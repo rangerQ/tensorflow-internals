@@ -3,96 +3,96 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{队列} 
+\chapter{Queue} 
 \label{ch:queue}
 
 \begin{content}
 
-\ascii{TensorFlow}的\code{Session}是线程安全的。也就是说，多个线程可以使用同一个\code{Session}实例，并发地执行同一个图实例的不同\ascii{OP}；\ascii{TensorFlow}执行引擎会根据输入与输出对图实施剪枝，得到一个最小依赖的子图。
+\ascii{TensorFlow}'s \code{Session} is thread-safe. That is, multiple threads can use the same \code{Session} instance to concurrently execute the same \ascii{OP} of the same graph instance; the \ascii{TensorFlow} execution engine prunes the graph based on input and output. , get a sub-graph with minimal dependence.
 
-因此，通过多线程并使用同一个\code{Session}实例，并发地执行同一个图实例的不同\ascii{OP}，最终实现的效果是子图之间的并发执行。
+Therefore, by multithreading and using the same \code{Session} instance, concurrently executing the different \ascii{OP} of the same graph instance, the final effect is the concurrent execution between the subgraphs.
 
-对于典型的模型训练，可以充分发挥\code{Session}多线程的并发能力，提升训练的性能。例如，输入子图运行在一个单独的线程中，用于准备样本数据；而训练子图则运行在另外一个单独的线程中，并按照\code{batch\_size}的大小一个批次取走训练样本，并启动迭代的训练过程。
+For typical model training, you can take full advantage of the \code{Session} multi-threaded concurrency and improve the performance of the training. For example, the input submap is run in a separate thread to prepare the sample data; the training submap is run in a separate thread and is taken in a batch according to the size of \code{batch\_size} Sample and start the iterative training process.
 
-本文将讲解上述并发模型中的基础设施，包括队列，多线程的协调器，及其控制\code{Enqueue OP}执行的\ascii{QueueRunner}。
+This article will explain the infrastructure in the concurrency model above, including queues, multithreaded coordinators, and \ascii{QueueRunner} that controls \code{Enqueue OP} execution.
 
 \end{content}
 
-\section{队列}
+\section{Queue}
 
 \begin{content}
 
-在\ascii{TensorFlow}的执行引擎中，\ascii{Queue}是一种控制异步计算的强大工具。特殊地，\ascii{Queue}是一种特殊的\ascii{OP}，与\ascii{Variable}类似，它是一类有状态的\ascii{OP}。
+In the execution engine of \ascii{TensorFlow}, \ascii{Queue} is a powerful tool for controlling asynchronous computing. In particular, \ascii{Queue} is a special \ascii{OP}, similar to \ascii{Variable}, which is a class of stateful \ascii{OP}.
 
-与之类似，\ascii{Variable}拥有关联的\ascii{Assign}等修改其状态的\ascii{OP}，\ascii{Queue}也有与之关联的\ascii{OP}，例如\code{Enqueue，Dequeue，EnqueueMany，DequeueMany}等\ascii{OP}，它们都能直接修改\ascii{Queue}的状态。
+Similarly, \ascii{Variable} has the associated \ascii{Assign} and other \ascii{OP}, \ascii{OP}, and \ascii{OP}, such as \code{Enqueue, Dequeue, EnqueueMany, DequeueMany} and other \ascii{OP}, they can directly modify the state of \ascii{Queue}.
 
 \subsection{FIFOQueue}
 
-举一个简单例子。首先，构造了一个\code{FIFOQueue}队列；然后，在计算图中添加了一个\code{EnqueueMany}，该\ascii{OP}用于在队列头部追加\ascii{1}个或多个元素；其次，再添加一个出队的\code{Dequeue}；最后，将出队元素的值增加\ascii{1}，再将其结果入队。在启动计算图执行之前，计算图的构造如下图所示。
+Give a simple example. First, a \code{FIFOQueue} queue is constructed; then, a \code{EnqueueMany} is added to the calculation graph, and the \ascii{OP} is used to append \ascii{1} or more elements to the head of the queue. Secondly, add a dequeue of \code{Dequeue}; finally, increase the value of the dequeue element by \ascii{1} and then join the result. The construction of the calculation graph is shown in the figure below before starting the calculation diagram execution.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-queue-example-1.png}
-\caption{图构造期}
+\caption{Figure construction period}
  \label{fig:py-queue-example-1}
 \end{figure}
 
-执行\code{EnqueueMany}操作后，计算图的状态如下图所示。
+After executing the \code{EnqueueMany} operation, the state of the calculation graph is as shown below.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-queue-example-2.png}
-\caption{图执行期：执行一次EnqueueMany}
+\caption{Figure execution period: Execute EnqueueMany}
  \label{fig:py-queue-example-2}
 \end{figure}
 
 
-执行第一步\code{Enqueue}后，计算图的状态如下图所示。
+After executing the first step \code{Enqueue}, the state of the calculation graph is as shown below.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-queue-example-3.png}
-\caption{图执行期：执行一次Enqueue}
+\caption{Figure execution period: Execute Enqueue once}
  \label{fig:py-queue-example-3}
 \end{figure}
 
-\subsection{用途}
+\subsection{use}
 
-队列在模型训练中扮演重要角色，后文将讲述数据加载的\ascii{Pipeline}，训练模型常常使用\code{RandomShuffleQueue}为其准备样本数据。为了提高\ascii{IO}的吞吐率，可以使用多线程，并发地将样本数据追加到样本队列中；与此同时，训练模型的线程迭代执行\code{train\_op}时，一次获取\code{batch\_size}大小的批次样本数据。
+Queues play an important role in model training. Later, we will cover the \ascii{Pipeline} of data loading. The training model often uses \code{RandomShuffleQueue} to prepare sample data for it. To improve the throughput of \ascii{IO}, you can use multithreading to append sample data to the sample queue concurrently; at the same time, the thread of the training model iterates through \code{train\_op} and gets \code once. Batch sample data of {batch\_size} size.
 
-显而易见，队列在\ascii{Pipeline}过程中扮演了异步协调和数据交换的功能，这给\ascii{Pipeline}的设计和实现带来很大的弹性空间。
+Obviously, the queue plays the role of asynchronous coordination and data exchange in the \ascii{Pipeline} process, which brings a lot of flexibility to the design and implementation of \ascii{Pipeline}.
 
-需要注意的是，为了使得队列在多线程最大化发挥作用，需要解决两个棘手的问题：
+It's important to note that in order for the queue to maximize its multithreading, two tricky issues need to be addressed:
 
 \begin{enum}
-  \eitem{如何同时停止所有的线程，及其处理异常报告？}
-  \eitem{如何并发地向队列中追加样本数据？} 
+  \eitem{How do I stop all threads at the same time, and how to handle exception reports? }
+  \eitem{How to append sample data to the queue concurrently? }
 \end{enum}
 
-因此，\ascii{TensorFlow}设计了\code{tf.train.Coordinator}和\code{tf.train.QueueRunner}两个类，分别解决上述两个问题。
+Therefore, \ascii{TensorFlow} designed two classes, \code{tf.train.Coordinator} and \code{tf.train.QueueRunner}, to solve the above two problems.
 
-这两个类相辅相成，\code{Coordinator}协调多个线程同时停止运行，并且向等待停止通知的主程序报告异常；而\code{QueueRunner}创建了一组线程，并协作多个入队\ascii{OP}(例如\code{Enqueue，EnqueueMany})的执行。
+These two classes complement each other, \code{Coordinator} coordinates multiple threads to stop running at the same time, and reports an exception to the main program waiting for the stop notification; and \code{QueueRunner} creates a set of threads and collaborates multiple enqueues\ascii Execution of {OP} (eg \code{Enqueue, EnqueueMany}).
 
 \end{content}
 
-\section{协调器}
+\section{Coordinator}
 
 \begin{content}
 
-\code{Coordinator}提供了一种同时停止一组线程执行的简单机制。它拥有\ascii{3}个重要的方法：
+\code{Coordinator} provides a simple mechanism to stop the execution of a group of threads at the same time. It has \ascii{3} important methods:
 
 \begin{enum}
-\eitem{\code{should\_stop}: 判断当前线程是否应该退出}
-\eitem{\code{request\_stop}: 请求所有线程停止执行}
-\eitem{\code{join}: 等待所有线程停止执行}
+\eitem{\code{should\_stop}: Determine if the current thread should exit}
+\eitem{\code{request\_stop}: Request all threads to stop executing}
+\eitem{\code{join}: Wait for all threads to stop executing}
 \end{enum}
 
-\subsection{使用方法}
+\subsection{Usage method}
 
-一般地，主程序常常使用如下模式使用\code{Coordinator}。
+In general, the main program often uses the following pattern to use \code{Coordinator}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 # Create a coordinator.
 coord = tf.train.Coordinator()
 
@@ -109,12 +109,12 @@ coord.join(threads)
 \end{python}
 \end{leftbar}
 
-任何子线程，都可以通过调用\code{coord.request\_stop}，通知其他线程停止执行。因此，每个线程的迭代执行中，都要事先检查\code{coord.should\_stop()}。一旦\code{coord.request\_stop}被调用，其他线程的\code{coord.request\_stop()}将立即返回\code{True}。
+Any child thread can notify other threads to stop execution by calling \code{coord.request\_stop}. Therefore, in the iterative execution of each thread, check \code{coord.should\_stop()} beforehand. Once \code{coord.request\_stop} is called, \code{coord.request\_stop()} of other threads will immediately return \code{True}.
 
-一般地，一个子线程的迭代执行方法遵循如下实现模式。
+In general, the iterative execution method of a child thread follows the implementation pattern as follows.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def MyLoop(coord):
   try
     while not coord.should_stop():
@@ -124,12 +124,12 @@ def MyLoop(coord):
 \end{python}
 \end{leftbar}
 
-\subsection{异常处理}
+\subsection{Exception handling}
 
-当某个线程发生了异常，则可以通过\code{coord.request\_stop(e)}报告异常的发生。
+When an exception occurs on a thread, the exception can be reported via \code{coord.request\_stop(e)}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 try:
   while not coord.should_stop():
     # ...do some work...
@@ -138,20 +138,20 @@ except Exception as e:
 \end{python}
 \end{leftbar}
 
-为了消除异常代码处理的重复代码，可以使用\code{coord.stop\_on\_exception()}的上下文管理器。
+To eliminate duplicate code for exception code handling, you can use the context manager of \code{coord.stop\_on\_exception()}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with coord.stop_on_exception():
   while not coord.should_stop():
     # ...do some work...
 \end{python}
 \end{leftbar}
 
-其中，该异常也会在\code{coord.join}中被重新抛出。因此，在主程序也需要合理地处理异常。
+Among them, the exception will be re-thrown in \code{coord.join}. Therefore, the main program also needs to handle exceptions reasonably.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 try:
   # Create a coordinator.
   coord = tf.train.Coordinator()
@@ -171,7 +171,7 @@ except Exception as e:
 \end{python}
 \end{leftbar}
 
-\subsection{实战：LoopThread}
+\subsection{Combat: LoopThread}
 
 \end{content}
 
@@ -179,32 +179,32 @@ except Exception as e:
 
 \begin{content}
 
-一个\code{QueueRunner}实例持有一个或多个\code{Enqueue}的入队\ascii{OP}，它为每个\code{Enqueue OP}启动一个线程。
+A \code{QueueRunner} instance holds one or more \code{Enqueue} enqueues\ascii{OP}, which starts a thread for each \code{Enqueue OP}.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/tf-queue-runner-model.png}
-\caption{TensorFlow系统架构}
+\caption{TensorFlow System Architecture}
  \label{fig:tf-queue-runner-model}
 \end{figure}
 
-\subsection{注册QueueRunner}
+\subsection{Register QueueRunner}
 
-可以调用\code{tf.train.add\_queue\_runner}往计算图中注册\code{QueueRunner}实例，并且将其添加到\code{GraphKeys.QUEUE\_RUNNERS}集合中。
+You can call \code{tf.train.add\_queue\_runner} to register the \code{QueueRunner} instance into the calculation diagram and add it to the \code{GraphKeys.QUEUE\_RUNNERS} collection.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def add_queue_runner(qr, collection=ops.GraphKeys.QUEUE_RUNNERS):
   ops.add_to_collection(collection, qr)
 \end{python}
 \end{leftbar}
 
-\subsection{执行QueueRunner}
+\subsection{Execute QueueRunner}
 
-可以调用\code{tf.train.start\_queue\_runners}时，它会从计算图中找到所有\code{QueueRunner}实例，并从\code{QueueRunner}实例中取出所有\code{Enqueue OP}，为每个\ascii{OP}启动一个线程。
+When \code{tf.train.start\_queue\_runners} can be called, it will find all \code{QueueRunner} instances from the calculation graph and fetch all \code{Enqueue OP} from the \code{QueueRunner} instance. Start a thread for each \ascii{OP}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def start_queue_runners(sess, coord, daemon=True, start=True,
                         collection=ops.GraphKeys.QUEUE_RUNNERS):
   with sess.graph.as_default():
@@ -216,21 +216,21 @@ def start_queue_runners(sess, coord, daemon=True, start=True,
 \end{python}
 \end{leftbar}
 
-在\code{QueueRunner.create\_threads}方法中，为其包含的每个\code{Enqueue}类型的\ascii{OP}启动单独的线程。
+In the \code{QueueRunner.create\_threads} method, start a separate thread for each \code{Enqueue} type of \ascii{OP} it contains.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class QueueRunner(object):
   def create_threads(self, sess, coord, daemon, start):
     """Create threads to run the enqueue ops.
     """
     threads = [threading.Thread(
-        target=self._run, args=(sess, op, coord))
-        for op in self._enqueue_ops]
+        target = self._run, args = (sess, op, coord))
+        for in self._enqueue_ops]
     if coord:
       threads.append(threading.Thread(
           target=self._close_on_stop, 
-          args=(sess, self._cancel_op, coord)))
+          args = (sess, self.cancel_op, coord)))
     for t in threads:
       if coord:
         coord.register_thread(t)
@@ -242,14 +242,14 @@ class QueueRunner(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{迭代执行Enqueue}
+\subsubsection{Iterative execution Enqueue}
 
-每个\code{Enqueue}子线程将迭代执行\code{Enqueue OP}。当发生\code{OutOfRangeError}异常时，将自动关闭队列，并退出子线程；但是，如果发生其他类型的异常，会主动通知\code{Coordinator}停止所有线程的运行，并退出子线程。
+Each \code{Enqueue} child thread will iterate through \code{Enqueue OP}. When a \code{OutOfRangeError} exception occurs, the queue is automatically closed and the child thread is exited; however, if other types of exceptions occur, \code{Coordinator} is actively notified to stop all threads from running and exit the child thread.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class QueueRunner(object):
-  def _run(self, sess, enqueue_op, coord):
+  def _run (self, sess, enqueue_op, coord):
     try:
       enqueue_callable = sess.make_callable(enqueue_op)
       while True:
@@ -258,19 +258,19 @@ class QueueRunner(object):
         try:
           enqueue_callable()
         except errors.OutOfRangeError:  
-          sess.run(self._close_op)
+          sess.run (self._close_op)
           return
     except Exception as e:
       coord.request_stop(e)
 \end{python}
 \end{leftbar}
 
-\subsubsection{监听队列关闭}
+\subsubsection{listening queue off}
 
-另外，如果给定\code{Coordinator}实例，\code{QueueRunner}还会额外启动一个线程；当\code{Coordinator}实例被触发调用\code{request\_stop}方法后，该线程将会自动关闭队列。
+In addition, if a \code{Coordinator} instance is given, \code{QueueRunner} will additionally start a thread; when the \code{Coordinator} instance is triggered to call the \code{request\_stop} method, the thread will automatically close. queue.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class QueueRunner(object):
   def _close_on_stop(self, sess, cancel_op, coord):
     """Close the queue, and cancel pending enqueue ops
@@ -278,14 +278,14 @@ class QueueRunner(object):
     """
     coord.wait_for_stop()
     try:
-      sess.run(cancel_op)
+      sess.run (cancel_op)
     except Exception:
       pass
 \end{python}
 \end{leftbar}
 
-其中，\code{Queue}的\code{Cancel OP}与\code{Close OP}都会关闭队列，但是\code{Cancel OP}会撤销已缓存的\code{Enqueue OP}列表，但\code{Close OP}则保留已缓存的\code{Enqueue OP}列表。
+Among them, \code{Cancel OP} and \code{Close OP} of \code{Queue} will close the queue, but \code{Cancel OP} will undo the cached list of \code{Enqueue OP}, but \code{Close OP} keeps a list of cached \code{Enqueue OP}.
 
-\subsection{关闭队列}
+\subsection{Close Queue}
 
-当队列被关闭后，对于任何尝试\code{Enqueue}将会产生错误。但是，对于任何尝试\code{Dequeue}依然是成功的，只要队列中遗留元素；否则，\code{Dequeue}将立即失败，抛出\code{OutOfRangeError}异常，而不会阻塞等待更多元素被入队。
+When the queue is closed, an error will be generated for any attempt on \code{Enqueue}. However, for any attempt to \code{Dequeue} it is still successful, as long as the elements are left in the queue; otherwise, \code{Dequeue} will fail immediately, throwing a \code{OutOfRangeError} exception without blocking waiting for more elements to be Enter the team.

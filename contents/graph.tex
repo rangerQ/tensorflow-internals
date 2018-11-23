@@ -3,46 +3,46 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{计算图} 
+\chapter{calculation diagram} 
 \label{ch:computation-graph}
 
 \begin{content}
 
-在\tf{}的计算图中，使用\ascii{OP}表示节点，根据\ascii{OP}之间计算和数据依赖关系，构造\ascii{OP}之间生产与消费的数据依赖关系，并通过有向边表示。其中，有向边存在两种类型，一种承载数据，并使用\code{Tensor}表示；另一种不承载数据，仅表示计算依赖关系。
+In the calculation diagram of \tf{}, use \ascii{OP} to represent nodes, construct data dependencies between production and consumption between \ascii{OP} according to the calculation and data dependencies between \ascii{OP}, and Expressed by directed edges. Among them, there are two types of directed edges, one for carrying data and one for \code{Tensor}; the other for not carrying data, only for computing dependencies.
 
-本章将阐述\tf{}中最重要的领域对象：\emph{计算图}。为了全面阐述计算图的关键实现技术，将分别探讨前后端的系统设计和实现，并探究前后端系统间计算图转换的工作流原理。
+This chapter will explain the most important domain objects in \tf{}: \emph{calculation graph}. In order to comprehensively expound the key implementation techniques of the computational graph, the system design and implementation of the front and back ends will be discussed separately, and the workflow principle of the computational graph transformation between the front and back systems will be explored.
 
 \end{content}
 
-\section{Python前端}
+\section{Python front end}
 
 \begin{content}
 
-在\ascii{Python}的前端系统中，并没有\code{Node, Edge}的概念，仅存在\code{Operation, Tensor}的概念。事实上，在前端\ascii{Python}系统中，\code{Operation}表示图中的\code{Node}实例，而\code{Tensor}表示图中的\code{Edge}实例。
+In the front-end system of \ascii{Python}, there is no concept of \code{Node, Edge}, only the concept of \code{Operation, Tensor} exists. In fact, in the front-end \ascii{Python} system, \code{Operation} represents the \code{Node} instance in the diagram, and \code{Tensor} represents the \code{Edge} instance in the diagram.
 
 \subsection{Operation}
 
-\code{OP}用于表达某种抽象的数学计算，它表示计算图中的节点。\code{Operation}是前端\ascii{Python}系统中最重要的一个领域对象，也是\tf{}运行时最小的计算单位。
+\code{OP} is used to express some kind of abstract mathematical calculation, which represents the nodes in the calculation graph. \code{Operation} is the most important domain object in the front-end \ascii{Python} system, and is the smallest unit of computation at the \tf{} runtime.
 
-\subsubsection{领域模型}
+\subsubsection{domain model}
 
-如\refig{py-operation}所示，\code{Operation}表示某种抽象计算，上游节点输出的零个或多个\code{Tensor}作为其输入，经过计算后输出零个或多个\code{Tensor}至下游的节点，从而上下游的\code{Operation}之间产生了数据依赖关系。特殊地，\code{Operation}可能持有上游的控制依赖边的集合，表示潜在的计算依赖关系。
+As shown by \refig{py-operation}, \code{Operation} represents some kind of abstract calculation. Zero or more \code{Tensor} output by the upstream node as its input, after calculation, output zero or more\ Code{Tensor} to the downstream node, resulting in data dependencies between the upstream and downstream \code{Operation}. In particular, \code{Operation} may hold a collection of upstream control dependent edges, indicating potential computational dependencies.
 
-在计算图构造期间，通过\ascii{OP}构造器\ascii{(OP Constructor)}，构造\code{Operation}实例，并将其注册至默认的图实例中。与此同时，\code{Operation}反过来通过\ascii{graph}直接持有该图实例。
+During the calculation of the graph construction, construct the \code{Operation} instance via the \ascii{OP} constructor\ascii{(OP Constructor)} and register it in the default graph instance. At the same time, \code{Operation} in turn holds the graph instance directly via \ascii{graph}.
 
-\code{Operation}的元数据由\code{OpDef}与\code{NodeDef}持有，它们以\ascii{ProtoBuf}的格式存在，它描述了\code{Operation}最本质的东西。其中，\code{OpDef}描述了\ascii{OP}的静态属性信息，例如\ascii{OP}的名称，输入/输出参数列表，属性集定义等信息。而\code{NodeDef}描述了\ascii{OP}的动态属性值信息，例如属性值等信息。
+The metadata for \code{Operation} is held by \code{OpDef} and \code{NodeDef}, which exist in the format \ascii{ProtoBuf}, which describes the most essential thing of \code{Operation}. Among them, \code{OpDef} describes the static attribute information of \ascii{OP}, such as the name of \ascii{OP}, input/output parameter list, attribute set definition and other information. And \code{NodeDef} describes the dynamic attribute value information of \ascii{OP}, such as attribute value and other information.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/py-operation.png}
-\caption{领域对象：Operation}
+\caption{Domain object: Operation}
  \label{fig:py-operation}
 \end{figure}
 
-\subsubsection{构造器}
+\subsubsection{constructor}
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Operation(object):
   def __init__(self, node_def, g, inputs=None, output_types=None,
                control_inputs=None, input_types=None, original_op=None,
@@ -77,7 +77,7 @@ class Operation(object):
     
     self._control_inputs = []
     for c in control_inputs:
-      c_op = self._get_op_from(c)
+      c_op = self._get_op_from (c)
       self._control_inputs.append(c_op)
 
     # 8. Outputs
@@ -93,12 +93,12 @@ class Operation(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{属性集}
+\subsubsection{property set}
 
-\code{Operation}定义了常用了属性方法，用于获取该\ascii{OP}的元数据。其中，\code{name}表示图中节点的名称，包括\code{name\_scope}的层次名称，在图实例的范围内是唯一的，例如\code{layer\_2/MatMul}；\code{type}则表示该\code{OP}类型唯一的名称，例如\code{MatMul, Variable}。
+\code{Operation} defines a common attribute method for getting the metadata of the \ascii{OP}. Where \code{name} represents the name of the node in the diagram, including the hierarchical name of \code{name\_scope}, which is unique within the scope of the diagram instance, such as \code{layer\_2/MatMul};\code{ Type} indicates the unique name of the \code{OP} type, such as \code{MatMul, Variable}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Operation(object):
   @property
   def name(self):
@@ -132,12 +132,12 @@ class Operation(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{运行OP}
+\subsubsection{Run OP}
 
-可以从该\ascii{OP}为末端反向遍历图，寻找最小依赖的子图，并在默认的\code{Session}中执行该子图。
+You can traverse the graph from the \ascii{OP} for the end, look for the smallest dependent submap, and execute the submap in the default \code{Session}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Operation(object):
   def run(self, feed_dict=None, session=None):
     """Runs this operation in a `Session`.
@@ -149,10 +149,10 @@ class Operation(object):
 \end{python}
 \end{leftbar}
 
-其中，\code{\_run\_using\_default\_session}将使用默认的\code{Session}运行该\ascii{OP}。
+Where \code{\_run\_using\_default\_session} will run the \ascii{OP} with the default \code{Session}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def _run_using_default_session(operation, feed_dict, session=None):
   """Uses the default session to run "operation".
   """
@@ -164,38 +164,38 @@ def _run_using_default_session(operation, feed_dict, session=None):
 
 \subsection{Tensor}
 
-在图构造期，\code{Tensor}在图中并未承载数据，它仅表示\code{Operation}输出的一个符号句柄。事实上，需要通过\code{Session.run}计算才能得到\code{Tensor}所持有的真实数据。
+In the graph construction period, \code{Tensor} does not carry data in the graph, it only represents a symbol handle output by \code{Operation}. In fact, you need to use \code{Session.run} to get the real data held by \code{Tensor}.
 
-\subsubsection{生产者与消费者}
+\subsubsection{producer and consumer}
 
-如\refig{py-tensor-producter-consumer}所示，\code{Tensor}是两个\code{Operation}数据交换的桥梁，它们之间构造了典型的\emph{生产者与消费者}之间的关系。上游\code{Operation}作为生产者，经过某种抽象计算，生产了一个\code{Tensor}，并以此作为该上游\code{Operation}的输出之一，并使用\code{output\_index}作为标识。该\code{Tensor}被传递给下游\code{Operation}，并作为下游\code{Operation}的输入，下游\code{Operation}充当该\code{Tensor}的消费者。
+As shown by \refig{py-tensor-producter-consumer}, \code{Tensor} is a bridge between two \code{Operation} data exchanges, which construct a typical \emph{producer and consumer} Relationship between. Upstream \code{Operation} as a producer, after some abstract calculation, produces a \code{Tensor} as one of the outputs of the upstream \code{Operation} and uses \code{output\_index} As an identification. The \code{Tensor} is passed to the downstream \code{Operation} and is used as input to the downstream \code{Operation}, and the downstream \code{Operation} acts as the consumer of the \code{Tensor}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/py-tensor-producter-consumer.png}
-\caption{Tensor: 生产者-消费者}
+\caption{Tensor: Producer-Consumer}
  \label{fig:py-tensor-producter-consumer}
 \end{figure}
 
-\subsubsection{领域模型}
+\subsubsection{domain model}
 
-如\refig{py-tensor}所示，\code{Tensor}通过\ascii{op}持有扮演生产者角色的\code{Operation}，并且使用\code{index}表示该\code{Tensor}在该\code{Operation}输出列表中的索引。也就是说，可以使用\code{op:index}的二元组信息在图中唯一标识一个\code{Tensor}实例。
+As shown by \refig{py-tensor}, \code{Tensor} holds the \code{Operation} that plays the producer role via \ascii{op} and uses \code{index} to indicate that the \code{Tensor} is The \code{Operation} outputs the index in the list. That is, you can use the binary information of \code{op:index} to uniquely identify a \code{Tensor} instance in the diagram.
 
-此外，\code{Tensor}持有\code{Operation}的消费者列表，用于追踪该\code{Tensor}输出到哪些\code{Operation}实例了。因此，\code{Tensor}充当了计算图的边，构建了\code{Operation}之间的数据依赖关系。
+In addition, \code{Tensor} holds a list of consumers of \code{Operation} that are used to track which \code{Operation} instances the \code{Tensor} output to. Therefore, \code{Tensor} acts as the edge of the computation graph and builds the data dependencies between \code{Operation}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-tensor.png}
-\caption{领域对象：Tensor}
+\caption{Domain object: Tensor}
  \label{fig:py-tensor}
 \end{figure}
 
-\subsubsection{建立关联}
+\subsubsection{establish association}
 
-最后，参考\code{Operation}与\code{Tensor}的部分实现，很容易找两者之间生产者-消费者的关联关系。当\code{Tensor}列表作为输入流入\code{Operation}时，此时建立了下游\code{Operation}与输入的\code{Tensor}列表之间的消费关系。
+Finally, with reference to the partial implementation of \code{Operation} and \code{Tensor}, it is easy to find a producer-consumer relationship between the two. When the \code{Tensor} list is passed as input to \code{Operation}, the consumer relationship between the downstream \code{Operation} and the input \code{Tensor} list is established.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Operation(object):
   def __init__(self, node_def, graph, inputs=None, output_types=None):
     # self(Operation) as consumer for input tensors.
@@ -210,14 +210,14 @@ class Operation(object):
 \end{python}
 \end{leftbar}
 
-同样地，\code{Tensor}在构造器中持有上游的的生产者\code{Operation}，及其该\code{Tensor}实例在该\code{Operation}的\code{outputs}列表中的索引。此外，当调用\code{\_add\_consumer}，将该下游\code{Operation}追加至消费者列表之中。
+Similarly, \code{Tensor} holds the upstream producer \code{Operation} in the constructor and its \code{Tensor} instance in the \code{Operation}\code{outputs} list index. Also, when \code{\_add\_consumer} is called, the downstream \code{Operation} is appended to the consumer list.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Tensor(_TensorLike):
   def __init__(self, op, value_index, dtype):    
     # Index of the OP's endpoint that produces this tensor.
-    self._op = op
+    self._op = on
     self._value_index = value_index
     
     # List of operations that use this Tensor as input.  
@@ -231,15 +231,15 @@ class Tensor(_TensorLike):
 \end{python}
 \end{leftbar}
 
-\subsubsection{属性集}
+\subsubsection{property set}
 
-通过\code{Tensor}可以追溯上游的\code{Operation}，从而获取相关的元数据。可以推测，遍历计算图的算法是反向的，与拓扑排序算法的遍历方向刚好相反。其中，\code{name}返回了\code{(node:output\_index)}的二元组信息，在计算图的范围内唯一地标识了该\code{Tensor}实例。
+The \code{Tperor} can be traced back through \code{Tensor} to get the relevant metadata. It can be speculated that the algorithm for traversing the computational graph is reversed, as opposed to the traversal direction of the topological sorting algorithm. Among them, \code{name} returns the binary information of \code{(node:output\_index)}, which uniquely identifies the \code{Tensor} instance within the scope of the calculation graph.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Tensor(_TensorLike):
   @property
-  def op(self):
+  def on (self):
     """The `Operation` that produces this tensor as an output."""
     return self._op
 
@@ -276,10 +276,10 @@ class Tensor(_TensorLike):
 \end{python}
 \end{leftbar}
 
-\subsubsection{评估}
+\subsubsection{evaluation}
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Tensor(_TensorLike):
   def eval(self, feed_dict=None, session=None):
     """Evaluates this tensor in a `Session`.
@@ -292,10 +292,10 @@ class Tensor(_TensorLike):
 \end{python}
 \end{leftbar}
 
-其中，\code{\_eval\_using\_default\_session}将使用默认的\code{Session}评估该\ascii{Tensor}实例。注意，\code{tf.Session.run}的\code{fetches}列表可以混合接收\code{Operation, Tensor}实例。
+Where \code{\_eval\_using\_default\_session} will evaluate the \ascii{Tensor} instance using the default \code{Session}. Note that the \code{fetches} list of \code{tf.Session.run} can be mixed to receive \code{Operation, Tensor} instances.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def _eval_using_default_session(tensors, feed_dict, graph, session=None):
   """Uses the default session to evaluate one or more tensors."""
   if session is None:
@@ -306,7 +306,7 @@ def _eval_using_default_session(tensors, feed_dict, graph, session=None):
 
 \subsection{TensorShape}
 
-\code{Tensor}使用\code{TensorShape}描述其形状信息。它持有该\code{Tensor}的数据类型，及其\code{Dimension}列表，每个\code{Dimension}描述了该维度的大小。其中，\code{TensorShape}与\code{Dimension}都是值对象，包含了一些实用的数学计算方法，例如计数，合并，兼容性检查等。
+\code{Tensor} uses \code{TensorShape} to describe its shape information. It holds the data type of the \code{Tensor} and its \code{Dimension} list, and each \code{Dimension} describes the size of the dimension. Among them, \code{TensorShape} and \code{Dimension} are value objects, including some practical mathematical calculation methods, such as counting, merging, compatibility checking, etc.
 
 \begin{figure}[H]
 \centering
@@ -315,10 +315,10 @@ def _eval_using_default_session(tensors, feed_dict, graph, session=None):
  \label{fig:py-tensor-shape}
 \end{figure}
 
-显而易见，可以使用\code{TensorShape}推算出\code{Tensor}所包含的元素个数。
+Obviously, you can use \code{TensorShape} to figure out the number of elements included in \code{Tensor}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class TensorShape(object):
   def num_elements(self):
     if self.is_fully_defined():
@@ -331,12 +331,12 @@ class TensorShape(object):
 \end{python}
 \end{leftbar}      
 
-\subsubsection{工厂方法}
+\subsubsection{factory method}
 
-存在几个实用的工厂方法，\code{scalar, vector, matrix}用于分别构造\ascii{0}维，\ascii{1}维，\ascii{2}维的\code{TensorShape}实例。
+There are several practical factory methods, \code{scalar, vector, matrix} for constructing the \ascii{0} dimension, the \ascii{1} dimension, the \code{TensorShape} instance of the \ascii{2} dimension, respectively.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def scalar():
   return TensorShape([])
 
@@ -348,12 +348,12 @@ def matrix(rows, cols):
 \end{python}
 \end{leftbar}
 
-\subsubsection{部分定义}
+\subsubsection{partial definition}
 
-当构造计算图时，对其\code{TensorShape}暂时不能确定，则可以使用\code{None}表示。存在两种情况，如果\code{rank}大小未知，称该\code{TensorShape}未知；如果\code{rank}大小已知，则称该\code{TensorShape}\emph{部分定义}。
+When constructing a calculation graph, its \code{TensorShape} is temporarily undetermined, and it can be represented by \code{None}. There are two cases. If the size of \code{rank} is unknown, the \code{TensorShape} is called unknown; if the size of \code{rank} is known, it is called \code{TensorShape}\emph{partial definition}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def unknown_shape(ndims=None):
   if ndims is None:
     return TensorShape(None)
@@ -362,12 +362,12 @@ def unknown_shape(ndims=None):
 \end{python}
 \end{leftbar}
 
-\subsubsection{完全定义}
+\subsubsection{full definition}
 
-相反地，当\code{TensorShape}每个维度的大小都已确定，则称\emph{完全定义}。
+Conversely, when the size of each dimension of \code{TensorShape} is determined, it is called \emph{fully defined}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class TensorShape(object):
   def is_fully_defined(self):
     return (self._dims is not None and all(dim.value is not None
@@ -375,12 +375,12 @@ class TensorShape(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{属性集}
+\subsubsection{property set}
 
-可以使用\code{ndims}属性返回\code{TensorShape}的\code{rank}大小，使用\code{dims}属性返回\code{Dimension}列表。
+You can use the \code{ndims} property to return the \code{rank} size of \code{TensorShape} and the \code{dims} property to return the \code{Dimension} list.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class TensorShape(object):
   @property
   def dims(self):
@@ -391,16 +391,16 @@ class TensorShape(object):
     if self._dims is None:
       return None
     else:
-      return len(self._dims)
+      return len (self._dims)
 \end{python}
 \end{leftbar}
 
-\subsubsection{转换}
+\subsubsection{conversion}
 
-可以使用\code{as\_proto}将其转换为\code{TensorShapeProto}表示。特殊地，当某一个\code{Dimension}未知，为了能够实施序列化，需要将\code{None}转换为\ascii{-1}。
+It can be converted to \code{TensorShapeProto} using \code{as\_proto}. In particular, when a \code{Dimension} is unknown, in order to be able to implement serialization, you need to convert \code{None} to \ascii{-1}.
 
 \begin{leftbar}
-\begin{python} 
+\ Begin {python} 
 class TensorShape(object):
   def _dims_as_proto(self): 
     def _size(dim):
@@ -417,10 +417,10 @@ class TensorShape(object):
 \end{python}
 \end{leftbar}
 
-也可以使用\code{as\_list}将其转为\code{Dimension}列表。如果\code{TensorShape}的\code{rank}大小未知，则抛出\code{ValueError}异常。
+You can also use \code{as\_list} to turn it into a list of \code{Dimension}. If the \code{rank} size of \code{TensorShape} is unknown, a \code{ValueError} exception is thrown.
 
 \begin{leftbar}
-\begin{python} 
+\ Begin {python} 
 class TensorShape(object):
   def as_list(self):
     if self._dims is None:
@@ -429,10 +429,10 @@ class TensorShape(object):
 \end{python}
 \end{leftbar}
 
-相反地，使用\code{as\_shape}将\code{Deimension}列表，或\code{TensorShapeProto}转换为了\code{TensorShape}实例。
+Instead, use \code{as\_shape} to convert the \code{Deimension} list, or \code{TensorShapeProto} to the \code{TensorShape} instance.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def as_shape(shape):
   if isinstance(shape, TensorShape):
     return shape
@@ -441,10 +441,10 @@ def as_shape(shape):
 \end{python}
 \end{leftbar}
 
-特殊地，当构造\code{TensorShape}时，当\code{TensorShapeProto}的某一维度大小为\ascii{-1}时，将其转换为\code{None}的表示。
+In particular, when \code{TensorShape} is constructed, when a dimension of \code{TensorShapeProto} is \ascii{-1}, it is converted to a representation of \code{None}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class TensorShape(object):
   def __init__(self, dims):
     if dims is None:
@@ -461,7 +461,7 @@ class TensorShape(object):
       self._dims = dims.dims
     else:
       try:
-        dims_iter = iter(dims)
+        dims_iter = iter (dims)
       except TypeError:
         # Treat as a singleton dimension
         self._dims = [as_dimension(dims)]
@@ -473,23 +473,23 @@ class TensorShape(object):
 
 \subsection{Graph}
 
-\code{Graph}是\tf{}最重要的领域对象，\tf{}的运行时就是完成\code{Graph}的构造、传递、剪枝、优化、分裂、执行。因此，熟悉\code{Graph}的领域模型，对于理解整个\tf{}运行时大有裨益。
+\code{Graph} is the most important domain object of \tf{}. The runtime of \tf{} is to complete the construction, passing, pruning, optimization, splitting, and execution of \code{Graph}. Therefore, familiarity with the domain model of \code{Graph} is useful for understanding the entire \tf{} runtime.
 
-\subsubsection{领域模型}
+\subsubsection{domain model}
 
-如\refig{py-graph}所示，一个\code{Graph}对象将包含一系列\code{Operation}对象，表示计算单元的集合。同时，它间接持有一系列\code{Tensor}对象，表示数据单元的集合。
+As shown in \refig{py-graph}, a \code{Graph} object will contain a series of \code{Operation} objects representing a collection of computational units. At the same time, it indirectly holds a series of \code{Tensor} objects representing a collection of data units.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/py-graph.png}
-\caption{领域对象：Graph}
+\caption{Domain object: Graph}
  \label{fig:py-graph}
 \end{figure}
 
-为了快速索引图中的节点信息，在当前图的作用域内为每个\code{Operation}分配唯一的\code{id}，并在图中存储\code{\_nodes\_by\_id}的数据字典。同时，为了可以根据节点的名字快速索引节点信息，在图中也存储了\code{\_nodes\_by\_name}的数据字典。
+In order to quickly index the node information in the graph, assign a unique \code{id} to each \code{Operation} in the scope of the current graph, and store the data dictionary of \code{\_nodes\_by\_id} in the graph. . At the same time, in order to quickly index the node information according to the name of the node, the data dictionary of \code{\_nodes\_by\_name} is also stored in the figure.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Graph(object):
   def __init__(self):
     self._lock = threading.Lock()
@@ -500,26 +500,26 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-在图构造期，\code{OP}通过\ascii{OP}构造器创建，最终被添加至当前的\code{Graph}实例中。当图被冻结后，便不能往图中追加节点了，使得\code{Graph}实例在多线程中被安全地共享。
+During the graph construction period, \code{OP} is created by the \ascii{OP} constructor and eventually added to the current \code{Graph} instance. When the graph is frozen, you can't append nodes to the graph, making the \code{Graph} instance safely shared in multiple threads.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Graph(object):
-  def _add_op(self, op):
+  def _add_op (self-on):
     self._check_not_finalized()
     with self._lock:
-      self._nodes_by_id[op._id] = op
-      self._nodes_by_name[op.name] = op
-      self._version = max(self._version, op._id)
+      self._nodes_by_id [op._id] = op
+      self._nodes_by_name [op.name] = op
+      self._version = max (self.version, op.id)
 \end{python}
 \end{leftbar}
 
-\subsubsection{分组}
+\subsubsection{group}
 
-为了更好地管理\code{Graph}中的节点，在每个\code{Operation}上打上特定的标签，实现了节点的分类。相同类型的节点被划归在同一个\code{Collection}中，并使用唯一的\code{GraphKey}标识该集合。随后，便可以根据\code{GraphKey}快速索引相关的节点信息。其中，系统预定义了常用的\code{GraphKey}，同时也支持自定义的\code{GraphKey}。
+In order to better manage the nodes in \code{Graph}, a specific tag is placed on each \code{Operation} to implement the classification of the nodes. Nodes of the same type are grouped in the same \code{Collection} and are identified by a unique \code{GraphKey}. Then, you can quickly index related node information according to \code{GraphKey}. Among them, the system pre-defined the commonly used \code{GraphKey}, and also supports the custom \code{GraphKey}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class GraphKeys(object):
   # Key to collect Variable objects that are global (shared across machines).
   # Default collection for all variables, except local ones.
@@ -609,10 +609,10 @@ class GraphKeys(object):
 \end{python}
 \end{leftbar}
 
-当某个\code{Opeartion}创建时，可以将其划归在特定的集合中，便于后期根据\code{GraphKey}快速索引。
+When a \code{Opeartion} is created, it can be grouped into a specific collection for quick indexing based on \code{GraphKey}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Graph(object):
   def add_to_collection(self, name, value):
     self._check_not_finalized()
@@ -625,22 +625,22 @@ class Graph(object):
 \end{leftbar}
 
 
-\subsubsection{图实例}
+\subsubsection{Figure instance}
 
-一般地，\ascii{OP}注册到一个全局的、唯一的、隐式的、默认的图实例中。特殊地，\tf{}也可以显式地创建新的图实例\code{g}，并调用\code{g.as\_default()}使其成为当前线程中唯一默认的图实例，并在该上下文管理器中所创建的\ascii{OP}都将自动注册到该图实例中。
+In general, \ascii{OP} is registered in a global, unique, implicit, default graph instance. In particular, \tf{} can also explicitly create a new graph instance \code{g} and call \code{g.as\_default()} to make it the only default graph instance in the current thread, and The \ascii{OP} created in this context manager will be automatically registered to the diagram instance.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with tf.Graph().as_default() as g:
   c = tf.constant(5.0)
   assert c.graph is g
 \end{python}
 \end{leftbar}
 
-事实上，\code{g.as\_default}从当前线程的图栈中返回了一个上下文管理器，使得当前的图实例\code{g}覆盖原来默认的图实例；当退出了上下文管理器后，则恢复原来默认的图实例。但是，在任何一个时刻，在当前线程中有且仅有一个图实例成为\emph{默认的}，可以调用\code{tf.get\_default\_graph()}，返回该默认的图实例。
+In fact, \code{g.as\_default} returns a context manager from the current thread's graph stack, so that the current graph instance \code{g} overrides the original default graph instance; when the context manager is exited , restore the original default image instance. However, at any one time, there is one and only one graph instance in the current thread that becomes \emph{default}, you can call \code{tf.get\_default\_graph()} to return the default graph instance.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 _default_graph_stack = _DefaultGraphStack()
 
 def get_default_graph():
@@ -654,10 +654,10 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-其中，\code{\_DefaultStack}中的\code{get\_controller}在栈顶追加新的图实例；当退出上下文管理器后，则从栈顶移除该图实例，恢复之前的图实例。当调用\code{get\_default}时，如果栈为空则通过\code{\_GetGlobalDefaultGraph}返回全局的、唯一的、隐式的图实例。在大部分\tf{}程序中，如果没有显式创建多个图实例，则所有\ascii{OP}都默认地注册到该图实例中。
+Among them, \code{get\_controller} in \code{\_DefaultStack} appends a new graph instance at the top of the stack; when exiting the context manager, the graph instance is removed from the top of the stack, and the previous graph instance is restored. When \code{get\_default} is called, a global, unique, and implicit graph instance is returned via \code{\_GetGlobalDefaultGraph} if the stack is empty. In most \tf{} programs, if you do not explicitly create multiple graph instances, all \ascii{OP} are registered to the graph instance by default.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class _DefaultStack(threading.local):
   """A thread-local stack for providing implicit defaults."""
 
@@ -688,8 +688,8 @@ class _DefaultGraphStack(_DefaultStack):
     """Override that returns a global default if the stack is empty."""
     ret = super(_DefaultGraphStack, self).get_default()
     if ret is None:
-      ret = self._GetGlobalDefaultGraph()
-    return ret
+      right = self._GetGlobalDefaultGraph ()
+    return right
 
   def _GetGlobalDefaultGraph(self):
     if self._global_default_graph is None:
@@ -698,14 +698,14 @@ class _DefaultGraphStack(_DefaultStack):
 \end{python}
 \end{leftbar}
 
-\subsubsection{名字空间}
+\subsubsection{namespace}
 
-为了更好地管理图中的节点，使用\code{name\_scope}对图中的节点实施层次化命名。例如，想要在全宇宙的范围内定位故宫的位置，可以实施层次化的命名：宇宙/银河系/太阳系/地球/中国/北京/故宫。这对于\ascii{TensorBoard}实现计算图的可视化非常有帮助，当计算图比较大时，可以通过折叠的方式展示图，也可以通过展开的方式一窥究竟。
+To better manage the nodes in the graph, use \code{name\_scope} to hierarchically name the nodes in the graph. For example, if you want to locate the location of the Forbidden City within the universe, you can implement a hierarchical name: Universe / Milky Way / Solar System / Earth / China / Beijing / Forbidden City. This is very helpful for \ascii{TensorBoard} to realize the visualization of the calculation graph. When the calculation graph is large, you can display the graph in a folded way, or you can glimpse it by expanding it.
 
-内嵌的\code{name\_scope}将继承外围的\code{name\_scope}；如果内嵌的\code{name\_scope}以\code{/}结尾，将重置为指定的\code{name\_scope}；如果内嵌的\code{name\_scope}为空字符串或\code{None}，将重置整个\code{name\_scope}。
+The embedded \code{name\_scope} will inherit the \code{name\_scope} of the periphery; if the embedded \code{name\_scope} ends with \code{/}, it will be reset to the specified \code{ Name\_scope}; if the embedded \code{name\_scope} is an empty string or \code{None}, the entire \code{name\_scope} will be reset.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with tf.Graph().as_default() as g:
   with g.name_scope("nested") as scope:
     nested_c = tf.constant(10.0, name="c")
@@ -729,10 +729,10 @@ with tf.Graph().as_default() as g:
 \end{python}
 \end{leftbar}
 
-事实上，\code{name\_scope}是一个上下文管理器，在嵌套的\code{name\_scope}中，实现了\code{name\_scope}栈式管理。当\code{name\_scope}出了作用域，便自动恢复外围的\code{name\_scope}。
+In fact, \code{name\_scope} is a context manager that implements \code{name\_scope} stack management in nested \code{name\_scope}. When \code{name\_scope} is scoped, the peripheral \code{name\_scope} is automatically restored.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def _name_from_scope_name(name):
   return name[:-1] if name[-1] == "/" else name
 
@@ -757,10 +757,10 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-在图构造期，\ascii{OP}构造器更习惯于使用\code{tf.name\_scope}，它从输入的\code{Operation}或\code{Tensor}列表中尝试获取图实例；如果未能获取到，则返回默认的图实例。然后，再在该图实例上追加新的\code{name\_scope}。
+During the graph construction period, the \ascii{OP} constructor is more accustomed to using \code{tf.name\_scope}, which attempts to get a graph instance from the input \code{Operation} or \code{Tensor} list; if not If it can be obtained, it returns the default graph instance. Then, append a new \code{name\_scope} to the image instance.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 @tf_contextlib.contextmanager
 def name_scope(name, default_name=None, values=[]):
   n = default_name if name is None else name
@@ -770,12 +770,12 @@ def name_scope(name, default_name=None, values=[]):
 \end{python}
 \end{leftbar}
 
-\subsubsection{控制依赖}
+\subsubsection{Control Dependency}
 
-可以通过内嵌的\code{control\_dependencies}合并外围的\code{control\_dependencies}，或通过\code{None}重置控制依赖集合为空。
+You can merge the surrounding \code{control\_dependencies} with the embedded \code{control\_dependencies} or reset the control dependency collection with the \code{None} reset.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with g.control_dependencies([a, b]):
   # Ops constructed here run after `a` and `b`.
   with g.control_dependencies(None):
@@ -788,10 +788,10 @@ with g.control_dependencies([a, b]):
 \end{python}
 \end{leftbar}
 
-事实上，\code{control\_dependencies}返回了一个上下文管理器，用于指定\ascii{OP}的控制依赖关系。其中，\code{control\_ops}记录了当前层所依赖的\ascii{Operation}列表，而\code{current}记录了当前层，及其外围所依赖的所有\ascii{Operation}列表。
+In fact, \code{control\_dependencies} returns a context manager that specifies the control dependencies for \ascii{OP}. Where \code{control\_ops} records the list of \ascii{Operation} that the current layer depends on, and \code{current} records the current layer and all the \ascii{Operation} lists it depends on.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Graph(object):
   def control_dependencies(self, control_inputs):
     if control_inputs is None:
@@ -810,10 +810,10 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-\code{\_ControlDependenciesController}实现了一个控制依赖的控制器。\code{control\_inputs}为\code{None}，将启用一个新的作用域，从而实现了新栈替代旧栈；当退出当前上下文的作用域后，恢复之前的旧栈，从而清除了所有之前的控制依赖关系。否则，每进入一层\code{control\_inputs}，便叠加当前作用域到当前的栈中。
+\code{\_ControlDependenciesController} implements a controller that controls dependencies. \code{control\_inputs} is \code{None}, which will enable a new scope, thus implementing a new stack to replace the old stack; when exiting the scope of the current context, restore the previous old stack, thus clearing all Previous control dependencies. Otherwise, each time you enter a layer of \code{control\_inputs}, the current scope is overlaid onto the current stack.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Graph(object):
   def __init__(self):
     self._control_dependencies_stack = []
@@ -852,24 +852,24 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-\code{\_current\_control\_dependencies}用于规约所有外围的\code{control\_inputs}，直至当前层所依赖的\code{Operation}列表。
+\code{\_current\_control\_dependencies} is used to declare all peripheral \code{control\_inputs} up to the list of \code{Operation} that the current layer depends on.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Graph(object):
   def _current_control_dependencies(self):
-    ret = set()
+    right = set ()
     for controller in self._control_dependencies_stack:
       for op in controller.control_inputs:
-        ret.add(op)
-    return ret
+        ret.add (up)
+    return right
 \end{python}
 \end{leftbar}
 
-\subsubsection{容器}
+\ subsubsection {Container}
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with g.container('experiment0'):
   # All stateful Operations constructed in this context will be placed
   # in resource container "experiment0".
@@ -897,7 +897,7 @@ tf.Session.reset(target, ["experiment0"])
 \end{leftbar}
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Graph(object):
   @tf_contextlib.contextmanager
   def container(self, container_name):
@@ -911,25 +911,25 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-\subsection{图构造}
+\subsection{Figure construction}
 
-在计算图的构造期间，不执行任何\ascii{OP}的计算。简单地说，图的构造过程就是根据\ascii{OP}构造器完成\code{Operation}实例的构造。而在\code{Operation}实例的构造之前，需要实现完成\code{OpDef}与\code{NodeDef}的构造过程。
+No calculations for \ascii{OP} are performed during the construction of the calculation graph. Simply put, the construction of the graph is based on the \ascii{OP} constructor to complete the construction of the \code{Operation} instance. Before the construction of the \code{Operation} instance, you need to implement the construction process of \code{OpDef} and \code{NodeDef}.
 
-\subsubsection{OpDef仓库}
+\subsubsection{OpDef repository}
 
-\code{OpDef}仓库在系统首次访问时，实现了\code{OpDef}的延迟加载和注册。也就是说，对于某中类型的\code{OpDef}仓库，\code{\_InitOpDefLibrary}模块首次导入时，扫描\code{op\_list\_ascii}表示的所有\ascii{OP}，并将其转换为\ascii{Protobuf}格式的\code{OpList}实例，最终将其注册到\code{OpDefLibrary}实例之中。
+The \code{OpDef} repository implements lazy loading and registration of \code{OpDef} for the first time the system is accessed. That is, for a \code{OpDef} repository of a certain type, when the \code{\_InitOpDefLibrary} module is first imported, scan all \ascii{OP} represented by \code{op\_list\_ascii} and convert it The \code{OpList} instance in \ascii{Protobuf} format is finally registered in the \code{OpDefLibrary} instance.
 
-例如，模块\code{gen\_array\_ops}是构建版本时自动生成的，它主要完成所有\code{array\_ops}类型的\code{OpDef}的定义，并自动注册到\code{OpDefLibrary}的仓库实例中，并提供按名查找\code{OpDef}的服务接口。
+For example, the module \code{gen\_array\_ops} is automatically generated when the build version is built. It mainly completes the definition of \code{array\_ops} type \code{OpDef} and is automatically registered to \code{OpDefLibrary} In the repository instance, and provide a service interface to find \code{OpDef} by name.
 
 \begin{leftbar}
-\begin{python}
-_op_def_lib = _InitOpDefLibrary()
+\ Begin {python}
+_op_def_lib = _InitOpDefLibrary ()
 
 def _InitOpDefLibrary():
-  op_list = _op_def_pb2.OpList()
-  _text_format.Merge(_InitOpDefLibrary.op_list_ascii, op_list)   
-  op_def_lib = _op_def_library.OpDefLibrary()
-  op_def_lib.add_op_list(op_list)
+  op_list = _on_def_pb2.OpList ()
+  _text_format.Merge (_InitOpDefLibrary.op_list_ascii, op_list)   
+  op_def_lib = _op_def_library.OpDefLibrary ()
+  op_def_lib.add_op_list (op_list)
   return op_def_lib
 
 _InitOpDefLibrary.op_list_ascii = """op {
@@ -952,91 +952,91 @@ _InitOpDefLibrary.op_list_ascii = """op {
 \end{python}
 \end{leftbar}
 
-\subsubsection{工厂方法}
+\subsubsection{factory method}
 
-如\refig{py-op-factory-and-repo}所示。当\ascii{Client}使用\ascii{OP}构造器创建一个\code{Operation}实例时，将最终调用\code{Graph.create\_op}方法，将该\code{Operation}实例注册到该图实例中。
+As shown in \refig{py-op-factory-and-repo}. When \ascii{Client} creates a \code{Operation} instance using the \ascii{OP} constructor, it will eventually call the \code{Graph.create\_op} method to register the \code{Operation} instance to the map. In the example.
 
-也就是说，一方面，\code{Graph}充当\code{Operation}的工厂，负责\code{Operation}的创建职责；另一方面，\code{Graph}充当\code{Operation}的仓库，负责\code{Operation}的存储，检索，转换等操作。
+That is to say, on the one hand, \code{Graph} acts as a factory for \code{Operation} and is responsible for the creation of \code{Operation}; on the other hand, \code{Graph} acts as a repository for \code{Operation} and is responsible for \code{Operation} storage, retrieval, conversion and other operations.
 
-这个过程常称为计算图的构造。在计算图的构造期间，并不会触发运行时的\ascii{OP}运算，它仅仅描述计算节点之间的依赖关系，并构建\ascii{DAG}图，对整个计算过程做整体规划。
+This process is often referred to as the construction of a computational graph. During the construction of the graph, the runtime \ascii{OP} operation is not triggered. It only describes the dependencies between the compute nodes and builds the \ascii{DAG} map to plan the entire calculation process.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-op-factory-and-repo.png}
-\caption{Graph: OP工厂 + OP仓库}
+\caption{Graph: OP Factory + OP Warehouse}
  \label{fig:py-op-factory-and-repo}
 \end{figure}
 
-\subsubsection{OP构造器}
+\subsubsection{OP Constructor}
 
-如\refig{py-op-constructor}所示。在图构造期，\ascii{Client}使用\code{tf.zeros\_like}构造一个名为\code{ZerosLike}的\ascii{OP}，该\ascii{OP}拥有一个输入，输出一个全\ascii{0}的\ascii{Tensor}；其中，\code{tf.zeros\_like}常称为\ascii{OP}构造器。
+As shown in \refig{py-op-constructor}. In the graph construction period, \ascii{Client} uses \code{tf.zeros\_like} to construct a \ascii{OP} named \code{ZerosLike}, which has an input and outputs a full \ \ascii{Tensor} of ascii{0}; where \code{tf.zeros\_like} is often called the \ascii{OP} constructor.
 
-然后，\ascii{OP}构造器调用一段自动生成的代码，进而转调\code{OpDefLibrary.apply\_op}方法。
+The \ascii{OP} constructor then calls an automatically generated code to transpose the \code{OpDefLibrary.apply\_op} method.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-op-constructor.png}
-\caption{OP构造器与代码生成器}
- \label{fig:py-op-constructor}
+\caption{OP constructor and code generator}
+ \ label {fig: py-op-constructor}
 \end{figure}
 
-\subsubsection{构造OpDef与NodeDef}
+\subsubsection{Construct OpDef and NodeDef}
 
-然后，如\refig{py-graph-create-op}所示。\code{OpDefLibrary}根据\ascii{OP}的名字从\code{OpDefLibrary}中，找到对应\code{OpDef}实例；最终，通过\code{Graph.create\_op}的工厂方法，创建\code{NodeDef}实例，进而创建\code{Operation}实例，将其自身注册到图实例中。
+Then, as shown in \refig{py-graph-create-op}. \code{OpDefLibrary} find the corresponding \code{OpDef} instance from \code{OpDefLibrary} according to the name of \ascii{OP}; finally, create \code{ via the factory method of \code{Graph.create\_op} The NodeDef} instance, which in turn creates a \code{Operation} instance, registers itself into the graph instance.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-graph-create-op.png}
-\caption{创建Operation实例: 创建OpDef, NodeDef实例}
+\caption{Create Operation instance: Create OpDef, NodeDef instance}
  \label{fig:py-graph-create-op}
 \end{figure}
 
 \end{content}
 
-\section{后端C++}
+\section{Backend C++}
 
 \begin{content}
 
-在\ascii{C++}后端，计算图是\ascii{TensorFlow}领域模型的核心。
+At the \ascii{C++} backend, the computational graph is at the heart of the \ascii{TensorFlow} domain model.
 
 \subsection{边}
 
-\code{Edge}持有前驱节点与后驱节点，从而实现了计算图的连接。一个节点可以拥有零条或多条输入边，与可以有零条或多条输出边。一般地，计算图中存在两类边：
+\code{Edge} holds the predecessor node and the post-drive node, thus implementing the connection of the calculation graph. A node can have zero or more input edges, and can have zero or more output edges. In general, there are two types of edges in the calculation graph:
 
 \begin{enum}
-  \eitem{普通边：用于承载数据(以\code{Tensor}表示)，表示节点间“生产者-消费者”的数据依赖关系，常用实线表示；}
-  \eitem{控制依赖：不承载数据，用于表示节点间的执行依赖关系，常用虚线表示。} 
+  \eitem{Normal side: used to carry data (represented by \code{Tensor}), indicating the data dependency of the "producer-consumer" between nodes, usually indicated by solid lines;
+  \eitem{Control Dependency: Does not carry data, is used to indicate the execution dependencies between nodes, usually indicated by dotted lines. }
 \end{enum}
 
-\subsubsection{两个标识}
+\subsubsection{two identifiers}
 
-\ascii{Edge}持有两个重要的索引：
+\ascii{Edge} holds two important indexes:
 
 \begin{enum}
-  \eitem{\code{src\_output}：表示该边为「前驱节点」的第\code{src\_output}条输出边；}
-  \eitem{\code{dst\_input}：表示该边为「后驱节点」的第\code{dst\_input}条输入边。} 
+  \eitem{\code{src\_output}: indicates that the edge is the \code{src\_output} output edge of the "predecessor node";
+  \eitem{\code{dst\_input}: Indicates that the edge is the \code{dst\_input} input edge of the "rear drive node". }
 \end{enum}
 
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/cc-edge-model.png}
-\caption{领域对象：Edge}
+\caption{Domain object: Edge}
  \label{fig:cc-edge-model}
 \end{figure}
 
-例如，存在两个前驱节点\code{s1, s2}，都存在两条输出边；存在两个后驱节点\code{d1, d2}，都存在两条输入边。
+For example, there are two precursor nodes \code{s1, s2}, which have two output edges; there are two backdrive nodes \code{d1, d2}, and there are two input edges.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/cc-edge-model-example.png}
-\caption{边例子}
+\caption{side example}
  \label{fig:cc-edge-model-example}
 \end{figure}
 
-\subsubsection{控制依赖}
+\subsubsection{Control Dependency}
 
-对于控制依赖边，其\code{src\_output, dst\_input}都为\code{-1(Graph::kControlSlot)}，暗喻控制依赖边不承载任何数据。
+For control dependent edges, its \code{src\_output, dst\_input} is \code{-1(Graph::kControlSlot)}, which means that the control dependent edge does not carry any data.
 
 \begin{leftbar}
 \begin{c++}
@@ -1047,9 +1047,9 @@ bool Edge::IsControlEdge() const {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Tensor标识}
+\subsubsection{Tensor ID}
 
-一般地，计算图的「普通边」承载\code{Tensor}，并使用\code{TensorId}标识。\code{Tensor}标识由源节点的名字，及其所在边的\code{src\_output}唯一确定。
+In general, the "normal side" of the calculation graph carries \code{Tensor} and is identified by \code{TensorId}. The \code{Tensor} flag is uniquely determined by the name of the source node and its \code{src\_output}.
 
 \begin{leftbar}
 \begin{c++}
@@ -1057,29 +1057,29 @@ TensorId ::= node_name:src_output
 \end{c++}
 \end{leftbar}
 
-缺省地，\code{src\_output}默认为\ascii{0}；也就是说，\code{node\_name}与\code{node\_name:0}两者等价。特殊地，当\code{src\_output}等于\ascii{-1}时，表示该边为「控制依赖边」，\code{TensorId}可以标识为\code{\^node\_name}，标识该边依赖于\code{node\_name}所在的节点。
+By default, \code{src\_output} defaults to \ascii{0}; that is, \code{node\_name} is equivalent to \code{node\_name:0}. Specifically, when \code{src\_output} is equal to \ascii{-1}, it means that the edge is "control dependent edge", \code{TensorId} can be identified as \code{\^node\_name}, identifying the It depends on the node where \code{node\_name} is located.
 
-\subsection{节点}
+\subsection{node}
 
-\code{Node}(节点)可以拥有零条或多条输入/输出的边，并使用\code{in\_edges, out\_edges}分别表示输入边和输出边的集合。另外，\code{Node}持有\code{NodeDef, OpDef}。其中，\code{NodeDef}包含设备分配信息，及其\ascii{OP}的属性值列表；\code{OpDef}持有\ascii{OP}的元数据，包括\ascii{OP}输入输出类型等信息。
+\code{Node} (node) can have zero or more input/output edges and use \code{in\_edges, out\_edges} to represent the set of input and output edges, respectively. In addition, \code{Node} holds \code{NodeDef, OpDef}. Where \code{NodeDef} contains device allocation information and a list of attribute values ​​for \ascii{OP}; \code{OpDef} holds metadata for \ascii{OP}, including \ascii{OP} input and output types, etc. information.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/cc-node-model.png}
-\caption{领域对象：Node}
+\caption{Domain object: Node}
  \label{fig:cc-node-model}
 \end{figure}
 
-\subsubsection{输入边}
+\subsubsection{input side}
 
-在输入边的集合中，可以按照索引\code{(dst\_input)}线性查找。当节点输入的边比较多时，可能会成为性能的瓶颈。依次类推，按照索引\code{(src\_output)}查找输出边，算法类同。
+In the collection of input edges, you can linearly search by index \code{(dst\_input)}. When the node inputs more edges, it may become a performance bottleneck. And so on, according to the index \code{(src\_output)} to find the output edge, the algorithm is similar.
 
 \begin{leftbar}
 \begin{c++}
 Status Node::input_edge(int idx, const Edge** e) const {
   for (auto edge : in_edges()) {
     if (edge->dst_input() == idx) {
-      *e = edge;
+      * e = edge;
       return Status::OK();
     }
   }
@@ -1088,9 +1088,9 @@ Status Node::input_edge(int idx, const Edge** e) const {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{前驱节点}
+\subsubsection{precursor node}
 
-首先通过\code{idx}索引找到输入边，然后通过输入边找到前驱节点。依次类推，按照索引查找后驱节点，算法类同。
+First find the input edge through the \code{idx} index, then find the precursor node through the input side. And so on, according to the index to find the rear drive node, the algorithm is similar.
 
 \begin{leftbar}
 \begin{c++}
@@ -1105,20 +1105,20 @@ Status Node::input_node(int idx, const Node** n) const {
 
 \subsection{图}
 
-\code{Graph}(计算图)就是节点与边的集合。计算图是一个\ascii{DAG}图，计算图的执行过程将按照\ascii{DAG}的拓扑排序，依次启动\ascii{OP}的运算。其中，如果存在多个入度为\ascii{0}的节点，\ascii{TensorFlow}运行时可以实现并发，同时执行多个\ascii{OP}的运算，提高执行效率。
+\code{Graph} is a collection of nodes and edges. The calculation graph is a \ascii{DAG} diagram. The execution of the calculation graph will be sorted according to the topology of \ascii{DAG}, and the operation of \ascii{OP} will be started in turn. Among them, if there are multiple nodes with the degree of intrusion \ascii{0}, the \ascii{TensorFlow} runtime can implement concurrency and execute multiple \ascii{OP} operations at the same time to improve execution efficiency.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/cc-graph-model.png}
-\caption{领域模型：图}
+\caption{domain model: diagram}
  \label{fig:cc-graph-model}
 \end{figure}
 
 \subsubsection{空图}
 
-计算图的初始状态，并非是一个空图。实现添加了两个特殊的节点：\code{Source}与\code{Sink}节点，分别表示\ascii{DAG}图的起始节点与终止节点。其中，\code{Source}的\code{id}为\ascii{0}，\code{Sink}的\code{id}为\ascii{1}；依次论断，普通\ascii{OP}节点的\ascii{id}将大于\ascii{1}。
+Calculating the initial state of the graph is not an empty graph. The implementation adds two special nodes: \code{Source} and \code{Sink} nodes, which represent the starting and ending nodes of the \ascii{DAG} graph, respectively. Where \code{Source}'s \code{id} is \ascii{0}, \code{Sink}'s \code{id} is \ascii{1}; in turn, ordinary \ascii{OP}node\ Ascii{id} will be greater than \ascii{1}.
 
-\code{Source}与\code{Sink}之间，通过连接「控制依赖」的边，保证计算图的执行始于\code{Source}节点，终于\code{Sink}节点。它们之前的控制依赖边，其\code{src\_output, dst\_input}值都为\ascii{-1}。
+Between \code{Source} and \code{Sink}, by connecting the edges of the "control dependencies", the execution of the calculation graph starts at the \code{Source} node, finally the \code{Sink} node. Their previous control depends on the edge, and their \code{src\_output, dst\_input} values ​​are all \ascii{-1}.
 
 \begin{figure}[H]
 \centering
@@ -1127,7 +1127,7 @@ Status Node::input_node(int idx, const Node** n) const {
  \label{fig:cc-empty-graph}
 \end{figure}
 
-\code{Source}与\code{Sink}是两个内部实现保留的节点，其节点名称以下划线开头，分别使用\code{\_SOURCE}和\code{\_SINK}命名；并且，它们都是\code{NoOp}，表示不执行任何计算。
+\code{Source} and \code{Sink} are two internal implementation-reserved nodes whose node names begin with an underscore and are named with \code{\_SOURCE} and \code{\_SINK} respectively; and they are \ Code{NoOp}, which means no calculation is performed.
 
 \begin{leftbar}
 \begin{c++}
@@ -1152,22 +1152,22 @@ Graph::Graph(const OpRegistryInterface* ops)
 \end{c++}
 \end{leftbar}
 
-习惯上，仅包含\code{Source}与\code{Sink}节点的计算图也常常称为空图。
+Conventionally, computational graphs that only contain \code{Source} and \code{Sink} nodes are often referred to as empty maps.
 
-\subsubsection{非空图}
+\subsubsection{Non-empty map}
 
-在前端，用户使用\ascii{OP}构造器，将构造任意复杂度的计算图。对于运行时，实现将用户构造的计算图通过控制依赖的边与\code{Source/Sink}节点连接，保证计算图执行始于\code{Source}节点，终于\code{Sink}节点。
+At the front end, the user uses the \ascii{OP} constructor to construct a computational graph of any complexity. For runtime, the implementation of the user-constructed computational graph is connected to the \code{Source/Sink} node by controlling the dependent edges, ensuring that the computation graph execution begins at the \code{Source} node, and finally the \code{Sink} node.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/cc-non-empty-graph.png}
-\caption{非空图}
+\caption{non-empty map}
  \label{fig:cc-non-empty-graph}
 \end{figure}
 
-\subsubsection{添加边}
+\subsubsection{Add Edge}
 
-计算图的构造过程非常简单，首先通过\code{Graph::AddNode}在图中放置节点，然后再通过\code{Graph::AddEdge}在图中放置边，实现节点之间的连接。
+The construction process of the calculation graph is very simple. First, put the nodes in the graph through \code{Graph::AddNode}, and then place the edges in the graph through \code{Graph::AddEdge} to realize the connection between the nodes.
 
 \begin{leftbar}
 \begin{c++}
@@ -1184,9 +1184,9 @@ const Edge* Graph::AllocEdge() const {
 }
 
 const Edge* Graph::AddEdge(Node* source, int x, Node* dest, int y) {
-  auto e = AllocEdge();
+  auto e = AllocEdge ();
   e->src_ = source;
-  e->dst_ = dest;
+  e-> dst_ = dest;
   e->src_output_ = x;
   e->dst_input_ = y;
 
@@ -1200,9 +1200,9 @@ const Edge* Graph::AddEdge(Node* source, int x, Node* dest, int y) {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{添加控制依赖边}
+\subsubsection{Add control dependency edge}
 
-添加控制依赖边，则可以转发调用\code{Graph::AddEdge}实现；此时，\code{src\_output, dst\_input}都为\ascii{-1}。
+Add control to the dependent edge, you can forward the call to the \code{Graph::AddEdge} implementation; at this point, \code{src\_output, dst\_input} are both \ascii{-1}.
 
 \begin{leftbar}
 \begin{c++}
@@ -1212,29 +1212,28 @@ const Edge* Graph::AddControlEdge(Node* src, Node* dst) {
 \end{c++}
 \end{leftbar}
 
-\subsection{OpDef仓库}
+\subsection{OpDef repository}
 
-同样地，\code{OpDef}仓库在\ascii{C++}系统\code{main}函数启动之前完成\code{OpDef}的加载和注册。它使用\ascii{REGISTER\_OP}宏完成\ascii{OpDef}的注册。
+Similarly, the \code{OpDef} repository completes the loading and registration of \code{OpDef} before the \ascii{C++}system\code{main} function starts. It uses the \ascii{REGISTER\_OP} macro to complete the registration of \ascii{OpDef}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/cc-op-repo.png}
-\caption{OpDef注册：使用REGISTER\_OP}
+\caption{OpDef registration: use REGISTER\_OP}
  \label{fig:cc-op-repo}
 \end{figure}
 
 \end{content}
 
-\section{图传递}
+\section{图传}
 
 \begin{content}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-graph-creation.png}
-\caption{图的序列化与反序列化}
+\caption{Serialization and deserialization of graphs}
  \label{fig:py-graph-creation}
 \end{figure}
 
 \end{content}
-

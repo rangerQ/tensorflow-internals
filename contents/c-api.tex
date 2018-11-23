@@ -3,39 +3,39 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{C API：分水岭} 
+\chapter{C API: Watershed} 
 \label{ch:c-api}
 
 \begin{content}
 
-本章通过客户端\ascii{Session}生命周期的实现为例，揭示前端\ascii{Python}与后端\cpp{}系统的实现通道，揭示\ascii{TensorFlow}多语言编程的奥秘。
+This chapter uses the implementation of the client\ascii{Session} lifecycle as an example to reveal the implementation channel of the front-end \ascii{Python} and the backend \cpp{} system, revealing the mystery of \ascii{TensorFlow} multi-language programming.
 
 \end{content}
 
-\section{Swig：幕后英雄}
+\section{Swig: Behind the scenes}
 
 \begin{content}
 
-前端多语言编程环境与后端\cpp{}实现系统的通道归功于\ascii{Swig}的包装器。\ascii{TensorFlow}使用\ascii{Bazel}的构建工具，在系统编译之前启动\ascii{Swig}的代码生成过程，通过\code{tensorflow.i}自动生成了两个适配(\ascii{Wrapper})文件：
+The front-end multi-language programming environment and the backend \cpp{} implementation of the system's channel are attributed to the \ascii{Swig} wrapper. \ascii{TensorFlow} uses the \ascii{Bazel} build tool to start the \ascii{Swig} code generation process before the system is compiled, and automatically generates two adaptations via \code{tensorflow.i} (\ascii{Wrapper })file:
 
 \begin{enum}
-  \eitem{\code{pywrap\_tensorflow\_internal.py}:  负责对接上层\ascii{Python}调用；}
-  \eitem{\code{pywrap\_tensorflow\_internal.cc}: 负责对接下层\ascii{C API}调用。}
+  \eitem{\code{pywrap\_tensorflow\_internal.py}: Responsible for docking the upper \ascii{Python} call;}
+  \eitem{\code{pywrap\_tensorflow\_internal.cc}: Responsible for docking the underlying \ascii{C API} call. }
 \end{enum}
 
-如\refig{swig}所示，\code{pywrap\_tensorflow\_internal.py}模块首次被导入时，自动地加载\code{\_pywrap\_tensorflow\_internal.so}的动态链接库；其中，\code{\_pywrap\_tensorflow\_internal.so}包含了整个\tf{}运行时的所有符号。在\code{pywrap\_tensorflow\_internal.cc}的实现中，静态注册了一个函数符号表，实现了\ascii{Python}函数名到\ascii{C}函数名的二元关系。在运行时，按照\ascii{Python}的函数名称，匹配找到对应的\ascii{C}函数实现，最终实现\ascii{Python}到\code{c\_api.c}具体实现的调用关系。
+As shown by \refig{swig}, the \code{pywrap\_tensorflow\_internal.py} module automatically loads the dynamic link library of \code{\_pywrap\_tensorflow\_internal.so} when it is first imported; where \code {\_pywrap\_tensorflow\_internal.so} contains all the symbols for the entire \tf{} runtime. In the implementation of \code{pywrap\_tensorflow\_internal.cc}, a function symbol table is statically registered, and the binary relationship of the \ascii{Python} function name to the \ascii{C} function name is implemented. At runtime, according to the function name of \ascii{Python}, the matching finds the corresponding \ascii{C} function implementation, and finally realizes the calling relationship of \ascii{Python} to \code{c\_api.c}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=1.0\textwidth]{figures/swig.png}
-\caption{Swig代码生成器}
+\caption{SwigCode Generator}
  \label{fig:swig}
 \end{figure}
 
-其中，\ascii{Bazel}的生成规则定义于\code{//tensorflow/python:pywrap\_tensorflow\_internal}，如下代码所示。
+The generation rules for \ascii{Bazel} are defined in \code{//tensorflow/python:pywrap\_tensorflow\_internal} as shown in the following code.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 tf_py_wrap_cc(
     name = "pywrap_tensorflow_internal",
     srcs = ["tensorflow.i"],
@@ -69,58 +69,58 @@ tf_py_wrap_cc(
 \end{python}
 \end{leftbar}
 
-下文以客户端\ascii{Session}生命周期的实现为例，揭示前端\ascii{Python}与后端\cpp{}系统的实现通道。
+The following takes the implementation of the client\ascii{Session} lifecycle as an example to reveal the implementation channel of the front-end \ascii{Python} and backend \cpp{} systems.
 
 \end{content}
 
-\section{会话控制}
+\section{session control}
 
 \begin{content}
 
-严格意义上，\ascii{C API}并非是\ascii{Client}与\ascii{Master}的分界线。如\refig{tf-client-session}所示，\ascii{Client}存在部分\cpp{}实现，即\code{tensorflow::Session}。其中，\code{tf.Session}实例直接持有\code{tensorflow::Session}实例的句柄。在实际运行时环境中，\code{tensorflow::Session}可能存在多种实现。例如，\code{DirectSession}负责\emph{本地模式}的会话控制。而\code{GrpcSession}负责基于\ascii{gRPC}协议的\emph{分布式模式}的会话控制。一般地，用户使用的是\code{tf.Session}实施编程，而非\code{tensorflow::Session}。
+Strictly speaking, \ascii{C API} is not the dividing line between \ascii{Client} and \ascii{Master}. As shown by \refig{tf-client-session}, \ascii{Client} has a partial \cpp{} implementation, ie \code{tensorflow::Session}. The \code{tf.Session} instance directly holds the handle of the \code{tensorflow::Session} instance. In the actual runtime environment, there may be multiple implementations of \code{tensorflow::Session}. For example, \code{DirectSession} is responsible for session control for \emph{local mode}. And \code{GrpcSession} is responsible for session control of \emph{distributed mode} based on \ascii{gRPC} protocol. In general, users use \code{tf.Session} to implement programming instead of \code{tensorflow::Session}.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/tf-client-session.png}
-\caption{客户端：tensorflow::Session实例创建过程}
+\caption{client: tensorflow::Session instance creation process}
  \label{fig:tf-client-session}
 \end{figure}
 
 \end{content}
 
-\section{会话生命周期}
+\section{session life cycle}
 
 \begin{content}
 
-会话的生命周期包括会话的创建，创建计算图，扩展计算图，执行计算图，关闭会话，销毁会话的基本过程。在前端\ascii{Python}和后端\cpp{}表现为两套相兼容的接口实现。
+The life cycle of a session includes the creation of a session, the creation of a calculation graph, the expansion of a computation graph, the execution of a computation graph, the closure of a session, and the destruction of a session. The front-end \ascii{Python} and backend\cpp{} behave as two sets of compatible interface implementations.
 
-\subsection{Python前端}
+\subsection{Python frontend}
 
-如\refig{py-session-lifecycle}所示，在\ascii{Python}前端，\code{Session}的生命周期主要体现在：
+As shown in \refig{py-session-lifecycle}, in the \ascii{Python} front end, the life cycle of \code{Session} is mainly reflected in:
 
 \begin{enum}
   \eitem{创建\code{Session(target)}；}
-  \eitem{迭代执行\code{Session.run(fetches, feed\_dict)}；}
+  \eitem{iteration execution\code{Session.run(fetches, feed\_dict)};}
     \begin{enum}
       \eitem{\code{Session.\_extend\_graph(graph)}；}
       \eitem{\code{Session.TF\_Run(feeds, fetches, targets)}；}
     \end{enum}
-  \eitem{关闭\code{Session}；}
-  \eitem{销毁\code{Session}；}
+  \eitem{close\code{Session};}
+  \eitem{destroy \code{Session};}
 \end{enum}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.5\textwidth]{figures/py-session-lifecycle.png}
-\caption{Python: Session生命周期}
+\caption{Python: Session lifecycle}
  \label{fig:py-session-lifecycle}
 \end{figure}
 
-例如，此处创建了本地模式的\code{Session}实例，并启动\code{mnist}的训练过程。
+For example, here the local mode \code{Session} instance is created and the training process for \code{mnist} is started.
 
 \begin{leftbar}
-\begin{python}
-sess = tf.Session()
+\ Begin {python}
+sess = tf.Session ()
 for _ in range(1000):
   batch_xs, batch_ys = mnist.train.next_batch(100)
   sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
@@ -128,27 +128,27 @@ sess.close()
 \end{python}
 \end{leftbar}
 
-\subsection{C++后端}
+\subsection{C++Backend}
 
-相应地，在\cpp{}后端，\code{Session}的生命周期主要体现在：
+Accordingly, in the \cpp{} backend, the life cycle of \code{Session} is mainly reflected in:
 
 \begin{enum}
-  \eitem{根据\code{target}多态创建\code{Session}；}
-  \eitem{\code{Session.Create(graph)}：有且仅有一次；}
-  \eitem{\code{Session.Extend(graph)}：零次或多次；}
+  \eitem{Create \code{Session} based on \code{target} polymorphism;}
+  \eitem{\code{Session.Create(graph)}: Yes and only once;}
+  \eitem{\code{Session.Extend(graph)}: zero or more times;}
   \eitem{迭代执行\code{Session.Run(inputs, outputs, targets)}；}
   \eitem{关闭\code{Session.Close}；}
-  \eitem{销毁\code{Session}对象。}
+  \eitem{Destroy the \code{Session} object. }
 \end{enum}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/cc-session-lifecycle.png}
-\caption{C++: Session生命周期}
+\caption{C++: Session lifecycle}
  \label{fig:cc-session-lifecycle}
 \end{figure}
 
-例如，此处创建了本地模式的\code{DirectSession}实例，并启动计算图的执行过程。
+For example, here the local mode \code{DirectSession} instance is created and the execution of the calculation graph is started.
 
 \begin{leftbar}
 \begin{c++}
@@ -182,22 +182,22 @@ session->Close();
 
 \end{content}
 
-\section{创建会话}
+\section{Create session}
 
 \begin{content}
 
-下面介绍Session创建的详细过程，从\ascii{Python}前端为起点，通过\ascii{Swig}自动生成的\ascii{Python-C++}的包装器，并以此为媒介，实现了\ascii{Python}到\ascii{TensorFlow}的\ascii{C API}的调用。其中，\ascii{C API}是前端系统与后端系统的分水岭。
+The following is a detailed process of session creation. Starting from the \ascii{Python} front end, the \ascii{Python-C++} wrapper automatically generated by \ascii{Swig} is used as a medium to implement \ascii{Python } Call to \ascii{C API} of \ascii{TensorFlow}. Among them, \ascii{C API} is the watershed of the front-end system and the back-end system.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=1.0\textwidth]{figures/py-create-session.png}
-\caption{创建会话}
+\caption{Create session}
  \label{fig:py-create-session}
 \end{figure}
 
-\subsection{编程接口}
+\subsection{programming interface}
 
-当\ascii{Client}要启动计算图的执行过程时，先创建了一个\code{Session}实例，进而调用父类\code{BaseSession}的构造函数。
+When \ascii{Client} wants to start the execution of the calculation graph, it first creates a \code{Session} instance, and then calls the constructor of the parent class \code{BaseSession}.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/python/client/session.py}]
@@ -209,7 +209,7 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
-在\code{BaseSession}的构造函数中，将调用\code{pywrap\_tensorflow}模块中的函数。其中，\code{TF\_NewDeprecatedSession}是遗留下来的，已被废弃的接口实现。在新的\ascii{API}中，直接将图实例传递给后端\ascii{C++}，避免了前后端图实例序列化的开销。
+In the constructor of \code{BaseSession}, the function in the \code{pywrap\_tensorflow} module will be called. Among them, \code{TF\_NewDeprecatedSession} is a legacy interface that has been deprecated. In the new \ascii{API}, passing the graph instance directly to the backend \ascii{C++} avoids the overhead of serializing the front and back graph instances.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/python/client/session.py}]
@@ -239,7 +239,7 @@ class BaseSession(SessionInterface):
 \end{python}
 \end{leftbar}
 
-如\refig{tf-graph-inst}所示，\code{ScopedTFGraph}是对\code{TF\_Graph}的包装器，完成类似于\ascii{C++}的\ascii{RAII}的工作机制。而\code{TF\_Graph}持有\code{ternsorflow::Graph}实例。其中，\code{self.\_graph.\_c\_graph}返回一个\code{TF\_Graph}实例，后者通过\ascii{C API}创建的图实例。
+As shown by \refig{tf-graph-inst}, \code{ScopedTFGraph} is a wrapper for \code{TF\_Graph} that does the work of \ascii{RAII} like \ascii{C++}. And \code{TF\_Graph} holds the \code{ternsorflow::Graph} instance. Where \code{self.\_graph.\_c\_graph} returns a \code{TF\_Graph} instance, which is created by \ascii{C API}.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/python/framework/ops.py}]
@@ -272,13 +272,13 @@ class ScopedTFGraph(object):
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.3\textwidth]{figures/tf-graph-inst.png}
-\caption{前后端：图实例传递}
+\caption{front and rear: pass the graph instance}
  \label{fig:tf-graph-inst}
 \end{figure}
 
-\subsubsection{Python包装器}
+\subsubsection{Python wrapper}
 
-在\code{pywrap\_tensorflow}模块中，通过\code{\_pywrap\_tensorflow\_internal}的转发，实现了从\ascii{Python}到动态连接库\code{\_pywrap\_tensorflow\_internal.so}的函数调用。
+In the \code{pywrap\_tensorflow} module, through \code{\_pywrap\_tensorflow\_internal} forwarding, from \ascii{Python} to the dynamic link library \code{\_pywrap\_tensorflow\_internal.so} Function call.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.py}]
@@ -290,9 +290,9 @@ def TF_NewSession(graph, opts, status):
 \end{python}
 \end{leftbar}
 
-\subsubsection{C++包装器}
+\subsubsection{C++ wrapper}
 
-在\code{pywrap\_tensorflow\_internal.cc}的具体实现中，静态注册了函数调用的符号表，实现\ascii{Python}的函数名称到\cpp{}函数实现的具体映射。
+In the concrete implementation of \code{pywrap\_tensorflow\_internal.cc}, the symbol table of the function call is statically registered, and the function name of \ascii{Python} is implemented to the specific mapping of the \cpp{} function implementation.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.cc}]
@@ -307,11 +307,11 @@ static PyMethodDef SwigMethods[] = {
 \end{c++}
 \end{leftbar}
 
-最终，\code{\_wrap\_TF\_NewSession/\_wrap\_TF\_NewDeprecatedSession}将分别调用\code{c\_api.h}对其开放的\ascii{API}接口：\code{TF\_NewSession/TF\_NewDeprecatedSession}。也就是说，自动生成的\code{pywrap\_tensorflow\_internal.cc}仅仅负责\ascii{Python}函数到\ascii{C/C++}函数调用的转发，最终将调用底层\ascii{C}系统向上提供的\ascii{API}接口。
+Finally, \code{\_wrap\_TF\_NewSession/\_wrap\_TF\_NewDeprecatedSession} will call \code{c\_api.h} to open the \ascii{API} interface: \code{TF\_NewSession/TF \_NewDeprecatedSession}. In other words, the automatically generated \code{pywrap\_tensorflow\_internal.cc} is only responsible for forwarding the \ascii{Python} function to the \ascii{C/C++} function call, and will eventually call the underlying \ascii{C} system up. The \ascii{API} interface provided.
 
 \subsection{C API}
 
-\code{c\_api.h}是\ascii{TensorFlow}的后端执行系统面向前端开放的公共\ascii{API}接口。其中，新的接口实现采用了引用计数的技术，实现图实例在多个\code{Session}实例中共享。
+\code{c\_api.h} is the public \ascii{API} interface open to the front end of the \ascii{TensorFlow} backend execution system. Among them, the new interface implementation uses the technique of reference counting, and the implementation of the graph instance is shared among multiple \code{Session} instances.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/c/c\_api.c}]
@@ -344,9 +344,9 @@ TF_DeprecatedSession* TF_NewDeprecatedSession(const TF_SessionOptions* opt,
 \end{c++}
 \end{leftbar}
 
-\subsection{后端系统}
+\subsection{backend system}
 
-\code{NewSession}将根据前端传递的\code{target}，使用\code{SessionFactory}多态创建不同类型的\code{tensorflow::Session}实例。
+\code{NewSession} will create different types of \code{tensorflow::Session} instances using \code{SessionFactory} polymorphism based on the \code{target} passed to the frontend.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/c/c\_api.c}]
@@ -366,39 +366,39 @@ Status NewSession(const SessionOptions& options, Session** out_session) {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{工厂方法}
+\subsubsection{factory method}
 
-在后端\cpp{}实现中，\code{tensorflow::Session}的创建使用了抽象工厂方法。如果\code{SessionOptions}中的\code{target}为空字符串(默认的)，则创建\code{DirectSession}实例，启动本地运行模式；如果\code{SessionOptions}中的\code{target}以\code{grpc://}开头，则创建\code{GrpcSession}实例，启动基于\code{RPC}的分布式运行模式。如\refig{cc-session-factory}所示。
+In the backend \cpp{} implementation, the creation of \code{tensorflow::Session} uses the abstract factory method. If \code{target} in \code{SessionOptions} is an empty string (the default), create a \code{DirectSession} instance and start the local run mode; if \code{target} in \code{SessionOptions} At the beginning of \code{grpc://}, create a \code{GrpcSession} instance and start a distributed run mode based on \code{RPC}. As shown in \refig{cc-session-factory}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=1.0\textwidth]{figures/cc-session-factory.png}
-\caption{tensorflow::Session创建：抽象工厂方法}
+\caption{tensorflow::Session creation: abstract factory method}
  \label{fig:cc-session-factory}
 \end{figure}
 
 \end{content}
 
-\section{创建/扩展图}
+\section{Create/Extension Diagram}
 
 \begin{content}
 
-在既有的接口实现中，需要将图构造期构造好的图序列化，并传递给后端\ascii{C++}系统。而在新的接口实现中，无需实现图的创建或扩展。因为在创建\ascii{OP}时，节点实时添加至后端\ascii{C++}系统的图实例中。但是，既有接口实现，对于理解系统行为较为重要，在次做简单地阐述。
+In the existing interface implementation, the graph constructed by the graph construction period needs to be serialized and passed to the backend \ascii{C++} system. In the new interface implementation, there is no need to implement the creation or extension of the graph. Because when you create \ascii{OP}, the node is added to the graph instance of the backend \ascii{C++} system in real time. However, the implementation of the existing interface is more important for understanding the behavior of the system.
 
-\ascii{Python}前端将迭代调用\code{Session.run}接口，将构造好的计算图，以\code{GraphDef}的形式发送给\cpp{}后端。其中，前端每次调用\code{Session.run}接口时，都会试图将新增节点的计算图发送给后端系统，以便将新增节点的计算图\ascii{Extend}到原来的计算图中。特殊地，在首次调用\code{Session.run}时，将发送整个计算图给后端系统。
+The \ascii{Python} frontend will iteratively call the \code{Session.run} interface, and the constructed calculation graph will be sent to the \cpp{} backend as \code{GraphDef}. Each time the front end calls the \code{Session.run} interface, it will try to send the calculation graph of the newly added node to the backend system, so as to add the calculation graph \ascii{Extend} of the newly added node to the original calculation diagram. . Specifically, the first computational graph will be sent to the backend system when \code{Session.run} is first called.
 
-后端系统首次调用\code{Session.Extend}时，转调(或等价实现)\code{Session.Create}。以后，后端系统每次调用\code{Session.Extend}时将真正执行\code{Extend}的语义，将新增的计算图的节点追加至原来的计算图中。
+The first time the backend system calls \code{Session.Extend}, it is transposed (or equivalent) \code{Session.Create}. Later, each time the backend system calls \code{Session.Extend}, the semantics of \code{Extend} will be actually executed, and the nodes of the newly added calculation graph will be added to the original calculation graph.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-session-create-graph.png}
-\caption{创建图}
+\caption{Create a diagram}
  \label{fig:py-session-create-graph}
 \end{figure}
 
-\subsection{编程接口}
+\subsection{programming interface}
 
-在既有的接口实现中，通过\code{\_extend\_graph}实现图实例的扩展。
+In the existing interface implementation, the extension of the graph instance is implemented by \code{\_extend\_graph}.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/python/client/session.py}]
@@ -411,7 +411,7 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
-在首次调用\code{self.\_extend\_graph}时，或者有新的节点被添加至计算图中时，对计算图\code{GraphDef}实施序列化操作，最终触发\code{tf\_session.TF\_ExtendGraph}的调用。
+When \code{self.\_extend\_graph} is called for the first time, or when a new node is added to the calculation graph, serialization is performed on the calculation graph \code{GraphDef}, which finally triggers \code{tf\_session. Call of TF\_ExtendGraph}.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/python/client/session.py}]
@@ -433,7 +433,7 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Python包装器}
+\subsubsection{Python wrapper}
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.py}]
@@ -442,7 +442,7 @@ def TF_ExtendGraph(sess, graph_def, status):
 \end{python}
 \end{leftbar}
 
-\subsubsection{C++包装器}
+\subsubsection{C++ wrapper}
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.cc}]
@@ -456,14 +456,14 @@ static PyMethodDef SwigMethods[] = {
 
 \subsection{C API}
 
-\code{TF\_ExtendGraph}是\ascii{C API}对接上层编程环境的接口。首先，它完成计算图\code{GraphDef}的反序列化，最终调用\code{tensorflow::Session}的\code{Extend}接口。
+\code{TF\_ExtendGraph} is the interface for the \ascii{C API} docking of the upper programming environment. First, it completes the deserialization of the computed graph \code{GraphDef} and finally calls the \code{Extend} interface of \code{tensorflow::Session}.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/c/c\_api.c}]
 void TF_ExtendGraph(TF_DeprecatedSession* sess, 
   const void* proto, size_t proto_len, TF_Status* status) {
   GraphDef g;
-  if (!tensorflow::ParseProtoUnlimited(&g, proto, proto_len)) {
+  if (! tensorflow :: ParseProtoUnlimited (& g, therefore, proto_len)) {
     status->status = InvalidArgument("Invalid GraphDef");
     return;
   }
@@ -472,9 +472,9 @@ void TF_ExtendGraph(TF_DeprecatedSession* sess,
 \end{c++}
 \end{leftbar}
 
-\subsection{后端系统}
+\subsection{backend system}
 
-\code{tensorflow::Session}在运行时根据\code{Session}的动态类型，将多态地调用相应子类的实现。
+\code{tensorflow::Session} will polymorphically call the implementation of the corresponding subclass at runtime based on the dynamic type of \code{Session}.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/core/common\_runtime/session.h}]
@@ -486,11 +486,11 @@ public:
 \end{c++}
 \end{leftbar}
 
-其中，\code{Create}表示在当前的\code{tensorflow::Session}实例上注册计算图，如果要注册新的计算图，需要关闭该\code{tensorflow::Session}对象。\code{Extend}表示在\code{tensorflow::Session}实例上已注册的计算图上追加节点。\code{Extend}首次执行时，等价于\code{Create}的语义，因为首次\code{Extend}时，已注册的计算图为空。事实上，系统就是按照如上方案实现的，此处以\code{GrpcSession}实现为例。
+Where \code{Create} means to register the calculation graph on the current \code{tensorflow::Session} instance. If you want to register a new calculation graph, you need to close the \code{tensorflow::Session} object. \code{Extend} indicates that the node is appended to the computed graph on the \code{tensorflow::Session} instance. When \code{Extend} is first executed, it is equivalent to the semantics of \code{Create}, because for the first time \code{Extend}, the registered calculation graph is empty. In fact, the system is implemented according to the above scheme, here is an example of the \code{GrpcSession} implementation.
 
-\subsubsection{首次扩展图: GrpcSession}
+\subsubsection{First expansion map: GrpcSession}
 
-如果判断引用\code{Master}的\code{handle}不为空，则执行\code{Extend}；否则，执行\code{Create}的语义，建立与\code{Master}的连接，并持有\code{MasterSession}的\code{handle}。
+If it is judged that \code{handle} of \code{Master} is not empty, execute \code{Extend}; otherwise, execute the semantics of \code{Create}, establish a connection with \code{Master}, and hold \code{handle} of \code{MasterSession}.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/core/distributed\_runtime/rpc/grpc\_session.cc}]
@@ -514,22 +514,22 @@ Status GrpcSession::ExtendImpl
 
 \end{content}
 
-\section{迭代运行}
+\section{iteration run}
 
 \begin{content}
 
-如\refig{py-session-run}所示，\ascii{Python}前端\code{Session.run}实现将\code{fetches, feed\_dict}传递给后端系统，后端系统调用\code{Session.Run}接口。后端系统的一次\code{Session.Run}执行常常被称为一次\ascii{Step}。其中，\ascii{Step}的执行过程是\ascii{TensorFlow}运行时的关键路径。
+As shown in \refig{py-session-run}, the \ascii{Python} frontend\code{Session.run} implementation passes \code{fetches, feed\_dict} to the backend system, and the backend system calls \code{ Session.Run} interface. A \code{Session.Run} execution of the backend system is often referred to as \ascii{Step}. Among them, the execution process of \ascii{Step} is the key path of \ascii{TensorFlow} runtime.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=1.0\textwidth]{figures/py-session-run.png}
-\caption{迭代执行}
+\caption{iteration execution}
  \label{fig:py-session-run}
 \end{figure}
 
-\subsection{编程接口}
+\subsection{programming interface}
 
-当\ascii{Client}调用\code{Session.run}时，最终会调用\code{pywrap\_tensorflow\_internal}模块中的函数。
+When \ascii{Client} calls \code{Session.run}, the function in the \code{pywrap\_tensorflow\_internal} module will eventually be called.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/python/client/session.py}]
@@ -552,7 +552,7 @@ class Session(BaseSession):
 \end{leftbar}
 
 
-\subsubsection{Python包装器}
+\subsubsection{Python wrapper}
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.py}]
@@ -568,7 +568,7 @@ def TF_Run(sess, options, feeds, outputs,
 \end{python}
 \end{leftbar}
 
-\subsubsection{C++包装器}
+\subsubsection{C++ wrapper}
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.cc}]
@@ -583,11 +583,11 @@ static PyMethodDef SwigMethods[] = {
 \end{c++}
 \end{leftbar}
 
-最终，\code{\_wrap\_TF\_Run/\_wrap\_TF\_SessionRun\_wrapper}将分别转调\ascii{C API}对应的\code{TF\_Run/TF\_SessionRun}接口函数。
+Finally, \code{\_wrap\_TF\_Run/\_wrap\_TF\_SessionRun\_wrapper} will be transferred to the \code{TF\_Run/TF\_SessionRun} interface function corresponding to \ascii{C API}.
 
 \subsection{C API}
 
-在既有的接口中，\code{TF\_Run}是\ascii{C API}对接上层编程环境的接口。首先，它完成输入数据从\ascii{C}到\cpp{}的格式转换，并启动后台的\code{tensorflow::Session}的执行过程。当执行完成后，再将\code{outputs}的输出数据从\cpp{}到\ascii{C}的格式转换。\code{TF\_SessionRun}与\code{TF\_Run}工作机制差不多，在此不再冗述。
+In the existing interface, \code{TF\_Run} is the interface of the \ascii{C API} docking upper-level programming environment. First, it completes the format conversion of input data from \ascii{C} to \cpp{} and starts the execution of the background \code{tensorflow::Session}. When the execution is complete, convert the output data of \code{outputs} from \cpp{} to \ascii{C}. \code{TF\_SessionRun} is similar to \code{TF\_Run} and will not be redundant here.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/c/c\_api.c}]
@@ -623,9 +623,9 @@ void TF_SessionRun(TF_Session* session,
 \end{c++}
 \end{leftbar}
 
-\subsection{后端系统}
+\subsection{backend system}
 
-\code{tensorflow::Session}在运行时按照其动态类型，将多态地调用相应的子类实现。
+\code{tensorflow::Session} will call the corresponding subclass implementation polymorphically at runtime according to its dynamic type.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/core/common\_runtime/session.h}]
@@ -644,42 +644,42 @@ public:
 \end{c++}
 \end{leftbar}
 
-输入包括：
+Inputs include:
 
 \begin{enum}
-  \eitem{\code{options}：\code{Session}的运行配置参数；}
-  \eitem{\code{inputs}: 输入\code{Tensor}的名字列表；}
-  \eitem{\code{output\_names}: 输出\code{Tensor}的名字列表；}
-  \eitem{\code{targets}: 无输出，待执行的\ascii{OP}的名字列表。} 
+  \eitem{\code{options}:\code{Session} running configuration parameters;}
+  \eitem{\code{inputs}: Enter a list of names for \code{Tensor};}
+  \eitem{\code{output\_names}: Output a list of names for \code{Tensor};}
+  \eitem{\code{targets}: No output, list of names of \ascii{OP} to be executed. }
 \end{enum}
 
-输出包括：
+The output includes:
 
 \begin{enum}
-  \eitem{\code{outputs}: 输出的\code{Tensor}列表；}
-  \eitem{\code{run\_metadata}: 运行时元数据的收集器。}
+  \eitem{\code{outputs}: list of output \code{Tensor};}
+  \eitem{\code{run\_metadata}: A collector for runtime metadata. }
 \end{enum}
 
-其中，输出的\code{outputs}列表与输入的\code{output\_names}一一对应，如果运行时因并发执行，导致\code{outputs}乱序执行，最终返回时需要对照输入的\code{output\_names}名字列表，对\code{outputs}进行排序。
+Among them, the output \code{outputs} list has a one-to-one correspondence with the input \code{output\_names}. If the runtime is executed concurrently, the \code{outputs} will be executed out of order, and the final return will need to be compared with the input \code. {output\_names} name list, sorting \code{outputs}.
 
 \end{content}
 
-\section{关闭会话}
+\section{Close session}
 
 \begin{content}
 
-当计算图执行完毕后，需要关闭\code{tf.Session}，以便释放后端的系统资源，包括队列，\ascii{IO}等。会话关闭流程较为简单，如\refig{py-session-close}所示。。
+After the calculation graph is executed, you need to close \code{tf.Session} to release the backend system resources, including the queue, \ascii{IO}, and so on. The session closure process is simpler, as shown by \refig{py-session-close}. .
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-session-close.png}
-\caption{关闭会话}
+\caption{Close session}
  \label{fig:py-session-close}
 \end{figure}
 
-\subsection{编程接口}
+\subsection{programming interface}
 
-当\ascii{Client}调用\code{Session.close}时，最终会调用\code{pywrap\_tensorflow}模块中的函数: \code{TF\_CloseDeprecatedSession}。
+When \ascii{Client} calls \code{Session.close}, the function in the \code{pywrap\_tensorflow} module will eventually be called: \code{TF\_CloseDeprecatedSession}.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/python/client/session.py}]
@@ -701,7 +701,7 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Python包装器}
+\subsubsection{Python wrapper}
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.py}]
@@ -713,9 +713,9 @@ def TF_CloseDeprecatedSession(sess, status):
 \end{python}
 \end{leftbar}
 
-\subsubsection{C++包装器}
+\subsubsection{C++ wrapper}
 
-\code{\_wrap\_TF\_CloseSession/\_wrap\_TF\_CloseDeprecatedSession}将分别转调\ascii{C API}对应的\code{TF\_CloseSession/TF\_CloseDeprecatedSession}接口函数。
+\code{\_wrap\_TF\_CloseSession/\_wrap\_TF\_CloseDeprecatedSession} will be transferred to the \code{TF\_CloseSession/TF\_CloseDeprecatedSession} interface function corresponding to \ascii{C API}.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.cc}]
@@ -732,7 +732,7 @@ static PyMethodDef SwigMethods[] = {
 
 \subsection{C API}
 
-\code{TF\_CloseSession/TF\_CloseDeprecatedSession}直接完成\code{tensorflow::Session}的关闭操作。
+\code{TF\_CloseSession/TF\_CloseDeprecatedSession} directly completes the closing of \code{tensorflow::Session}.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/c/c\_api.c}]
@@ -746,9 +746,9 @@ void TF_CloseDeprecatedSession(TF_DeprecatedSession* s, TF_Status* status) {
 \end{c++}
 \end{leftbar}
 
-\subsection{后端系统}
+\subsection{backend system}
 
-\code{Session(C++)}在运行时其动态类型，将多态地调用相应的子类实现。
+\code{Session(C++)} At runtime, its dynamic type will polymorphically call the corresponding subclass implementation.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/core/common\_runtime/session.h}]
@@ -761,22 +761,22 @@ public:
 
 \end{content}
 
-\section{销毁会话}
+\section{Destroy session}
 
 \begin{content}
 
-当\code{tf.Session}不在被使用，由\ascii{Python}的\ascii{GC}释放。\code{Session.\_\_del\_\_}被调用后，将启动后台\code{tensorflow::Session}对象的析构过程。如\refig{py-delete-session}所示。
+When \code{tf.Session} is not being used, it is released by \ascii{GC} of \ascii{Python}. After \code{Session.\_\_del\_\_} is called, the destructor of the background \code{tensorflow::Session} object will be started. As shown in \refig{py-delete-session}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-delete-session.png}
-\caption{销毁会话}
+\caption{destroy session}
  \label{fig:py-delete-session}
 \end{figure}
 
-\subsection{编程接口}
+\subsection{programming interface}
 
-当\ascii{Client}调用\code{Session.\_\_del\_\_}时，先启动\code{Session.close}的调用，最终会调用\code{pywrap\_tensorflow}模块中的函数\code{TF\_DeleteSession/TF\_DeleteDeprecatedSession}。
+When \ascii{Client} calls \code{Session.\_\_del\_\_}, the call to \code{Session.close} is started, and the function in the \code{pywrap\_tensorflow} module will be called. Code{TF\_DeleteSession/TF\_DeleteDeprecatedSession}.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/python/client/session.py}]
@@ -792,7 +792,7 @@ class Session(BaseSession):
     # 2. delete session unconditionally.
     if self._session is not None:
       try:
-        status = c_api_util.ScopedTFStatus()
+        c_api_util.ScopedTFStatus state = ()
         if self._created_with_new_api:
           tf_session.TF_DeleteSession(self._session, status)
         else:
@@ -803,11 +803,11 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Python包装器}
+\subsubsection{Python wrapper}
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.py}]
-def TF_DeleteSession(sess, status):
+def TF_DeleteSession (gender, status):
     return _pywrap_tensorflow_internal.TF_DeleteSession(sess, status)
 
 def TF_DeleteDeprecatedSession(sess, status):
@@ -815,9 +815,9 @@ def TF_DeleteDeprecatedSession(sess, status):
 \end{python}
 \end{leftbar}
 
-\subsubsection{C++包装器}
+\subsubsection{C++ wrapper}
 
-\code{\_wrap\_TF\_DeleteSession/\_wrap\_TF\_DeleteDeprecatedSession}将分别转调\ascii{C API}对应的\code{TF\_DeleteSession/TF\_DeleteDeprecatedSession}接口函数。
+\code{\_wrap\_TF\_DeleteSession/\_wrap\_TF\_DeleteDeprecatedSession} will be transferred to the \code{TF\_DeleteSession/TF\_DeleteDeprecatedSession} interface function corresponding to \ascii{C API}.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.cc}]
@@ -834,7 +834,7 @@ static PyMethodDef SwigMethods[] = {
 
 \subsection{C API}
 
-\code{TF\_DeleteDeprecatedSession}直接完成\code{tensorflow::Session}对象的释放。而新的接口\code{TF\_DeleteSession}实现中，当需要删除\code{tensorflow::Session}实例时，相应的图实例的计数器减\ascii{1}。当计数器为\ascii{0}时，则删除该图实例；否则，不删除该图实例。
+\code{TF\_DeleteDeprecatedSession} directly completes the release of the \code{tensorflow::Session} object. In the new interface \code{TF\_DeleteSession} implementation, when the \code{tensorflow::Session} instance needs to be deleted, the counter of the corresponding graph instance is decremented by \ascii{1}. When the counter is \ascii{0}, the graph instance is deleted; otherwise, the graph instance is not deleted.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/c/c\_api.c}]
@@ -860,9 +860,9 @@ void TF_DeleteDeprecatedSession(TF_DeprecatedSession* s, TF_Status* status) {
 \end{c++}
 \end{leftbar}
 
-\subsection{后端系统}
+\subsection{backend system}
 
-\code{tensorflow::Session}在运行时其动态类型，多态地调用相应子类实现的析构函数。
+\code{tensorflow::Session} is a dynamic type at runtime that polymorphically calls the destructor implemented by the corresponding subclass.
 
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/core/common\_runtime/session.h}]
@@ -875,42 +875,42 @@ public:
 
 \end{content}
 
-\section{性能调优}
+\section{Performance Tuning}
 
 \begin{content}
 
-相比遗留的接口实现，新的接口实现存在若干优化技术提升系统的性能。虽然，截止本书撰写时，新的接口并未完全对外发布，但可以预期未来将删除既有已废弃的接口，替换为了新的接口实现。
+Compared to the legacy interface implementation, the new interface implementation has several optimization techniques to improve the performance of the system. Although, as of this writing, the new interface has not been fully released, it is expected that in the future, both the obsolete interface will be removed and replaced with the new interface implementation.
 
-\subsection{共享图实例}
+\subsection{shared graph instance}
 
-如\refig{tf-graph-session-relation}所示，一个\code{Session}只能运行一个图实例。如果一个\code{Session}要运行其他的图实例，必须先关掉\code{Session}，然后再将新的图实例注册到此\code{Session}中，最后启动新的计算图的执行过程。
+As shown in \refig{tf-graph-session-relation}, a \code{Session} can only run one graph instance. If a \code{Session} is to run another graph instance, you must first close \code{Session}, then register the new graph instance to this \code{Session}, and finally start the execution of the new graph. .
 
-但反过来，一个计算图可以运行在多个\code{Session}实例上。如果在\code{Graph}实例上维持\code{Session}的引用计数器，在\code{Session}创建时，在该图实例上增加\ascii{1}；在\code{Session}销毁时(不是关闭\code{Session})，在该图实例上减少\ascii{1}；当计数器为\ascii{0}时，则自动删除图实例。在新的接口实现中，实现了该引用计数器的技术。
+But in turn, a computed graph can run on multiple \code{Session} instances. If you maintain the reference counter for \code{Session} on the \code{Graph} instance, add \ascii{1} to the image instance when \code{Session} is created; when \code{Session} is destroyed (not Close \code{Session}), reduce \ascii{1} on the graph instance; when the counter is \ascii{0}, the graph instance is automatically deleted. In the new interface implementation, the technique of referencing counters is implemented.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/tf-graph-session-relation.png}
-\caption{计算图：Session引用计数器技术}
+\caption{Calculation: Session Reference Counter Technology}
  \label{fig:tf-graph-session-relation}
 \end{figure}
 
-\subsection{消除序列化}
+\subsection{elimination of serialization}
 
-如\refig{tf-old-session-interface}所示，在遗留的接口实现中，前端\ascii{Python}在图构造期，将图构造完成后，并将其序列化，最后通过\code{Session::Create}或\code{Session::Extend}传递给后端\ascii{C++}系统。这本质是一个图实例的拷贝过程，具有很大的时延开销。
+As shown in \refig{tf-old-session-interface}, in the legacy interface implementation, the frontend \ascii{Python} is in the graph construction phase, after the graph is constructed, serialized, and finally passed through \code{ Session::Create} or \code{Session::Extend} is passed to the backend \ascii{C++} system. This is essentially a copy process of a graph instance with a large latency overhead.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/tf-old-session-interface.png}
-\caption{图实例：序列化/反序列化}
+\caption{Figure example: Serialization/Deserialization}
  \label{fig:tf-old-session-interface}
 \end{figure}
 
-如\refig{tf-new-session-interface}所示，在新的接口实现中，可以去除\code{Session}的\code{Create/Extend}的语义。在图的构造器，前端\ascii{Python}在构造每个\ascii{OP}时，直接通过\ascii{C API}将其追加至后端\ascii{C++}的图实例中，从而避免了图实例在前后端的序列化和反序列化的开销。
+As shown in \refig{tf-new-session-interface}, the semantics of \code{Create/Extend} of \code{Session} can be removed in the new interface implementation. In the constructor of the graph, the frontend \ascii{Python} is added to the backend \ascii{C++} graph instance directly by \ascii{C API} when constructing each \ascii{OP}, thus avoiding The overhead of serialization and deserialization of the graph instance at the front and back ends.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/tf-new-session-interface.png}
-\caption{图实例：实施注册ascii{OP}}
+\caption{Figure example: implementation registration ascii{OP}}
  \label{fig:tf-new-session-interface}
 \end{figure}
 

@@ -3,84 +3,84 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{本地执行} 
+\chapter{local execution} 
 \label{ch:local}
 
 \begin{content}
 
-\tf{}可以独立地运行在一个进程内，完成计算图的执行过程。本章将重点介绍本地运行时的基本架构与运行机制；重点讨论计算图剪枝、分裂、优化、执行等实现技术细节；并且详细探究在本地模式下，跨设备间\ascii{OP}之间数据交互的工作机制，及其\ascii{OP}在设备集上的编排(\ascii{placement})算法。
+\tf{} can be run independently in a process to complete the execution of the calculation graph. This chapter will focus on the basic architecture and operational mechanisms of the local runtime; focus on the implementation details of computational graph pruning, splitting, optimization, execution, etc.; and explore in detail the data between \ascii{OP} across devices. The working mechanism of the interaction, and its \ascii{OP} orchestration on the device set (\ascii{placement}) algorithm.
 
 \end{content}
 
-\section{本地模式}
+\section{Local Mode}
 \label{sec:local-runtime}
 
 \begin{content}
 
-如\refig{local}所示，在本地模式下，\ascii{Client, Master, Worker}部署在同一台机器同一进程内，并由\code{DirectSession}同时扮演这三个角色。\code{DirectSession}运行在单独的进程内，各服务实体之间是函数调用关系。
+As shown in \refig{local}, in local mode, \ascii{Client, Master, Worker} is deployed in the same process on the same machine, and these three roles are played by \code{DirectSession} at the same time. \code{DirectSession} runs in a separate process, with function call relationships between service entities.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/local.png}
-\caption{本地模式}
+\caption{local mode}
  \label{fig:local}
 \end{figure}
 
-\ascii{Client}负责计算图的构造，通过调用\code{Session.run}，启动计算图的执行过程。如\refig{local-runtime}所示，在\code{run\_step}执行过程之中，涉及计算图的剪枝、分裂、执行三个重要阶段。
+\ascii{Client} is responsible for computing the construction of the graph, starting the execution of the graph by calling \code{Session.run}. As shown in \refig{local-runtime}, during the execution of \code{run\_step}, there are three important stages involved in the pruning, splitting, and execution of computational graphs.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/local-runtime.png}
-\caption{本地模式：图操作}
+\caption{Local mode: Figure operation}
  \label{fig:local-runtime}
 \end{figure}
 
-\subsection{部分执行}
+\subsection{Partial execution}
 
-\ascii{Master}收到计算图执行命令后，启动计算图的剪枝操作。它根据计算图的输入输出反向遍历图，寻找一个最小依赖的子图，常称为\code{ClientGraph}。
+\ascii{Master} starts the pruning operation of the calculation graph after receiving the calculation diagram execution command. It reverses the traversal map based on the input and output of the computed graph, looking for a minimally dependent subgraph, often called \code{ClientGraph}.
 
-也就是说，每次执行\code{run\_step}时，并不会执行整个计算图(\code{FullGraph})，而是执行部分的子图。剪枝体现了\tf{}部分执行的设计理念。
+That is to say, each time you execute \code{run\_step}, the entire calculation graph (\code{FullGraph}) is not executed, but a partial subgraph is executed. The pruning reflects the design concept of the \tf{} part of the implementation.
 
-\subsection{并发执行}
+\subsection{Concurrent execution}
 
-然后，运行时按照当前设备集完成图的分裂，生成了很多子图，每个子图称为\code{PartitionGraph}；然后触发各个\ascii{Worker}并发地执行每个\code{PartitionGraph}；对于每一个\ascii{PartitionGraph}，运行时将启动一个\ascii{Executor}，按照其拓扑排序完成\code{PartitionGraph}的执行。
+Then, the runtime completes the splitting of the graph according to the current device set, and generates a lot of subgraphs, each of which is called \code{PartitionGraph}; then triggers each \ascii{Worker} to execute each \code{PartitionGraph} concurrently; For each \ascii{PartitionGraph}, the runtime will launch a \ascii{Executor} to complete the execution of \code{PartitionGraph} according to its topology.
 
-也就是说，分裂和执行体现了\tf{}并发执行的设计理念。
+In other words, splitting and execution embody the design philosophy of \tf{} concurrent execution.
 
-\section{会话控制}
+\section{session control}
 
-在本地模式下，其运行时由\code{DirectSession}控制。一般地，\code{DirectSession}执行计算图时，各组件之间都是函数调用关系。但是，\code{DirectSession}也存在清晰的生命周期管理机制，如\refig{local-direct-session-lifecycle}所示。
+In local mode, its runtime is controlled by \code{DirectSession}. In general, when \code{DirectSession} executes a calculation graph, each component is a function call relationship. However, \code{DirectSession} also has a clear lifecycle management mechanism, as shown by \refig{local-direct-session-lifecycle}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/local-direct-session-lifecycle.png}
-\caption{DirectSession生命周期}
+\caption{DirectSession lifecycle}
  \label{fig:local-direct-session-lifecycle}
 \end{figure}
 
-\subsection{领域模型}
+\subsection{domain model}
 
-如\refig{local-direct-session-model}所示，\code{DirectSession}持有\code{SimpleGraphExecutionState}实例，后者负责计算图的剪枝，生成\code{ClientGraph}实例。
+As shown by \refig{local-direct-session-model}, \code{DirectSession} holds the \code{SimpleGraphExecutionState} instance, which is responsible for computing the pruning of the graph and generating the \code{ClientGraph} instance.
 
-\code{DirectSession}同时持有一组线程池，但是没次\code{DirectSession.run}时，根据外部配置的索引，从线程池组里选择其一为其提供服务。因为\code{DirectSession}是线程安全的，支持多个并发执行的\code{DirectSession.run}，即可以同时运行多个线程池实例。
+\code{DirectSession} holds a set of thread pools at the same time, but when \code{DirectSession.run} is not used, it selects one of the thread pool groups to provide services according to the externally configured index. Because \code{DirectSession} is thread-safe and supports multiple concurrent executions of \code{DirectSession.run}, multiple thread pool instances can be run simultaneously.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/local-direct-session-model.png}
-\caption{DirectSession领域模型}
+\caption{DirectSession Domain Model}
  \label{fig:local-direct-session-model}
 \end{figure}
 
-\subsection{创建会话}
+\subsection{Create session}
 
-如\refig{local-direct-session-factory}所示，\code{DirectSession}由\code{DirectSessionFactory}多态创建。其中，\code{DeviceFactory::AddDevices}将创建本地设备集。
+As shown by \refig{local-direct-session-factory}, \code{DirectSession} is created by \code{DirectSessionFactory} polymorphism. Where \code{DeviceFactory::AddDevices} will create a local device set.
 
-其中，\code{DirectSession}中主要完成线程池组的创建。
+Among them, \code{DirectSession} mainly completes the creation of the thread pool group.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/local-direct-session-factory.png}
-\caption{多态创建DirectSession}
+\caption{Polymorphic creation of DirectSession}
  \label{fig:local-direct-session-factory}
 \end{figure}
 
@@ -101,7 +101,7 @@ struct DirectSessionFactory : SessionFactory {
 \end{c++}
 \end{leftbar}
 
-其中，\code{DirectSessionFactory::NewSession}由\ascii{C API}调用。
+Where \code{DirectSessionFactory::NewSession} is called by \ascii{C API}.
 
 \begin{leftbar}
 \begin{c++}
@@ -132,7 +132,7 @@ TF_DeprecatedSession* TF_NewDeprecatedSession(
 \end{c++}
 \end{leftbar}
 
-在\code{DirectSession}的构造函数中，主要负责其领域模型的初始化，包括线程池的创建，构建\code{CancellationManager}实例。
+In the constructor of \code{DirectSession}, it is mainly responsible for the initialization of its domain model, including the creation of the thread pool, and the construction of the \code{CancellationManager} instance.
 
 \begin{leftbar}
 \begin{c++}
@@ -147,9 +147,9 @@ DirectSession::DirectSession(
 \end{c++}
 \end{leftbar}
 
-\subsection{销毁会话}
+\subsection{destroy session}
 
-由\ascii{SessionFactory}所\code{new}出来的\code{DirectSession}，由\ascii{C API}负责\code{delete}掉。
+\code{DirectSession} from \ascii{SessionFactory}\code{new} is responsible for \code{delete} by \ascii{C API}.
 
 \begin{leftbar}
 \begin{c++}
@@ -161,7 +161,7 @@ void TF_DeleteDeprecatedSession(TF_DeprecatedSession* s, TF_Status* status) {
 \end{c++}
 \end{leftbar}
 
-随后，\code{DirectSession}的析构函数被调用，它负责清理其负责管理的系统资源。主要包括\code{Executor}列表，\code{ThreadPool}列表，\code{CancellationManager}实例。
+Subsequently, the destructor of \code{DirectSession} is called, which is responsible for cleaning up the system resources it is responsible for. It mainly includes the \code{Executor} list, the \code{ThreadPool} list, and the \code{CancellationManager} instance.
 
 \begin{leftbar}
 \begin{c++}
@@ -190,9 +190,9 @@ DirectSession::~DirectSession() {
 \end{c++}
 \end{leftbar}
 
-\subsection{创建/扩展图}
+\subsection{Create/Extension Map}
 
-首次扩展图，等价于创建图。扩展图就是在原有计算图的基础上，追加新的子图。当然，追加的子图中所包含的节点，在原有的计算图中不应该存在。
+The first expansion of the diagram is equivalent to creating a diagram. The expanded graph is based on the original calculation graph, and a new subgraph is added. Of course, the nodes included in the added subgraph should not exist in the original calculation graph.
 
 
 \begin{leftbar}
@@ -212,24 +212,24 @@ Status DirectSession::Extend(const GraphDef& graph) {
 \end{c++}
 \end{leftbar}
 
-当创建计算图时，\code{DirectSession}主要完成\code{SimpleGraphExecutionState}实例的创建。如\refig{local-simple-graph-execution-state-model}所示，\code{SimpleGraphExecutionState}实例持有\code{FullGraph}两种格式的实例：\code{Graph}与\code{GraphDef}，并由它负责管理和维护\code{FullGraph}的生命周期。
+When creating a calculation graph, \code{DirectSession} mainly completes the creation of the \code{SimpleGraphExecutionState} instance. As shown in \refig{local-simple-graph-execution-state-model}, the \code{SimpleGraphExecutionState} instance holds instances of \code{FullGraph}: \code{Graph} and \code{GraphDef}, It is responsible for managing and maintaining the lifecycle of \code{FullGraph}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.5\textwidth]{figures/local-simple-graph-execution-state-model.png}
-\caption{创建SimpleGraphExecutionState实例}
+\caption{Create a SimpleGraphExecutionState instance}
  \label{fig:local-simple-graph-execution-state-model}
 \end{figure}
 
-其中，\code{SimpleGraphExecutionState}的主要职责包括：
+Among them, the main responsibilities of \code{SimpleGraphExecutionState} include:
 
 \begin{enum}
-  \eitem{构造\code{FullGraph}}：发生在\code{DirectSession.Create}；
-  \eitem{执行简单的\ascii{OP}编排算法}：发生在\code{DirectSession.Create}；
-  \eitem{执行图的剪枝操作}：发生在\code{DirectSession.Run}。
+  \eitem{construct \code{FullGraph}}: Occurs in \code{DirectSession.Create};
+  \eitem{Execute simple \ascii{OP} orchestration algorithm}: Occurs in \code{DirectSession.Create};
+  \eitem{Execute pruning operation}: Occurs in \code{DirectSession.Run}.
 \end{enum}
 
-当执行\code{DirectSession::Create}时，将创建\code{SimpleGraphExecutionState}实例，并完成\code{FullGraph}实例的构建和初始化。
+When \code{DirectSession::Create} is executed, the \code{SimpleGraphExecutionState} instance is created and the build and initialization of the \code{FullGraph} instance is completed.
 
 \begin{leftbar}
 \begin{c++}
@@ -240,7 +240,7 @@ Status SimpleGraphExecutionState::MakeForBaseGraph(
 
   AddDefaultAttrsToGraphDef(&ret->original_graph_def_, *ret->flib_def_, 0));
   if (!ret->session_options_->config.graph_options().place_pruned_graph()) {
-    ret->InitBaseGraph();
+    direction> InitBaseGraph ();
   }
   *out_state = std::move(ret);
   return Status::OK();
@@ -248,7 +248,7 @@ Status SimpleGraphExecutionState::MakeForBaseGraph(
 \end{c++}
 \end{leftbar}
 
-其中，\code{SimpleGraphExecutionState::InitBaseGraph}完成\code{FullGraph}从\code{GraphDef}到\code{Graph}的格式转换，并启动\code{SimplePlacer}的\ascii{OP}编排算法。
+Among them, \code{SimpleGraphExecutionState::InitBaseGraph} completes the format conversion of \code{FullGraph} from \code{GraphDef} to \code{Graph} and starts the \ascii{OP} orchestration algorithm of \code{SimplePlacer}.
 
 \begin{leftbar}
 \begin{c++}
@@ -259,73 +259,73 @@ Status SimpleGraphExecutionState::InitBaseGraph() {
   ConvertGraphDefToGraph(opts, *original_graph_def_, ng.get());
 
   SimplePlacer placer(ng.get(), device_set_, session_options_);
-  placer.Run();
+  placer.Run ();
 
-  this->graph_ = ng.release();
+  this-> graph_ = ng.release ();
   return Status::OK();
 }
 \end{c++}
 \end{leftbar}
 
-\subsubsection{图构造：GraphDef -> Graph}
+\subsubsection{Figure construction: GraphDef -> Graph}
 
-刚开始，\code{SimpleGraphExecutionState}得到的是\code{GraphDef}，这是最原始的图结构。它由\ascii{Client}将序列化后传递到后端\ascii{C++}，然后由后端反序列化得到的图结构。
+At the beginning, \code{SimpleGraphExecutionState} got \code{GraphDef}, which is the original primitive structure. It is serialized by \ascii{Client} and passed to the backend \ascii{C++}, which is then deserialized by the backend.
 
-如\refig{local-graph-def-to-graph}所示，通过调用\code{ConvertGraphDefToGraph}将\code{GraphDef}实例变换为等价的\code{Graph}实例；同理，可以调用\code{Graph.ToGraphDef}将\code{Graph}实例变换为等价的\code{GraphDef}实例。
+As shown in \refig{local-graph-def-to-graph}, convert the \code{GraphDef} instance to the equivalent \code{Graph} instance by calling \code{ConvertGraphDefToGraph}; similarly, you can call \code {Graph.ToGraphDef} transforms the \code{Graph} instance into an equivalent \code{GraphDef} instance.
 
-其中，\code{GraphDef}是使用\ascii{protobuf}格式存在的图结构，它包含了图所有元数据；而\code{Graph}则是运行时系统中用于描述图结构的领域对象，它不仅仅持有\code{GraphDef}的元数据，并包含其它图结构的其它信息。
+Where \code{GraphDef} is a graph structure that exists in the \ascii{protobuf} format, which contains all the metadata of the graph; and \code{Graph} is the domain object used to describe the graph structure in the runtime system. Not only holds the metadata of \code{GraphDef}, but also contains other information about other graph structures.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/local-graph-def-to-graph.png}
-\caption{\code{GraphDef}与\code{Graph}之间的格式转换}
+Format conversion between \caption{\code{GraphDef} and \code{Graph}}
  \label{fig:local-graph-def-to-graph}
 \end{figure}
 
-\subsubsection{OP编排：SimplePlacer}
+\subsubsection{OP orchestration: SimplePlacer}
 
-\ascii{OP}的编排(\ascii{placement})指的是，将计算图中包含的\ascii{OP}以最高效的方式置放在合适的计算设备上运算，以最大化计算资源的利用率，可以形式化地描述为\refig{local-cost-model}。
+The \ascii{OP} orchestration (\ascii{placement}) refers to the computation of the resources in the most efficient way by placing the \ascii{OP} contained in the calculation graph on the appropriate computing device. Utilization, which can be formally described as \refig{local-cost-model}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/local-cost-model.png}
-\caption{费用模型}
+\caption{cost model}
  \label{fig:local-cost-model}
 \end{figure}
 
-求取最优的编排方案，我猜想这是一个\ascii{NP}问题。该问题取决于计算图的特征，网络拓扑与带宽，样本数目等多个复杂的因素，该问题也是社区中最活跃的问题之一。
+To find the optimal arrangement, I guess this is a \ascii{NP} problem. This problem depends on the characteristics of the computational graph, network topology and bandwidth, the number of samples, and many other complex factors, which is one of the most active issues in the community.
 
-\subsection{迭代执行}
+\subsection{iteration execution}
 
-\code{DirectSession.Run}是\tf{}运行时的关键路径，它负责完成一次迭代计算。首先，\code{DirectSession}根据输入/输出对\code{FullGraph}实施剪枝，生成\code{ClientGraph}；然后，根据所持有本地设备集，将\code{ClientGraph}分裂为多个\code{PartitionGraph}；运行时为其每个\code{PartitionGraph}启动一个\code{Executor}实例，后者执行\code{PartitionGraph}的拓扑排序算法，完成计算图的执行。
+\code{DirectSession.Run} is the key path to the \tf{} runtime and is responsible for completing an iterative calculation. First, \code{DirectSession} prunes the \code{FullGraph} based on the input/output to generate \code{ClientGraph}; then, splits \code{ClientGraph} into multiple \codes based on the set of local devices held. {PartitionGraph}; The runtime starts a \code{Executor} instance for each of its \code{PartitionGraph}, which executes the topological sorting algorithm of \code{PartitionGraph} to complete the execution of the computed graph.
 
-具体实现，请参照\refsec{graph-operation-prune}，\refsec{graph-operation-split}，\refsec{graph-operation-exec}。
+For specific implementation, please refer to \refsec{graph-operation-prune}, \refsec{graph-operation-split}, \refsec{graph-operation-exec}.
 
 \subsubsection{图操作}
 
-如\refig{local-graph-transformation}所示，在本地模式下，计算图经历三个形态的变换，最终被分解至各个计算设备上，以便实现在各个计算设备上并发执行子图。
+As shown in \refig{local-graph-transformation}, in local mode, the computational graph undergoes three forms of transformation and is ultimately decomposed into computational devices to enable concurrent execution of subgraphs on various computing devices.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/local-graph-transformation.png}
-\caption{图变换}
+\caption{图转换}
  \label{fig:local-graph-transformation}
 \end{figure}
 
 \begin{itemize}
-  \item \code{FullGraph}: \ascii{Client}负责构造的完整的计算图，常称为\code{FullGraph}；但是，一次\code{Session.run}并不会执行整个计算图；
-  \item \code{ClientGraph}: \ascii{Master}根据\code{Session.run}传递\code{feeds, fetches}输入输出列表，对\ascii{FullGraph}实施剪枝操作，计算得到本地迭代执行的最小依赖子图，常称为\code{ClientGraph}；
-  \item \code{PartitionGraph}: \ascii{Master}根据当前计算设备集，及其\ascii{OP}的设备约束规范，将\code{ClientGraph}分裂为多个\code{PartitionGraph}；其中，每个计算设备对应一个\code{PartitionGraph}，计算设备负责\code{PartitionGraph}的执行。
+  \item \code{FullGraph}: \ascii{Client} is responsible for constructing the complete calculation graph, often called \code{FullGraph}; however, once \code{Session.run} does not execute the entire calculation graph;
+  \item \code{ClientGraph}: \ascii{Master} passes the \code{feeds, fetches} input and output list according to \code{Session.run}, implements pruning operation on \ascii{FullGraph}, and calculates the local iteration execution. The least dependent subgraph, often called \code{ClientGraph};
+  \item \code{PartitionGraph}: \ascii{Master} splits \code{ClientGraph} into multiple \code{PartitionGraph} based on the current set of computing devices and its \ascii{OP} device constraint specification; The computing device corresponds to a \code{PartitionGraph}, and the computing device is responsible for the execution of \code{PartitionGraph}.
 \end{itemize}
 
-但是，\code{FullGraph, ClientGraph, PartitionGraph}的数据结构相同，它们都是\code{Graph}三种不同表现形式，仅仅大小和范畴存在差异。
+However, the data structures of \code{FullGraph, ClientGraph, PartitionGraph} are the same, they are all three different manifestations of \code{Graph}, only the size and scope are different.
 
-\subsubsection{形式化}
+\subsubsection{formalization}
 
-在真实的系统实现中，本地模式的运行时是使用\ascii{C++}实现。其中，\tf{}运行时的关键路径为\code{run\_step}。因为真实系统实现中涉及过多的细节，不易发现算法的主干和逻辑。为了简化问题的描述，将形式化地描述\code{run\_step}的实现过程。
+In real system implementations, the local mode runtime is implemented using \ascii{C++}. The key path to the \tf{} runtime is \code{run\_step}. Because the real system implementation involves too much detail, it is not easy to find the backbone and logic of the algorithm. To simplify the description of the problem, the implementation of \code{run\_step} will be described formally.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def do_run_partitions(executors_and_partitions):
   barrier = ExecutorBarrier(executors_and_partitions.size())
   for (executor, partition) in executors_and_partitions:
@@ -345,11 +345,11 @@ def run_step(devices, full_graph, inputs, outputs):
 \end{python}
 \end{leftbar}
 
-其中，在每个计算设备上，启动一个\code{Executor}执行分配给它的\code{PartitionGraph}。当某一个计算设备执行完所分配的\code{PartitionGraph}之后，\code{ExecutorBarrier}的计数器加\ascii{1}，直至所有设备完成\code{PartitionGraph}列表的执行，\code{barrier.wait()}阻塞操作退出。
+Among them, on each computing device, start a \code{Executor} to execute the \code{PartitionGraph} assigned to it. After a certain computing device executes the allocated \code{PartitionGraph}, the counter of \code{ExecutorBarrier} is added to \ascii{1} until all devices complete the execution of the \code{PartitionGraph} list, \code{barrier.wait ()} Blocking operation exits.
 
-跨设备的\code{PartitionGraph}之间可能存在数据依赖关系，它们之间通过插入\code{Send/Recv}节点完成交互。事实上，在本地模式中，\code{Send/Recv}通过\code{Rendezvous}完成数据交换的。\code{Send}将数据放在\code{Rendezvous}上，而\code{Recv}则根据标识从\code{Rendezvous}取走。其中，\code{Send}不阻塞，而\code{Recv}是阻塞的。
+There may be data dependencies between \code{PartitionGraph} across devices, and they interact by inserting \code{Send/Recv} nodes. In fact, in local mode, \code{Send/Recv} does the data exchange via \code{Rendezvous}. \code{Send} puts the data on \code{Rendezvous}, and \code{Recv} takes it from \code{Rendezvous} according to the identifier. Where \code{Send} is not blocked, and \code{Recv} is blocked.
 
-\subsection{关闭会话}
+\subsection{Close session}
 
 \begin{leftbar}
 \begin{c++}
@@ -365,12 +365,12 @@ Status DirectSession::Close() {
 \end{c++}
 \end{leftbar}
 
-如\refig{local-cancellation-manager}所示，将\ascii{Step}注册给\code{DirectSession}的\code{CancellationManager}之中。当\code{DirectSession}被关闭时，\code{DirectSession}的\code{CancellationManager}，将取消这次\ascii{step}的执行过程。
+Register \ascii{Step} to \code{CancellationManager} of \code{DirectSession} as shown in \refig{local-cancellation-manager}. When \code{DirectSession} is closed, the \code{CancellationManager} of \code{DirectSession} will cancel the execution of this \ascii{step}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/local-cancellation-manager.png}
-\caption{CancellationManager工作原理}
+\caption{How does CancellationManager work}
  \label{fig:local-cancellation-manager}
 \end{figure}
 
@@ -397,9 +397,9 @@ Status DirectSession::Run(
 \end{c++}
 \end{leftbar}
 
-当前\ascii{Step}的\code{CancellationManager}最终会传递给\code{OpKernelContext}。\ascii{Kernel}实现计算时，如果保存了中间状态，可以向其注册相应的回调钩子。其中，每个回调钩子都有唯一的\code{token}标识。
+The \code{CancellationManager} of the current \ascii{Step} will eventually be passed to \code{OpKernelContext}. When \ascii{Kernel} implements the calculation, if the intermediate state is saved, you can register the corresponding callback hook with it. Among them, each callback hook has a unique \code{token} identifier.
 
-当\ascii{Step}被取消时，回调钩子被调用，该\ascii{Kernel}可以取消该\ascii{OP}的计算。例如，\code{FIFOQueue}实现\code{TryEnqueue}时，便往本次\ascii{Step}的\code{CancellationManager}注册了回调钩子，用于取消该\ascii{Kernel}中间的状态信息。
+When \ascii{Step} is canceled, the callback hook is called, and the \ascii{Kernel} can cancel the calculation of the \ascii{OP}. For example, when \code{FIFOQueue} implements \code{TryEnqueue}, a callback hook is registered to the \code{CancellationManager} of this \ascii{Step} to cancel the status information in the middle of \ascii{Kernel}.
 
 \begin{leftbar}
 \begin{c++}
@@ -419,23 +419,23 @@ void FIFOQueue::TryEnqueue(const Tuple& tuple, OpKernelContext* ctx,
 \end{leftbar}
 
 
-\section{剪枝}
+\section{Pruning}
 \label{sec:graph-operation-prune}
 
-\code{DirectSession::Run}执行时，首先完成\code{ClientGraph}的构造。事实上，\code{ClientGraph}的构造过程，主要完成\code{FullGraph}的剪枝算法，并生成\code{ClientGraph}。
+When \code{DirectSession::Run} is executed, the construct of \code{ClientGraph} is completed first. In fact, the construction process of \code{ClientGraph} mainly completes the pruning algorithm of \code{FullGraph} and generates \code{ClientGraph}.
 
-\subsection{构建ClientGraph}
+\subsection{Build ClientGraph}
 
-如\refig{local-simple-graph-execution-state}所示，\code{SimpleGraphExecutionState}实例持有\code{FullGraph}实例，并根据输入/输出列表，生成\code{ClientGraph}。
+As shown in \refig{local-simple-graph-execution-state}, the \code{SimpleGraphExecutionState} instance holds the \code{FullGraph} instance and generates \code{ClientGraph} based on the input/output list.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.55\textwidth]{figures/local-simple-graph-execution-state.png}
-\caption{生成\code{ClientGraph}}
+\caption{Generate\code{ClientGraph}}
  \label{fig:local-simple-graph-execution-state}
 \end{figure}
 
-其中，\code{BuildGraphOptions}包含了输入/输出列表，调用\code{SimpleGraphExecutionState::BuildGraph}生成\code{ClientGraph}实例。
+Where \code{BuildGraphOptions} contains the input/output list and calls \code{SimpleGraphExecutionState::BuildGraph} to generate the \code{ClientGraph} instance.
 
 \begin{leftbar}
 \begin{c++}
@@ -474,7 +474,7 @@ Status DirectSession::Run(
 
   // 1. prune graph
   // client\_graph = prune(full\_graph, inputs, outputs)
-  std::unique_ptr<SimpleClientGraph> client_graph;
+  std :: unique_ptr <SimpleClientGraph> client_graph;
   execution_state_->BuildGraph(
     build_graph_options(inputs, output_names, target_nodes), 
     &client_graph);
@@ -495,7 +495,7 @@ Status DirectSession::Run(
 \end{c++}
 \end{leftbar}
 
-\code{ClientGraph}初始来自原始的\code{FullGraph}，调用\code{RewriteGraphForExecution}函数，将根据输入/输出，对\code{ClientGraph}实施改写操作，包括增加节点，或删除节点，最终生成\code{SimpleClientGraph}实例。
+\code{ClientGraph} is initially from the original \code{FullGraph}, calling the \code{RewriteGraphForExecution} function, which will rewrite the \code{ClientGraph} according to the input/output, including adding nodes, or deleting nodes, and finally generating\ Code{SimpleClientGraph} instance.
 
 \begin{leftbar}
 \begin{c++}
@@ -511,7 +511,7 @@ Status SimpleGraphExecutionState::BuildGraph(
   // which is client graph.
   std::unique_ptr<Graph> ng;
   ng.reset(new Graph(flib_def_.get()));
-  CopyGraph(*graph_, ng.get());
+  CopyGraph (* graph_, ng.get ());
 
   // 2. prune the client graph
   subgraph::RewriteGraphForExecution(
@@ -523,7 +523,7 @@ Status SimpleGraphExecutionState::BuildGraph(
   // 3. create SimpleClientGraph, and return it.
   std::unique_ptr<SimpleClientGraph> dense_copy(
       new SimpleClientGraph(std::move(flib)));
-  CopyGraph(*ng, &dense_copy->graph);
+  CopyGraph (* ng, & dense_copy-> graph);
   *out = std::move(dense_copy);
 
   return Status::OK();
@@ -531,67 +531,67 @@ Status SimpleGraphExecutionState::BuildGraph(
 \end{c++}
 \end{leftbar}
 
-因此，构建\code{ClientGraph}过程，其关键路径为\code{RewriteGraphForExecution}，即剪枝算法。剪枝算法根据输入/输出列表，反向遍历\ascii{FullGraph}，找到最小的依赖子图\code{ClientGraph}。
+Therefore, the \code{ClientGraph} process is constructed with the key path \code{RewriteGraphForExecution}, the pruning algorithm. The pruning algorithm traverses \ascii{FullGraph} in the inverse of the input/output list to find the smallest dependent subgraph \code{ClientGraph}.
 
-一般地，对于\code{ClientGraph}输入节点，扮演了起始节点；而输出节点，扮演了终止节点。因此，关于输入和输出，存在两个比较棘手的问题：
+In general, for the \code{ClientGraph} input node, the starting node is played; and the output node acts as the terminating node. So, with regard to input and output, there are two more difficult issues:
 
 \begin{enum}
-  \eitem{输入：当\code{ClientGraph}计算开始前，外部的运行时如何传递\code{Tensor}给输入节点}；
-  \eitem{输出：当\code{ClientGraph}计算完成后，外部的运行时又如何从输出节点获取\code{Tensor}}。
+  \eitem{Input: How to pass \code{Tensor} to the input node} before the start of the \code{ClientGraph} calculation;
+  \eitem{Output: When the \code{ClientGraph} is evaluated, how does the external runtime get \code{Tensor}} from the output node.
 \end{enum}
 
-存在两种媒介：\code{FunctionCallFrame}和\code{Rendezvous}，外部运行时与输入/输出节点可以使用其中一种媒介交换数据。
+There are two kinds of media: \code{FunctionCallFrame} and \code{Rendezvous}, and the external runtime and the input/output node can exchange data using one of the media.
 
-\code{FunctionCallFrame}用于\code{Arg/RetVal}函数调用的\ascii{OP}，用于函数调用时传递函数参数值，及其返回函数值。但是，它们仅适用于单进程的运行时环境。
+\code{FunctionCallFrame} is used for the \code{Arg/RetVal} function call's \ascii{OP}, which is used to pass function argument values ​​when the function is called, and its return function value. However, they only apply to the single-process runtime environment.
 
-\code{Rendezvous}用于\code{Send/Recv}消息发送的\ascii{OP}，这是一种更为通用的通信方式，适用于分布式的运行时环境。
+\code{Rendezvous} is used for \code{Send/Recv} messaging \ascii{OP}, which is a more general way of communicating for distributed runtime environments.
 
-\subsection{基于Rendezvous}
+\subsection{based on Rendezvous}
 
-如\refig{client-prune-graph}所示，根据\code{fetches}列表，反向搜索依赖的节点，直至\code{feeds}，计算得到最小依赖的子图。
+As shown by \refig{client-prune-graph}, according to the \code{fetches} list, the dependent nodes are searched backwards until \code{feeds}, and the sub-graph with the smallest dependency is calculated.
 
-对于\code{Feed}的边实施剪枝，例如剪枝\code{ina:0})边，并在此处插入节点\code{Recv}，并按照输入边的名字命名该节点，例如\code{\_recv\_ina\_0}。
+Perform pruning on the edge of \code{Feed}, such as the pruning \code{ina:0}) edge, and insert the node \code{Recv} here, and name the node by the name of the input side, for example \code {\_recv\_ina\_0}.
 
-同理，对于\code{Fetch}的边也实施剪枝，例如剪枝\code{f:0}边，并在此处插入节点\code{Send}节点，并按照输出边的名字命名该节点，例如\code{\_send\_f\_0}。
+Similarly, pruning is also performed on the edges of \code{Fetch}, such as pruning the \code{f:0} edge, where the node \code{Send} node is inserted, and the node is named after the output edge. , for example, \code{\_send\_f\_0}.
 
-最终，通过插入\code{Source/Sink}节点，将剪枝后得到各个联通的子图进行汇总，形成一个完整的\ascii{DAG}图。
+Finally, by inserting the \code{Source/Sink} node, the subgraphs of each Unicom are summarized after pruning to form a complete \ascii{DAG} map.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/client-prune-graph.png}
-\caption{图剪枝：插入Send/Recv节点}
+\caption{Figure pruning: insert Send/Recv node}
  \label{fig:client-prune-graph}
 \end{figure}
 
-\subsection{基于FunctionCallFrame}
+\subsection{Based on FunctionCallFrame}
 
-但是，输入/输出通过\code{Rendezvous}交换数据可能存在性能上的瓶颈。因为待发送的\code{Tensor}需要携带发送设备，接收设备，\code{TensorId}，共同组成了唯一的字符串标识，数据发送和接收需要花费很长的字符串解析的时间开销。
+However, there may be a performance bottleneck in the input/output exchange of data via \code{Rendezvous}. Because the \code{Tensor} to be sent needs to carry the sending device, the receiving device, and \code{TensorId}, together form a unique string identifier, and the data transmission and reception takes a long time to parse the string.
 
-特殊地，对于本地模式，因为在同一进程内，使用\code{Rendezvous}交换数据存在不必要的性能损耗。可以使用基于\code{FunctionCallFrame}函数调用替代之。
+In particular, for local mode, there is an unnecessary performance penalty for exchanging data using \code{Rendezvous} within the same process. It can be replaced with a call based on the \code{FunctionCallFrame} function.
 
-因此，在本地模式下，可以使用\code{Arg/RetVal}分别替代\code{Send/Recv}节点，从而实现了函数调用交换数据的方式，替代原有基于\code{Rendezvous}交互数据的方式。
+Therefore, in local mode, you can use \code{Arg/RetVal} instead of the \code{Send/Recv} node, which implements the way the function calls exchange data, replacing the original way of interacting with data based on \code{Rendezvous}. .
 
-如\refig{client-prune-graph-function-ops}所示。对于\code{Feed}的边实施剪枝，例如剪枝\code{ina:0})边，并在此处插入节点\code{Arg}，并按照输入边的名字命名该节点，例如\code{\_arg\_ina\_0}。
+As shown in \refig{client-prune-graph-function-ops}. Pruning the edge of \code{Feed}, such as the pruning \code{ina:0}) edge, and inserting the node \code{Arg} here, and naming the node by the name of the input side, such as \code {\_arg\_ina\_0}.
 
-同理，对于\code{Fetch}的边也实施剪枝，例如剪枝\code{f:0}边，并在此处插入节点\code{RetVal}节点，并按照输出边的名字命名该节点，例如\code{\_retval\_f\_0}。
+Similarly, pruning is also performed on the edges of \code{Fetch}, such as pruning the \code{f:0} edge, where the node \code{RetVal} node is inserted, and the node is named after the output edge. , for example, \code{\_retval\_f\_0}.
 
-最终，通过插入\code{Source/Sink}节点，将剪枝后得到各个联通的子图进行汇总，形成一个完整的\ascii{DAG}图。
+Finally, by inserting the \code{Source/Sink} node, the subgraphs of each Unicom are summarized after pruning to form a complete \ascii{DAG} map.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/client-prune-graph-function-ops.png}
-\caption{图剪枝：插入Arg/RetVal节点}
+\caption{Figure pruning: insert Arg/RetVal node}
  \label{fig:client-prune-graph-function-ops}
 \end{figure}
 
-\subsection{剪枝算法实现}
+\subsection{Pruning algorithm implementation}
 
-剪枝算法主要由\code{RewriteGraphForExecution}完成，主要包括\ascii{3}个子过程。
+The pruning algorithm is mainly done by \code{RewriteGraphForExecution}, which mainly includes \ascii{3} sub-processes.
 
 \begin{enum}
-  \eitem{追加输入节点}
-  \eitem{追加输出节点} 
-  \eitem{反向剪枝}
+  \eitem{Additional input node}
+  \eitem{Additional output node} 
+  \eitem{reverse pruning}
 \end{enum}
 
 \begin{leftbar}
@@ -612,18 +612,18 @@ void RewriteGraphForExecution(Graph* g, bool use_function,
 \end{c++}
 \end{leftbar}
 
-\subsubsection{追加输入节点}
+\subsubsection{Add input node}
 
-如\refig{local-prune-feed}所示，对于任意一条输入边实施剪枝时，插入相应的\code{Arg}或\code{Recv}节点，删除既有的边，并重新连接相应的边。
+As shown in \refig{local-prune-feed}, when pruning is performed on any input edge, insert the corresponding \code{Arg} or \code{Recv} node, delete the existing edge, and reconnect the corresponding side.
 
-在计算图中，一条边唯一地由\code{TensorId}标识，它由\code{op:src\_output}二元组构成。前者表示边的上游节点，后者表示给边为上游节点的第几条边。
+In the calculation graph, an edge is uniquely identified by \code{TensorId}, which consists of a \code{op:src\_output} binary group. The former represents the upstream node of the edge, and the latter represents the edge of the upstream node.
 
-示例代码删除了部分不重要的逻辑，并搬迁了部分函数的职责，并在局部尝试部分函数提取，以便更好地还原算法的逻辑。其中，假设\code{Graph}可以按照\code{TensorId}索引节点和边。
+The sample code removes some of the less important logic and relocates some of the functions, and tries partial function extraction locally to better restore the logic of the algorithm. Among them, suppose \code{Graph} can index nodes and edges according to \code{TensorId}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/local-prune-feed.png}
-\caption{剪枝：输入边}
+\caption{Pruning: Input Edge}
  \label{fig:local-prune-feed}
 \end{figure}
 
@@ -637,7 +637,7 @@ namespace {
 
   Node* AppendRecvNode(Graph& g, 
     const TensorId& tensor_id, const DeviceAttributes& device_info) {
-      Node* recv_node;
+      Node * recv_node;
       NodeBuilder(strings::StrCat(
         "_recv_", tensor_id.op(), "_", tensor_id.src_output()), "_Recv")
         .Attr("tensor_type", data_type(g, tensor_id))
@@ -652,7 +652,7 @@ namespace {
 
   Node* AppendArgNode(Graph& g, size_t index, 
     const TensorId& tensor_id, const DeviceAttributes& device_info) {
-    Node* arg_node;
+    Node * arg_node;
     NodeBuilder(strings::StrCat(
       "_arg_", tensor_id.op(), "_", tensor_id.src_output()), "_Arg")
       .Attr("T", data_type(g, tensor_id))
@@ -697,16 +697,16 @@ void FeedInputs(Graph& g, bool use_function,
 \end{c++}
 \end{leftbar}
 
-\subsubsection{追加输出节点}
+\subsubsection{Add output node}
 
-对于任意一条输出边实施剪枝时，插入相应的\code{RetVal}或\code{Send}节点，并将其与\code{Sink}节点通过控制依赖边连接。
+When pruning is performed on any of the output edges, insert the corresponding \code{RetVal} or \code{Send} node and connect it to the \code{Sink} node by controlling the dependent edges.
 
-如\refig{local-prune-fetch}所示，对输出边实施剪枝操作。新节点与上游节点的连接关系，在构造新节点时，通过\code{Input}已经指定。另外，函数直接返回了新节点(\code{RetVal/Send})为终止节点，因此没必要删除原来的边，其算法与输入边的处理存在微妙的差异。
+Perform pruning on the output side as shown in \refig{local-prune-fetch}. The connection relationship between the new node and the upstream node is specified by \code{Input} when constructing the new node. In addition, the function directly returns the new node (\code{RetVal/Send}) as the termination node, so there is no need to delete the original edge, and the algorithm has a subtle difference from the processing of the input edge.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/local-prune-feed.png}
-\caption{剪枝：输出边}
+\caption{Pruning: Output Edge}
  \label{fig:local-prune-fetch}
 \end{figure}
 
@@ -771,11 +771,11 @@ void FetchOutputs(Graph& g, bool use_function,
 \end{c++}
 \end{leftbar}
 
-\subsubsection{反向剪枝}
+\subsubsection{reverse pruning}
 
-剪枝操作，其本质就是\ascii{DAG}反向的宽度优先遍历算法。首先，创建了一个队列，及其一个\code{visited}数组，后者用于记录已经遍历过的节点。初始化时，队列仅包含输出节点和输入节点(\code{targets})。当图遍历完毕后，不再\code{visited}里面的节点，表示本此执行不依赖于它，应从图中删除该节点，及其相关联的边。
+The pruning operation is essentially the \ascii{DAG} reverse width-first traversal algorithm. First, a queue is created with a \code{visited} array that records the nodes that have been traversed. At initialization, the queue contains only the output node and the input node (\code{targets}). When the graph is traversed, the node in \code{visited} is no longer present, indicating that the execution is not dependent on it, and the node and its associated edges should be removed from the graph.
 
-经过剪枝后，将形成若干\ascii{DAG}子图。将入度为\code{0}的节点，与\code{Source}节点通过控制依赖边相连接；出度为\ascii{0}的节点，与\code{Sink}节点通过控制依赖边相连接，最终形成一个完整的\ascii{DAG}图。
+After pruning, several \ascii{DAG} subgraphs will be formed. The node with the intrinsic degree of \code{0} is connected to the \code{Source} node by controlling the dependent edge; the node with the degree of \ascii{0} is connected to the \code{Sink} node by controlling the dependent edge. , eventually form a complete \ascii{DAG} map.
 
 \begin{leftbar}
 \begin{c++}
@@ -851,73 +851,73 @@ void PruneForTargets(Graph* g,
 \end{c++}
 \end{leftbar}
 
-\section{分裂}
+\section{ split}
 \label{sec:graph-operation-split}
 
-如\refig{local-graph-split-by-device}所示，假如\code{d}节点放置在\ascii{GPU0}上执行，而其他节点放置在\ascii{CPU0}上执行。其中，节点\code{a}与\code{b}通过\code{Arg}输入数据；节点\code{f}将其结果输出到\code{RetVal}节点上。
+As shown in \refig{local-graph-split-by-device}, if the \code{d} node is placed on \ascii{GPU0}, the other nodes are placed on \ascii{CPU0}. Among them, node \code{a} and \code{b} input data through \code{Arg}; node \code{f} outputs its result to \code{RetVal} node.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/local-graph-split-by-device.png}
-\caption{按本地设备集执行图分裂}
+\caption{Execute map split by local device set}
  \label{fig:local-graph-split-by-device}
 \end{figure}
 
-因此，计算图中存在若干条边跨越设备。对于跨越设备的边，运行时将其分裂，并就地插入\code{Send/Recv}边，分别用于原设备上发送数据，并在目标设备上接受数据，完成设备间的数据交换。如\refig{local-graph-split-insert-send-recv}所示。
+Therefore, there are several edges across the device in the calculation graph. For the edge across the device, the runtime splits it and inserts it into the \code{Send/Recv} side, which is used to send data on the original device and accept data on the target device to complete data exchange between devices. As shown in \refig{local-graph-split-insert-send-recv}.
 
-其中，\code{Arg/RetVal}节点通过媒介\code{FunctionCallFrame}交换数据；\code{Send/Recv}节点通过媒介\code{Rendezvous}交换数据。
+The \code{Arg/RetVal} node exchanges data via the medium \code{FunctionCallFrame}; the \code{Send/Recv} node exchanges data via the medium \code{Rendezvous}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=1.0\textwidth]{figures/local-graph-split-insert-send-recv.png}
-\caption{跨设备OP之间插入Send/Recv节点}
+\caption{Insert a Send/Recv node between device OPs}
  \label{fig:local-graph-split-insert-send-recv}
 \end{figure}
 
-\subsection{情况1}
+\subsection{Case 1}
 
-最简单的情况下，\code{src}与\code{dst}在同一个\code{Partition}内。因此，直接将其划归在同一个\code{Partition}即可。
+In the simplest case, \code{src} is in the same \code{Partition} as \code{dst}. Therefore, you can directly assign it to the same \code{Partition}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/split-graph-1.png}
-\caption{情况1：src与dst在同一个Partition内}
+\caption{Case 1: src and dst are in the same Partition}
  \label{fig:split-graph-1}
 \end{figure}
 
-\subsection{情况2}
+\subsection{Case 2}
 
-如果\code{src}与\code{dst}不在同一个\code{Partition}内，但两者之间原来是通过普通边连接在一起的。因此，仅需要在它们中间增加\code{Send}与\code{Recv}节点，将其划归在两个不同的\code{Partition}内。
+If \code{src} is not in the same \code{Partition} as \code{dst}, but the two are originally connected by ordinary edges. Therefore, you only need to add the \code{Send} and \code{Recv} nodes to them in two different \code{Partition}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/split-graph-2.png}
-\caption{情况2：src与dst不在同一个Partition内，但两者之间是普通边}
+\caption{Case 2: src and dst are not in the same Partition, but the normal edge between the two}
  \label{fig:split-graph-2}
 \end{figure}
 
-\subsection{情况3}
+\subsection{Case 3}
 
-如果\code{src}与\code{dst}不在同一个\code{Partition}内，但两者之间原来是通过控制依赖边连接在一起的。
+If \code{src} is not in the same \code{Partition} as \code{dst}, but the two are originally connected by controlling the dependent edges.
 
-此时，需要在\code{src}侧增加一个\code{Const}的\code{DummyNode}，并作为\code{src}的下游通过控制依赖边相连；最终，在通过\code{Send}将其值发送到对端。
+At this point, you need to add a \code{DummyNode} of \code{Const} on the \code{src} side, and connect it as a downstream of \code{src} by controlling the dependency edges; finally, by \code{Send} Its value is sent to the peer.
 
-在\code{dst}侧，\code{Recv}收到该值，使用\code{Identity}将其消费掉；最终，再将\code{Identity}与\code{dst}连接控制依赖边。
+On the \code{dst} side, \code{Recv} receives the value and consumes it using \code{Identity}; finally, the \code{Identity} and \code{dst} are connected to control the dependent edge.
 
-在这里，\code{Const}扮演生产者，\code{Identity}扮演消费者角色。既满足了跨设备间通信的需求，又满足原来\code{src}与\code{dst}之间的控制依赖的关系。但是，其缺点就是存在微妙的性能开销。
+Here, \code{Const} plays the producer and \code{Identity} plays the consumer role. It satisfies the requirements of communication between devices and the control dependency between \code{src} and \code{dst}. However, the downside is that there are subtle performance overheads.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/split-graph-3.png}
-\caption{情况3：src与dst不在同一个Partition内，但两者之间是控制依赖边}
+\caption{Case 3: src and dst are not in the same Partition, but between them is the control dependent edge}
  \label{fig:split-graph-3}
 \end{figure}
 
-\subsection{分裂算法实现}
+\subsection{split algorithm implementation}
 
-分裂算法也是一个反向遍历图的算法。对于当前遍历的节点，将其标记为\code{dst}；然后再寻找\code{dst}的所有输入边；遍历所有输入边，从而找到与改边相连的源节点，将其标记为\code{src}。
+The splitting algorithm is also an algorithm that reverses the traversal map. For the currently traversed node, mark it as \code{dst}; then look for all input edges of \code{dst}; iterate over all the input edges to find the source node that is connected to the changed edge, marking it as \code {src}.
 
-因此，更具上述讨论的三种情况，迭代实现\code{src}与\code{dst}两者之前的\code{Partition}划分算法。
+Therefore, in the three cases discussed above, iteratively implements the \code{Partition} partitioning algorithm before \code{src} and \code{dst}.
 
 \begin{leftbar}
 \begin{c++}
@@ -986,7 +986,7 @@ namespace {
     }
   }
 
-  void SetSendRecvAttrs(
+  void SetSendRecvAttrs (
       const PartitionOptions& opts, 
       const Edge* edge,
       NodeDefBuilder* builder) {
@@ -1007,7 +1007,7 @@ namespace {
       NodeDefBuilder::NodeOut send_from) {
     NodeDef* send = gdef->add_node();
     NodeDefBuilder builder(opts.new_name(edge->src()->name()), "_Send");
-    SetSendRecvAttrs(opts, edge, &builder);
+    SetSendRecvAttrs (opts, edge, & builder);
     builder.Device(edge->src()->assigned_device_name())
            .Input(send_from)
            .Finalize(send);
@@ -1019,7 +1019,7 @@ namespace {
                    Status* status) {
     NodeDef* recv = gdef->add_node();
     NodeDefBuilder builder(opts.new_name(src->name()), "_Recv");
-    SetSendRecvAttrs(opts, edge, &builder);
+    SetSendRecvAttrs (opts, edge, & builder);
     builder.Device(dst->assigned_device_name())
            .Attr("tensor_type", EdgeType(edge))
            .Finalize(recv);
@@ -1043,7 +1043,7 @@ namespace {
       GraphDef* src_graph, 
       Edge* edge, 
       GraphDef* dst_graph, 
-      NodeDef* dst_def) {
+      NodeDef * dst_def) {
     NodeDefBuilder::NodeOut send_from;
     BuildSendFrom(opts, src_graph, edge, send_from);
 
@@ -1089,9 +1089,9 @@ Status Partition(const PartitionOptions& opts,
 \end{c++}
 \end{leftbar}
 
-\subsection{回调函数}
+\subsection{callback function}
 
-在\code{PartitionOptions}中，存在两个重要的回调函数。\code{NodeToLocFunc}用于图分裂；\code{NewNameFunc}用于给新增加的节点命名，例如\code{Send/Recv}。
+There are two important callback functions in \code{PartitionOptions}. \code{NodeToLocFunc} is used for graph splitting; \code{NewNameFunc} is used to name newly added nodes, such as \code{Send/Recv}.
 
 \begin{leftbar}
 \begin{c++}
@@ -1107,7 +1107,7 @@ struct PartitionOptions {
 \end{c++}
 \end{leftbar}
 
-对于图分裂，存在两种最基本的分裂方法。
+For graph splitting, there are two basic methods of splitting.
 
 \begin{leftbar}
 \begin{c++}
@@ -1124,61 +1124,61 @@ string SplitByWorker(const Node* node) {
 \end{c++}
 \end{leftbar}
 
-在本地模式下，\code{NodeToLocFunc}被配置为\code{SplitByDevice}。如图\code{intraprocess-splity-by-device}所示。
+In local mode, \code{NodeToLocFunc} is configured as \code{SplitByDevice}. As shown in \code{intraprocess-splity-by-device}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/intraprocess-splity-by-device.png}
-\caption{本地模式：SplitByDevice}
+\caption{Local Mode: SplitByDevice}
  \label{fig:intraprocess-splity-by-device}
 \end{figure}
 
 
-在分布式模式下，\code{Master}的\code{NodeToLocFunc}被配置为\code{SplitByWorker}；而\code{Worker}
-的\code{NodeToLocFunc}被配置为\code{SplitByDevice}。
+In distributed mode, \code{NodeToLocFunc} of \code{Master} is configured as \code{SplitByWorker}; and \code{Worker}
+\code{NodeToLocFunc} is configured as \code{SplitByDevice}.
 
-因此，在分布式模式下，图分裂经历了两级分离。第一级按照\code{SplitByWorker}分裂，将图划分到各个\code{Worker}上去；第二级按照\code{SplitByDevice}，再将图划分到各个计算设备上去。
+Therefore, in distributed mode, the graph split undergoes two levels of separation. The first level is split according to \code{SplitByWorker}, and the picture is divided into various \code{Worker}; the second level is based on \code{SplitByDevice}, and then the picture is divided into various computing devices.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/interprocess-splity-by-worker.png}
-\caption{分布式模式：两级分裂}
+\caption{Distributed mode: two-level split}
  \label{fig:interprocess-splity-by-worker}
 \end{figure}
 
-\section{执行}
+\section{execution}
 \label{sec:graph-operation-exec}
 
-接下来，运行时将并发执行各个\code{PartitionGraph}。如\refig{local-graph-execution}所示，每个\code{PartitionGraph}启动一个\code{Executor}，实现并发执行图的计算。
+Next, the runtime will execute each \code{PartitionGraph} concurrently. As shown in \refig{local-graph-execution}, each \code{PartitionGraph} starts a \code{Executor} to implement the calculation of the concurrent execution graph.
 
-每个\code{Executor}将执行\code{PartitionGraph}的拓扑排序算法，将入度为\ascii{0}的\ascii{OP}追加到\code{ready\_queue}之中，并将其关联的\ascii{OP}的入度减\ascii{1}。调度器调度\code{ready\_queue}之中\ascii{OP
-}，并将其放入\code{ThreadPool}中执行对应的\ascii{Kernel}实现。
+Each \code{Executor} will execute the topological sorting algorithm of \code{PartitionGraph}, append \ascii{OP} with degree \ascii{0} to \code{ready\_queue} and associate it with The degree of \ascii{OP} is reduced by \ascii{1}. Scheduler dispatch \code{ready\_queue}\ascii{OP
+}, and put it into \code{ThreadPool} to execute the corresponding \ascii{Kernel} implementation.
 
-在所有\code{Partition}开始并发执行之前，需要外部将其输入传递给相应的\code{Arg}节点；当所有\code{Partition}完成计算后，外部再从\code{RetVal}节点中取走数据。其中，\code{Arg/RetVal}节点之间的数据时通过\code{FunctionCallFrame}完成交互的。
+Before all \code{Partition} starts concurrent execution, you need to pass its input to the corresponding \code{Arg} node externally; when all \code{Partition} finishes the calculation, the external is taken from the \code{RetVal} node. Take the data. Among them, the data between the \code{Arg/RetVal} nodes is interactive through \code{FunctionCallFrame}.
 
-如果\code{PartitionGraph}之间需要跨设备交换数据，生产者将其放在\code{Send}节点，消费者通过\code{Recv}节点获取数据。其中，发送方不阻塞；接收方如果数据未到，则发生阻塞直至超时。此外，\code{Send/Recv}节点之间的数据是通过\code{Rendezvous}完成交互的。
+If \code{PartitionGraph} needs to exchange data across devices, the producer places it in the \code{Send} node, and the consumer gets the data through the \code{Recv} node. The sender does not block; if the receiver does not arrive, the blocking occurs until timeout. In addition, the data between the \code{Send/Recv} nodes is interactive through \code{Rendezvous}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=1.0\textwidth]{figures/local-graph-execution.png}
-\caption{执行图}
+\caption{Execution map}
  \label{fig:local-graph-execution}
 \end{figure}
 
-因此，执行图计算需要解决如下\ascii{3}个核心问题：
+Therefore, the implementation of graph calculation needs to solve the following \ascii{3} core issues:
 
 \begin{enum}
-  \eitem{输入/输出处理}
-  \eitem{设备间数据交换} 
-  \eitem{执行\code{PartitionGraph}}
+  \eitem{input/output processing}
+  \eitem{Inter-device data exchange} 
+  \eitem{execute\code{PartitionGraph}}
 \end{enum}
 
-\subsection{输入}
+\subsection{input}
 
-在某个设备上，\code{PartitionGraph}的起始节点为\code{Arg}节点，结束节点为\code{RetVal}节点。整个过程可以看成函数调用过程，\code{Arg}用于传递函数参数，\code{RetVal}用于返回函数值。
+On a device, the starting node of \code{PartitionGraph} is the \code{Arg} node and the ending node is the \code{RetVal} node. The whole process can be seen as a function call procedure, \code{Arg} is used to pass function arguments, and \code{RetVal} is used to return function values.
 
-更确切地说，\code{Arg}完成\code{PartitionGraph}的输入，\code{RetVal}完成
-\code{PartitionGraph}的输出。对于\code{Arg}节点，其调用时序为：\code{set\_arg -> get\_arg}。其中，前者由\code{DirectSession}在启动\code{Executor}列表之前，通过调用\code{FunctionCallFrame.SetArgs(feeds)}，传递输入参数列表的值；后者由\code{Arg}的\ascii{Kernel}实现调用。
+More precisely, \code{Arg} completes the input of \code{PartitionGraph}, and \code{RetVal} completes
+The output of \code{PartitionGraph}. For the \code{Arg} node, the calling sequence is: \code{set\_arg -> get\_arg}. Among them, the former is passed by \code{DirectSession} before calling the \code{Executor} list, passing the value of the input parameter list by calling \code{FunctionCallFrame.SetArgs(feeds)}; the latter is \ascii by \code{Arg} {Kernel} implementation call.
 
 \begin{leftbar}
 \begin{c++}
@@ -1221,7 +1221,7 @@ Status DirectSession::Run(
   // 3.2.2 frame.set\_args(feeds)
   call_frame.SetArgs(feed_args);
   
-  // 3.3 concurent execution
+  // 3.3 execution competitor
   // for (executor, partition) in executors\_and\_partitions:
   // \ \ executor.run(partition) 
 
@@ -1230,7 +1230,7 @@ Status DirectSession::Run(
 \end{c++}
 \end{leftbar}
 
-而\code{frame.get\_arg}则有\code{Arg}来获取，并且\code{Arg}将其输出到\code{PartitionGraph}中的第一个计算节点。
+\code{frame.get\_arg} has \code{Arg} to get it, and \code{Arg} outputs it to the first compute node in \code{PartitionGraph}.
 
 \begin{leftbar}
 \begin{c++}
@@ -1257,11 +1257,11 @@ struct ArgOp : OpKernel {
 \end{c++}
 \end{leftbar}
 
-\subsection{并发执行}
+\subsection{Concurrent execution}
 
-经过图分裂后，运行为每个\code{Partition}启动一个\code{Executor}。为了监听所有\code{Executor}是否全部完成，创建了一个\code{ExecutorBarrier}。并且在启动所有\code{Executor}之后，调用\code{executors\_done.Wait()}阻塞，等待所有\code{Executor}完成执行。
+After the graph is split, the run starts a \code{Executor} for each \code{Partition}. In order to monitor whether all \code{Executor} is completed, a \code{ExecutorBarrier} is created. And after starting all \code{Executor}, call \code{executors\_done.Wait()} to block and wait for all \code{Executor} to complete execution.
 
-当完成一个\code{Executor}中完成，\code{ExecutorBarrier}的计算器减\ascii{1}(初始值为\code{num\_executors})，直至为\ascii{0}，将调用其完成钩子，最终触发\code{executors\_done.Notify()}。
+When done in a \code{Executor}, the \code{ExecutorBarrier} calculator minus \ascii{1} (initial value is \code{num\_executors}) until it is \ascii{0}, it will be called to complete The hook finally triggers \code{executors\_done.Notify()}.
 
 \begin{leftbar}
 \begin{c++}
@@ -1304,7 +1304,7 @@ Status DirectSession::Run(
   // 3.2.2 frame.set\_args(feeds)
   call_frame.SetArgs(feed_args);
   
-  // 3.3 concurent execution
+  // 3.3 execution competitor
   // barrier = ExecutorBarrier(executors\_and\_partitions.size())
   // for (executor, partition) in executors\_and\_partitions:
   // \ \ executor.run(partition) 
@@ -1345,9 +1345,9 @@ Status DirectSession::Run(
 \end{c++}
 \end{leftbar}
 
-\subsection{输出}
+\subsection{output}
 
-同理，对于\code{RetVal}节点，其调用时序为：\code{set\_ret\_val -> get\_ret\_val}。前者由\code{RetVal}完成，后者由\code{DirectSession}完成。
+Similarly, for the \code{RetVal} node, the calling sequence is: \code{set\_ret\_val -> get\_ret\_val}. The former is done by \code{RetVal} and the latter by \code{DirectSession}.
 
 \begin{leftbar}
 \begin{c++}
@@ -1372,7 +1372,7 @@ struct RetvalOp : OpKernel {
 \end{c++}
 \end{leftbar}
 
-等所有\code{Executor}运行结束后，\code{DirectSession}便可以从\code{FunctionCallFrame}中取出所有输出值，并将其放置在\code{outputs}，并返回\ascii{Client}。
+After all \code{Executor} has finished running, \code{DirectSession} can take all output values ​​from \code{FunctionCallFrame} and place them in \code{outputs} and return \ascii{Client}.
 
 \begin{leftbar}
 \begin{c++}
@@ -1415,7 +1415,7 @@ Status DirectSession::Run(
   // 3.2.2 frame.set\_args(feeds)
   call_frame.SetArgs(feed_args);
   
-  // 3.3 concurent execution
+  // 3.3 execution competitor
   // barrier = ExecutorBarrier(executors\_and\_partitions.size())
   // for (executor, partition) in executors\_and\_partitions:
   // \ \ executor.run(partition) 
@@ -1468,36 +1468,36 @@ Status DirectSession::Run(
 \end{c++}
 \end{leftbar}
 
-至此，整个\code{DirectSession.Run}解读完毕。但是，\code{Partition}中节点如何被调度执行的，\code{Partition}之间的\code{Send/Recv}是如何工作的呢？
+At this point, the entire \code{DirectSession.Run} has been interpreted. However, how does the \code{Send/Recv} between \code{Partition} work in the \code{Partition} how the nodes are scheduled to execute?
 
-因此，在最后一公里，还要探究三件事情。
+Therefore, in the last mile, we must explore three things.
 
 \begin{enum}
-  \eitem{\code{SendOp}与\code{RecvOp}的工作原理}
-  \eitem{\code{IntraProcessRendezvous}的工作原理} 
-  \eitem{\code{Executor}的调度算法}
+  How \eitem{\code{SendOp} works with \code{RecvOp}}
+  How \eitem{\code{IntraProcessRendezvous} works} 
+  \eitem{\code{Executor} scheduling algorithm}
 \end{enum}
 
-\section{设备间通信}
+\section{Inter-device communication}
 
-\code{SendOp/RecvOp}通过\code{Rendezvous}交换数据的；它实现了消息发送/接受，与具体消息传递相解耦。例如，在单进程内，\code{SendOp/RecvOp}基于\code{IntraProcessRendezvous}传递数据的；而在多进程环境中，\code{SendOp/RecvOp}则可以基于\code{GrpcRendezvous}传递数据。
+\code{SendOp/RecvOp} exchanges data via \code{Rendezvous}; it implements message delivery/acceptance and decouples from specific messaging. For example, in a single process, \code{SendOp/RecvOp} passes data based on \code{IntraProcessRendezvous}; in a multi-process environment, \code{SendOp/RecvOp} can pass data based on \code{GrpcRendezvous}.
 
-首先，探究这两个\ascii{OP}的工作原理；然后，再探究本地模式下，\code{IntraProcessRendezvous}的工作原理。
+First, explore the workings of these two \ascii{OP}; then, explore the working principle of \code{IntraProcessRendezvous} in local mode.
 
-\subsection{SendOp实现}
+\subsection{SendOp implementation}
 
-如\refig{local-send-recv-ops}所示，进程内的\code{Send/Recv}通过唯一的标识\code{ParsedKey}实现数据的交换。
+As shown in \refig{local-send-recv-ops}, the in-process \code{Send/Recv} exchanges data with a unique identifier \code{ParsedKey}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/local-send-recv-ops.png}
-\caption{进程内\code{SendOp}与\code{RecvOp}的数据交换}
+\caption{Data exchange between \code{SendOp} and \code{RecvOp}}
  \label{fig:local-send-recv-ops}
 \end{figure}
 
-参考\code{SendOp}的\ascii{Kernel}实现，看起来非常复杂，但是它实际上就做了一件事情。首先，它构造设备间通信的关键字\code{ParsedKey}，然后调用\code{Rendezvous.Send}操作，将上游\ascii{OP}输入到\code{SendOp}的\code{Tensor}发送到\code{Rendezvous}缓存之中，该操作是非阻塞的。
+Referring to the \ascii{Kernel} implementation of \code{SendOp}, it looks very complicated, but it actually does one thing. First, it constructs the keyword \code{ParsedKey} for communication between devices, then calls the \code{Rendezvous.Send} operation to send the upstream \ascii{OP} to the \code{Tensor} of \code{SendOp} to \ In the code{Rendezvous} cache, this operation is non-blocking.
 
-其中，\code{ParsedKey}包括：发送设备，接受设备，设备全局标识，及其待发送\code{Tensor}的标识(\code{src:output\_index})组成。
+Among them, \code{ParsedKey} includes: the sending device, the receiving device, the device global identifier, and the identifier of the \code{Tensor} to be sent (\code{src:output\_index}).
 
 \begin{leftbar}
 \begin{c++}
@@ -1517,7 +1517,7 @@ struct SendOp : OpKernel {
     string tensor_name;
     ctx->GetAttr("tensor_name", &tensor_name);
 
-    key_prefix_ = GetRendezvousKeyPrefix(
+    key_prefix_ = GetRendezvousKeyPrefix (
         send_device, recv_device,
         send_device_incarnation, tensor_name);
 
@@ -1542,7 +1542,7 @@ struct SendOp : OpKernel {
  
  private:
   Rendezvous::ParsedKey CreateParsedkey(OpKernelContext* ctx) {
-    FrameAndIter frame_iter = GetFrameAndIter(ctx, hostmem_sendrecv_);
+    FrameAndIter frame_iter = GetFrameAndIter (ctx, hostmem_sendrecv_);
     if (frame_iter == FrameAndIter(0, 0)) {
       return parsed_key_;
     } else {
@@ -1561,11 +1561,11 @@ struct SendOp : OpKernel {
 \end{c++}
 \end{leftbar}
 
-\subsection{RecvOp实现}
+\subsection{RecvOp implementation}
 
-同理地，可以猜测\code{Recv}的\ascii{Kernel}的实现了。它首先构造\code{Rendezvous}的\code{ParsedKey}，然后调用\code{Rendezvous.RecvAsync}操作，从\code{Rendezvous}取出相应的\code{Tensor}。
+Similarly, you can guess the implementation of \ascii{Kernel} for \code{Recv}. It first constructs the \code{ParsedKey} of \code{Rendezvous}, then calls the \code{Rendezvous.RecvAsync} operation and fetches the corresponding \code{Tensor} from \code{Rendezvous}.
 
-这是一个异步操作，当\code{Rendezvous}中数据可获取，便开始执行回调函数\code{done\_cb}，它将其得到的\code{Tensor}输出到下游\ascii{OP}。
+This is an asynchronous operation. When the data in \code{Rendezvous} is available, it starts executing the callback function \code{done\_cb}, which outputs the resulting \code{Tensor} to the downstream \ascii{OP}.
 
 \begin{leftbar}
 \begin{c++}
@@ -1585,7 +1585,7 @@ struct RecvOp : AsyncOpKernel {
     string tensor_name;
     ctx->GetAttr("tensor_name", &tensor_name);
 
-    key_prefix_ = GetRendezvousKeyPrefix(
+    key_prefix_ = GetRendezvousKeyPrefix (
         send_device, recv_device,
         send_device_incarnation, tensor_name);
   
@@ -1607,7 +1607,7 @@ struct RecvOp : AsyncOpKernel {
 
  private:
   Rendezvous::ParsedKey CreateParsedKey(OpKernelContext* ctx) {
-    FrameAndIter frame_iter = GetFrameAndIter(ctx, hostmem_sendrecv_);
+    FrameAndIter frame_iter = GetFrameAndIter (ctx, hostmem_sendrecv_);
     if (frame_iter == FrameAndIter(0, 0)) {
       return parsed_key_;
     } else {

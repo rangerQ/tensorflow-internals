@@ -1,87 +1,87 @@
-\chapter{代码阅读} 
+\chapter{code reading} 
 \label{ch:code-reading}
 
 \begin{content}
 
-在程序员的日常工作之中，绝大多数时间都是在\emph{阅读代码}，而不是在写代码。但是，阅读代码往往是一件很枯燥的事情，尤其当遇到了一个不漂亮的设计，反抗的心理往往更加强烈。事实上，变换一下习惯、思路和方法，代码阅读其实是一个很享受的过程。
+In the programmer's daily work, most of the time is in \emph{reading code}, not writing code. However, reading the code is often a very boring thing, especially when you encounter a design that is not beautiful, the psychology of resistance is often stronger. In fact, changing the habits, ideas and methods, code reading is actually a very enjoyable process.
 
-阅读代码的模式，实践和习惯，集大成者莫过于希腊作者\ascii{Diomidis Spinellis}的经典之作：\ascii{Code Reading, The Open Source Perspective}。本文从另外一个视角出发，谈谈我阅读代码的一些习惯，期待找到更多知音的共鸣。
+Read the patterns, practices, and habits of the code, and the masters of the Greek author \ascii{Diomidis Spinellis}: \ascii{Code Reading, The Open Source Perspective}. This article starts from another perspective, talks about some of my habits of reading the code, and looks forward to finding more people's resonance.
 
 \end{content}
 
-\section{工欲善其事，必先利其器}
+\section{Working for good things, you must first sharpen it}
 
 \begin{content}
 
-首先，阅读代码之前先准备好一个称心如意的工具箱，包括\ascii{IDE}, \ascii{UML}，脑图等工具。我主要使用的编程语言包括\ascii{C++, Scala, Java, Ruby, Python}；我更偏向使用\ascii{JetBrains}公司的产品，其很多习惯用法对程序员都很贴心。
+First, prepare a good toolbox before reading the code, including \ascii{IDE}, \ascii{UML}, brain map and other tools. The programming languages ​​I mainly use include \ascii{C++, Scala, Java, Ruby, Python}; I prefer to use \ascii{JetBrains} products, many of which are very intimate to programmers.
 
-其次，高效地使用快捷键，这是一个良好的代码阅读习惯，它极大地提高了代码阅读的效率和质量。例如，查看类层次关系，函数调用链，方法引用点等等。
+Second, the efficient use of shortcuts, which is a good code reading habit, it greatly improves the efficiency and quality of code reading. For example, look at class hierarchy, function call chains, method reference points, and more.
 
 \begin{remark}
-拔掉鼠标，减低对鼠标的依赖。当发现没有鼠标而导致工作无法进行下去时，尝试寻找对应的快捷键。通过日常的点滴积累，工作效率必然能够得到成倍的提高。
+Unplug the mouse and reduce the dependency on the mouse. When you find that there is no mouse and the work cannot be carried out, try to find the corresponding shortcut. Through daily accumulation of bits and pieces, work efficiency can be doubled.
 \end{remark}
 
 \end{content}
 
-\section{力行而后知之真}
+\section{力行而知知之}
 
 \begin{content}
 
-阅读代码一种常见的反模式就是通过\ascii{Debug}的方式来阅读代码。作者不推荐这种代码阅读的方式，其一，因为运行时线程间的切换很容易导致方向的迷失；其二，了解代码调用栈对于理解系统行为并非见得有效，因为其包含太多实现细节，不易发现问题的本质。
+A common anti-pattern for reading code is to read the code in the way of \ascii{Debug}. The author does not recommend this way of reading code. First, because the switching between threads at run time can easily lead to the loss of direction. Second, understanding the code call stack is not effective for understanding system behavior, because it contains too many implementation details. It is not easy to find the nature of the problem.
 
-但在阅读代码之前，有几件事情是必须做的。其一，手动地构建一次工程，并运行测试用例；其二，亲自动手写几个\ascii{Demo}感受一下。
+But before reading the code, there are a few things that must be done. First, manually build a project and run test cases; second, hand-write several \ascii{Demo} to feel it.
 
-先将工程跑起来，目的不是为了\ascii{Debug}代码，而是在于了解工程构建的方式，及其认识系统的基本结构，并体会系统的使用方式。
+The project is run first, not for the \ascii{Debug} code, but for understanding the way the project is built, and understanding the basic structure of the system, and understanding how the system is used.
 
-如果条件允许，可以尝试使用\ascii{ATDD}的方式，发现和挖掘系统的行为。通过这个过程，将自己当成一个客户，思考系统的行为，这是理解系统最重要的基石。
+If conditions permit, you can try to discover and mine the behavior of the system using \ascii{ATDD}. Through this process, thinking of yourself as a customer and thinking about the behavior of the system is the most important cornerstone for understanding the system.
 
 \end{content}
 
-\section{发现领域模型}
+\section{Discover domain model}
 
 \begin{content}
 
-阅读代码，不是为了了解每个类，每个函数干什么，而是为了挖掘更本质，更不易变化的知识。事实上，发现\emph{领域模型}是阅读代码最重要的一个目标，因为领域模型是系统的灵魂所在。通过代码阅读，找到系统本质的知识，并通过自己的模式表达出来，才能真正地抓住系统的脉络，否则一切都是空谈。
+Reading the code, not to understand each class, what each function does, but to mine more essential, less variable knowledge. In fact, the discovery of \emph{domain model} is the most important goal of reading code, because the domain model is the soul of the system. Through the code reading, find the knowledge of the essence of the system, and express it through its own mode, in order to truly grasp the context of the system, otherwise everything is empty talk.
 
-例如，在阅读\tf{}的\ascii{Python}实现的客户端代码时，理顺计算图的领域模型，对于理解\ascii{TensorFlow}的编程模型，及其系统运行时的行为极其重要。
+For example, when reading the client code implemented by \tf{}'s \ascii{Python}, it is extremely important to understand the domain model of the computation graph and understand the programming model of \ascii{TensorFlow} and its runtime behavior.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-graph.png}
-\caption{领域对象：Graph}
+\caption{Domain object: Graph}
  \label{fig:py-graph}
 \end{figure}
 
 \end{content}
 
-\section{挖掘系统架构}
+\section{Excavation System Architecture}
 
 \begin{content}
 
-阅读代码犹如在大海中航行，系统架构图就是航海图。阅读代码不能没有整体的系统概念，否则收效不佳，阅读质量大大折扣。必须拥有系统思维，并明确目标，才不至于迷失方向。
+Reading the code is like sailing in the sea, and the system architecture diagram is a nautical chart. Reading the code can't be without the overall system concept, otherwise the results will be poor and the reading quality will be greatly discounted. You must have a systematic mindset and a clear goal so that you don't lose your way.
 
-首要的任务，就是找到系统的边界，并能够以抽象的思维思考外部系统的行为特征。其次，理清系统中各组件之间的交互，关联关系，及其职责，对于理解整个系统的行为极为重要。
+The first task is to find the boundaries of the system and to think about the behavioral characteristics of the external system in abstract thinking. Second, clarifying the interactions, relationships, and responsibilities between components in the system is critical to understanding the behavior of the entire system.
 
-例如，对于\ascii{TensorFlow}，\ascii{C API}是衔接前后端系统的桥梁。理解\ascii{C API}的设计，基本能够猜测前后端系统的行为。
+For example, for \ascii{TensorFlow}, \ascii{C API} is a bridge between the front and back systems. Understand the design of \ascii{C API} and basically be able to guess the behavior of the front-end system.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/tf-architecture-simple.png}
-\caption{TensorFlow系统架构}
+\caption{TensorFlow System Architecture}
  \label{fig:tf-architecture-simple}
 \end{figure}
 
 \end{content}
 
-\section{细节是魔鬼}
+\section{Details are the devil}
 
 \begin{content}
 
-纠结于细节，将导致代码阅读代码的效率和质量大大折扣。例如，日志打印，解决某个\ascii{Bug}的补丁实现，某版本分支的兼容方案，某些变态需求的锤子代码实现等等。
+The entanglement in the details will lead to a significant discount in the efficiency and quality of the code reading code. For example, log printing, solving a patch implementation of \ascii{Bug}, a compatibility scheme for a version branch, a hammer code implementation for some metamorphosis requirements, and so on.
 
-阅读代码的一个常见的反模式就是「给代码做批注」。这是一个高耗低效，投入产出比极低的实践。一般地，越是优雅的系统，注释越少；越是复杂的系统，再多的注释也是于事无补。
+A common anti-pattern for reading code is "annotating code." This is a practice that is highly inefficient and inefficient, with a very low input-output ratio. In general, the more elegant the system, the fewer comments; the more complex the system, the more comments are not helpful.
 
-我有一个代码阅读的习惯，为代码阅读建立一个单独的\ascii{code-reading}分支，一边阅读代码，一边删除这些无关的代码。
+I have a habit of reading code, creating a separate \ascii{code-reading} branch for code reading, and reading the code while deleting the extraneous code.
 
 \begin{leftbar}
 \begin{scala}
@@ -89,168 +89,167 @@ $ git checkout -b code-reading
 \end{scala}
 \end{leftbar}
 
-删除这些噪声后，你会发现系统根本没有想象之中那么复杂。现实中，系统的复杂性，往往都是不成熟的设计和实现导致的额外复杂度。随着对系统的深入理解，很多细节都会自然地浮出水面，所有神秘的面纱都将被揭开而公示天下。
+After removing these noises, you will find that the system is not as complicated as you might think. In reality, the complexity of the system is often the additional complexity caused by immature design and implementation. With the in-depth understanding of the system, many details will naturally surface, and all mysterious veil will be revealed and publicized.
 
 \end{content}
 
-\section{适可而止}
+\section{可可止}
 
 \begin{content}
 
-阅读代码的一个常见的反模式就是「一根筋走到底，不到黄河绝不死心」。程序员都拥有一颗好奇心，总是对不清楚的事情感兴趣。例如，消息是怎么发送出去的？任务调度工作原理是什么？数据存储怎么做到的？；虽然这种勇气值得赞扬，但在代码阅读时绝对不值得鼓励。
+A common anti-pattern of reading code is "a rib is going to the end, not to the Yellow River." Programmers have a curiosity and are always interested in things that are unclear. For example, how is the message sent out? What is the principle of task scheduling? How is data storage done? Although this kind of courage is worthy of praise, it is definitely not worth encouraging when reading the code.
 
-还有另外一个常见的反模式就是「追踪函数调用栈」。这是一个极度枯燥的过程，常常导致思维的僵化；因为你永远活在作者的阴影下，完全没有自我。
+Another common anti-pattern is the "Tracking Function Call Stack". This is an extremely boring process that often leads to the rigidity of thinking; because you live forever in the shadow of the author, there is no self at all.
 
-我个人阅读代码的时候，函数调用栈深度绝不超过\ascii{3}，然后使用抽象的思维方式思考底层的调用。因为我发现，随着年龄的增长，曾今值得骄傲的记忆力，现在逐渐地变成自己的短板。当我尝试追踪过深的调用栈之后，之前的阅读信息完全地消失记忆了。
+When I read the code personally, the depth of the function call stack never exceeds \ascii{3}, and then the underlying call is thought of using abstract thinking. Because I found that with age, the memory that I have been proud of now is gradually becoming my own shortcoming. When I tried to track the deep call stack, the previous reading information completely disappeared.
 
-也就是说，我更习惯于「广度遍历」，而不习惯于「深度遍历」的阅读方式。这样，我才能找到系统隐晦存在的「分层概念」，并理顺系统的层次结构。
+In other words, I am more accustomed to "wide traversal" rather than accustomed to "deep traversal" reading. In this way, I can find the "hierarchical concept" that the system conceals and rationalize the hierarchy of the system.
 
 \end{content}
 
-\section{发现她的美}
+\section{Discover her beauty}
 
 \begin{content}
 
-三人行，必有我师焉。在代码阅读代码时，当发现好的设计，包括实现模式，习惯用法等，千万不要错过；否则过上一段时间，这次代码阅读对你来说就没有什么价值了。
+Threesome, there must be my teacher. When reading code, when you find a good design, including implementation mode, idioms, etc., don't miss it; otherwise, after a while, this code reading will be of little value to you.
 
-当我发现一个好的设计时，我会尝试使用类图，状态机，序列图等方式来表达设计；如果发现潜在的不足，将自己的想法补充进去，将更加完美。
+When I find a good design, I will try to use the class diagram, state machine, sequence diagram, etc. to express the design; if you find potential deficiencies, add your own ideas, it will be more perfect.
 
-例如，当我阅读\ascii{Hamcrest}时，尝试画画类图，并体会它们之间关系，感受一下设计的美感，也是受益颇多的。
+For example, when I read \ascii{Hamcrest}, I tried to draw a class diagram, and realized the relationship between them, and felt the beauty of the design, which also benefited a lot.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/hamcrest.png}
-\caption{组合式设计}
+\caption{Combination design}
  \label{fig:hamcrest}
 \end{figure}
 
 \end{content}
 
-\section{尝试重构}
+\section{Try to refactor}
 
 \begin{content}
 
-因为这是一次代码阅读的过程，不会因为重构带来潜在风险的问题。在一些复杂的逻辑，通过重构的等价变换可以将其变得更加明晰，直观。
+Because this is a process of code reading, there is no potential risk due to refactoring. In some complex logic, it can be made more explicit and intuitive through the reconstruction of equivalent transformations.
 
-对于一个巨函数，我常常会提取出一个抽象的代码层次，以便发现它潜在的本质逻辑。例如，这是一个使用\ascii{Scala}实现的\ascii{ArrayBuffer}，当需要在尾部添加一个元素时，既有的设计是这样子的。
+For a giant function, I often extract an abstract code hierarchy to discover its underlying logic. For example, this is a \ascii{ArrayBuffer} implemented with \ascii{Scala}, and when you need to add an element to the end, the existing design is like this.
 
 \begin{leftbar}
 \begin{python}
-def +=(elem: A): this.type = {
-  if (size + 1 > array.length) {
-    var newSize: Long = array.length
-    while (n > newSize)
-      newSize *= 2
-    newSize = math.min(newSize, Int.MaxValue).toInt
-  
-    val newArray = new Array[AnyRef](newSize)
-    System.arraycopy(array, 0, newArray, 0, size)
-    array = newArray
-  }
-  array(size) = elem.asInstanceOf[AnyRef]
-  size += 1
-  this
+Def +=(elem: A): this.type = {
+  If (size + 1 > array.length) {
+    Var newSize: Long = array.length
+    While (n > newSize)
+      newSize *= 2
+    newSize = math.min(newSize, Int.MaxValue).toInt
+  
+    Val newArray = new Array[AnyRef](newSize)
+    System.arraycopy(array, 0, newArray, 0, size)
+    Array = newArray
+  }
+  Array(size) = elem.asInstanceOf[AnyRef]
+  Size += 1
+  This
 }
 \end{python}
 \end{leftbar}
 
-这段代码给阅读造成了极大的障碍，我会尝试通过快速的函数提取，发现逻辑的主干。
+This code creates a huge obstacle to reading, and I will try to find the backbone of the logic through a quick function extraction.
 
 \begin{leftbar}
 \begin{python}
-def +=(elem: A): this.type = {
-  if (atCapacity)
-    grow()
-  addElement(elem)
+Def +=(elem: A): this.type = {
+  If (atCapacity)
+    Grow()
+  addElement(elem)
 }
 \end{python}
 \end{leftbar}
 
-至于\code{atCapacity, grow, addElement}是怎么实现的，压根不用关心，因为我已经达到阅读代码的效果了。
+As for how \code{atCapacity, grow, addElement} is implemented, don't care, because I have achieved the effect of reading the code.
 
 \end{content}
 
-\section{形式化}
+\section{Formalization}
 
 \begin{content}
 
-当阅读代码时，有部分人习惯画程序的「流程图」。相反，我几乎从来不会画「流程图」，因为流程图反映了太多的实现细节，而不能深刻地反映算法的本质。
+When reading the code, some people are used to drawing the "flow chart" of the program. On the contrary, I almost never draw a "flowchart" because the flow chart reflects too many implementation details and does not profoundly reflect the nature of the algorithm.
 
-我更倾向于使用「形式化」的方式来描述问题。它拥有数学的美感，简洁的表达方式，及其高度抽象的思维，对挖掘问题本质极其关键。
+I prefer to use a "formal" approach to describe the problem. It has a mathematical aesthetic, a simple expression, and its highly abstract thinking, which is critical to the nature of the problem.
 
-例如，对于\ascii{FizzBuzzWhizz}的问题，相对于冗长的文字描述，或流程图，形式化的方式将更加简单，并富有表达力。以\ascii{3, 5, 7}为输入，形式化后描述后，可清晰地挖掘出问题的本质所在。
+For example, for the problem of \ascii{FizzBuzzWhizz}, the formalization is more simple and expressive than a lengthy textual description or flowchart. With \ascii{3, 5, 7} as input, after formalization, the essence of the problem can be clearly revealed.
 
 \begin{leftbar}
 \begin{python}
-r1: times(3) => Fizz || 
-    times(5) => Buzz ||
-    times(7) => Whizz
+R1: times(3) => Fizz || 
+    Times(5) => Buzz ||
+    Times(7) => Whizz
 
-r2: times(3) && times(5) && times(7) => FizzBuzzWhizz ||
-    times(3) && times(5) => FizzBuzz  ||
-    times(3) && times(7) => FizzWhizz ||
-    times(5) && times(7) => BuzzWhizz
+R2: times(3) && times(5) && times(7) => FizzBuzzWhizz ||
+    Times(3) && times(5) => FizzBuzz ||
+    Times(3) && times(7) => FizzWhizz ||
+    Times(5) && times(7) => BuzzWhizz
 
-r3: contains(3) => Fizz
+R3: contains(3) => Fizz
 
-rd: others => string of others
+Rd: others => string of others
 
-spec: r3 || r2 || r1 || rd
+Spec: r3 || r2 || r1 || rd
 \end{python}
 \end{leftbar}
 
 \end{content}
 
-\section{实例化}
+\section{instantiate}
 
 \begin{content}
 
-实例化是认识问题的一种重要方法，当逻辑非常复杂时，一个简单例子往往使自己豁然开朗。在理想的情况下，实例化可以做成自动化的测试用例，并以此描述系统的行为。
+Instantiation is an important way to understand the problem. When the logic is very complicated, a simple example often makes you suddenly open. Ideally, instantiation can be made into automated test cases that describe the behavior of the system.
 
-如果存在某个算法和实现都相当复杂时，也可以通过实例化探究算法的工作原理，这对于理解问题本身大有益处。
+If there is an algorithm and implementation that is quite complex, it can also be used to instantiate the working principle of the algorithm, which is very beneficial for understanding the problem itself.
 
-以\ascii{Spark}中划分\ascii{DAG}算法为例。以\ascii{G}为起始节点，从后往前按照\ascii{RDD}的依赖关系，依次识别出各个\ascii{Stage}的边界。
+Take the \ascii{DAG} algorithm in \ascii{Spark} as an example. Starting with \ascii{G}, the boundaries of each \ascii{Stage} are identified in turn according to the dependency of \ascii{RDD}.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/spark-stage-dag.png}
-\caption{Spark：Stage划分算法}
+\caption{Spark: Stage partitioning algorithm}
  \label{fig:spark-stage-dag}
 \end{figure}
 
 \begin{itemize}
- \item \ascii{Stage 3}的划分
+ Division of \item \ascii{Stage 3}
    \begin{enum}
-     \eitem{\ascii{G}与\ascii{B}之间是窄依赖，规约为同一\ascii{Stage(3)}；}
-     \eitem{\ascii{B}与\ascii{A}之间是宽依赖，\ascii{A}为新的起始\ascii{RDD}，递归调用此过程；}
-     \eitem{\ascii{G}与\ascii{F}之间是宽依赖，\ascii{F}为新的起始\ascii{RDD}，递归调用此过程。} 
+     Between \eitem{\ascii{G} and \ascii{B} is a narrow dependency, the same as \ascii{Stage(3)};}
+     Between \eitem{\ascii{B} and \ascii{A} is a wide dependency, \ascii{A} is the new starting \ascii{RDD}, which is called recursively;
+     \eitem{\ascii{G} is a wide dependency with \ascii{F}, and \ascii{F} is the new starting \ascii{RDD}, which is called recursively. }
    \end{enum}
 
- \item \ascii{Stage 1}的划分
+ Division of \item \ascii{Stage 1}
    \begin{enum}
-     \eitem{\ascii{A}没有父亲}RDD}，\ascii{Stage(1)}划分结束。特殊地\ascii{Stage(1)}仅包含\ascii{RDD A}。}
+     \eitem{\ascii{A}No father} RDD}, \ascii{Stage(1)} The end of the division. In particular, \ascii{Stage(1)} only contains \ascii{RDD A}. }
    \end{enum}
- \item \ascii{Stage 2}的划分
+ Division of \item \ascii{Stage 2}
    \begin{enum}
-     \eitem{因\ascii{RDD}之间的关系都为窄依赖，规约为同一个\ascii{Stage(2)}；}
-     \eitem{直至\ascii{RDD C, E}，因没有父亲\ascii{RDD}，\ascii{Stage(2)}划分结束。}
+     \eitem{Since the relationship between \ascii{RDD} is narrowly dependent, the rule is the same \ascii{Stage(2)};}
+     \eitem{until \ascii{RDD C, E}, because there is no father \ascii{RDD}, \ascii{Stage(2)} ends. }
    \end{enum} 
 \end{itemize}
 
-最终，形成了\ascii{Stage}的依赖关系，依次提交\ascii{TaskSet}至\ascii{TaskScheduler}进行调度执行。
+Finally, the dependency of \ascii{Stage} is formed, and \ascii{TaskSet} to \ascii{TaskScheduler} are submitted in turn for scheduling execution.
 
 \end{content}
 
-\section{独乐乐，不如众乐乐}
+\section{独乐乐, not as good as music}
 
 \begin{content}
 
-与他人分享你的经验，也许可以找到更多的启发；尤其对于熟知该领域的人沟通，如果是\ascii{Owner}就更好了，肯定能得到意外的惊喜和收获。
+Sharing your experience with others, you may find more inspiration; especially for people who are familiar with the field, if it is better than \ascii{Owner}, you will definitely get unexpected surprises and gains.
 
-也可以通过各种渠道，收集他人的经验，并结合自己的思考，推敲出自己的理解，如此才能将知识放入自己的囊中。
+You can also collect the experience of others through various channels, and combine your own thinking to find out your own understanding, so that you can put knowledge into your own bag.
 
-阅读代码，不是一个人的世界；应该走出去，多参加一些社区活动，了解生态圈中主流的研究方向，技术动态，产业发展，对于理解业务是极其有帮助的。
+Reading the code is not a one-person world; you should go out and participate in some community activities to understand the mainstream research direction, technological dynamics, and industrial development in the ecosystem, which is extremely helpful for understanding the business.
 
 
 \end{content}
-

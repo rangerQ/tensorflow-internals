@@ -8,50 +8,50 @@
 
 \begin{content}
 
-训练一个简单的模型，可以通过运行\code{train\_op}数次直至模型收敛，最终将训练参数实施\ascii{Checkpoint}，持久化训练模型。对于小规模的学习模型，这个过程至多需要花费数小时的时间。
+To train a simple model, you can run \code{train\_op} several times until the model converges, and finally implement the training parameters \ascii{Checkpoint} to persist the training model. For small-scale learning models, this process can take up to several hours.
 
-但是，对于大规模的学习模型，需要花费数天时间；而且可能需要使用多份复本\ascii{(replica)}，此时需要更加健壮的训练过程支持模型的训练。因此，需要解决三个基本问题：
+However, it takes several days for a large-scale learning model; and it may be necessary to use multiple copies of \ascii{(replica)}, which requires a more robust training process to support the training of the model. Therefore, there are three basic issues that need to be addressed:
 
 \begin{enum}
-  \eitem{当训练过程异常关闭，或程序崩溃，能够合理地处理异常；}
-  \eitem{当异常关闭，或程序崩溃之后，能够恢复训练过程；} 
-  \eitem{能够通过\ascii{TensorBoard}监控整个训练过程。}   
+  \eitem{When the training process is abnormally closed, or the program crashes, it can handle the exception reasonably;}
+  \eitem{When the exception is closed, or the program crashes, the training process can be resumed;} 
+  \eitem{The ability to monitor the entire training process via \ascii{TensorBoard}. }   
 \end{enum}
 
-当训练被异常关闭或程序崩溃之后，为了能够恢复训练过程，必须周期性实施\ascii{Checkpoint}。当训练过程重启后，可以通过寻找最近一次的\ascii{Checkpoint}文件，恢复训练过程。
+In order to be able to resume the training process, the training must be implemented periodically (ascii{Checkpoint}) after the training is shut down abnormally or the program crashes. When the training process is restarted, the training process can be resumed by looking for the most recent \ascii{Checkpoint} file.
 
-为了能够使用\ascii{TensorBoard}监控训练过程，可以通过周期性运行一些\ascii{Summary}的\ascii{OP}，并将结果追加到事件文件中。\ascii{TensorBoard}能够监控和解析事件文件的数据，可视化整个训练过程，包括展示计算图的结构。
+In order to be able to monitor the training process using \ascii{TensorBoard}, you can periodically run some \ascii{Summary}\ascii{OP} and append the results to the event file. \ascii{TensorBoard} monitors and parses the data of the event file, visualizing the entire training process, including showing the structure of the calculation graph.
 
 \end{content}
 
-\section{引入MonitoredSession}
+\section{Introduction to MonitoredSession}
 
 \begin{content}
 
-\code{tf.train.MonitoredSession}，它可以定制化\code{Hook}，用于监听整个\code{Session}的生命周期；内置\code{Coordinator}对象，用于协调所有运行中的线程同时停止，并监听，上报和处理异常；当发生\code{AbortedError}或\code{UnavailableError}异常时，可以重启\code{Session}。
+\code{tf.train.MonitoredSession}, which can be customized to \code{Hook} for listening to the entire \code{Session} lifecycle; built-in \code{Coordinator} object for coordinating all running threads simultaneously Stop, listen, report, and handle exceptions; when \code{AbortedError} or \code{UnavailableError} exception occurs, you can restart \code{Session}.
 
-\subsection{使用方法}
+\subsection{Usage method}
 
-一般地，首先使用\code{ChiefSessionCreator}创建\code{Session}实例，并且注册三个最基本的\code{tf.train.SessionRunHook}：
+In general, first create a \code{Session} instance using \code{ChiefSessionCreator} and register the three most basic \code{tf.train.SessionRunHook}:
 
 \begin{enum}
-  \eitem{\code{CheckpointSaverHook}：周期性地\ascii{Checkpoint}；}
-  \eitem{\code{SummarySaverHook}：周期性地运行\ascii{Summary}；} 
-  \eitem{\code{StepCounterHook}：周期性地统计每秒运行的\ascii{Step}数目。}   
+  \ item {\ code {CheckpointSaverHook}: Periodically \ ascii {Checkpoint};}
+  \eitem{\code{SummarySaverHook}: Run \ascii{Summary} periodically;} 
+  \eitem{\code{StepCounterHook}: Periodically counts the number of \ascii{Step} running per second. }   
 \end{enum}
 
-为了能够安全处理异常，并且能够关闭\code{MonitoredSession}，常常使用\code{with}的上下文管理器。
+In order to be able to handle exceptions safely and to be able to close \code{MonitoredSession}, the context manager of \code{with} is often used.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 session_creator = tf.train.ChiefSessionCreator(
-  checkpoint_dir=checkpoint_dir,
+  checkpoint_dir = checkpoint_dir,
   master=master,
   config=config)
 
 hooks = [
   tf.train.CheckpointSaverHook(
-    checkpoint_dir=checkpoint_dir,
+    checkpoint_dir = checkpoint_dir,
     save_secs=save_checkpoint_secs),
   tf.train.SummarySaverHook(
     save_secs=save_summaries_secs,
@@ -65,54 +65,54 @@ with tf.train.MonitoredSession(
   session_creator=session_creator,
   hooks=hooks) as sess:
   if not sess.should_stop():
-    sess.run(train_op)
+    sess.run (train_op)
 \end{python}
 \end{leftbar}
 
-\subsection{使用工厂}
+\subsection{Use factory}
 
-使用\code{MonitoredTrainingSession}的工厂方法，可以简化\code{MonitoredSession}的创建过程。
+Using the factory method of \code{MonitoredTrainingSession}, you can simplify the creation of \code{MonitoredSession}.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.4\textwidth]{figures/py-train-monitored-training-session.png}
-\caption{MonitoredTrainingSession：工厂方法}
+\caption{MonitoredTrainingSession:Factory Method}
  \label{fig:py-train-monitored-training-session}
 \end{figure}
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with MonitoredTrainingSession(
   master=master,
   is_chief=is_chief,
-  checkpoint_dir=checkpoint_dir
+  checkpoint_dir = checkpoint_dir
   config=config) as sess:
   if not sess.should_stop():
-    sess.run(train_op)
+    sess.run (train_op)
 \end{python}
 \end{leftbar}
 
-\subsection{装饰器}
+\subsection{decorator}
 
-为了得到复合功能的\code{MonitoredSession}，可以将完成子功能的\code{WrappedSession}进行组合拼装。
+In order to get the composite function \code{MonitoredSession}, you can assemble the \code{WrappedSession} that completes the sub-functions.
 
 \begin{enum}
-  \eitem{\code{RecoverableSession}：当发生\code{AbortedError}或\code{UnavailableError}异常时，可以恢复和重建\code{Session}；}
-  \eitem{\code{CoordinatedSession}：内置\code{Coordinator}对象，用于协调所有运行中的线程同时停止，并监听，上报和处理异常；} 
-  \eitem{\code{HookedSession}：可以定制化\code{Hook}，用于监听整个\code{Session}的生命周期。}   
+  \eitem{\code{RecoverableSession}: When \code{AbortedError} or \code{UnavailableError} exception occurs, \code{Session} can be restored and rebuilt;}
+  \eitem{\code{CoordinatedSession}: Built-in \code{Coordinator} object to coordinate all running threads while stopping, and listening, reporting, and handling exceptions; 
+  \eitem{\code{HookedSession}: Customize \code{Hook} to listen to the entire \code{Session} lifecycle. }   
 \end{enum}
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-decorator.png}
-\caption{MonitoredSession：装饰器}
+\caption{MonitoredSession: Decorator}
  \label{fig:py-train-monitored-session-decorator}
 \end{figure}
 
-最终，可以组合三者的特性，构建得到\code{MonitoredSession}(伪代码实现，详情请查阅\code{MonitoredSession}的具体实现)。
+In the end, you can combine the characteristics of the three, and build \code{MonitoredSession} (pseudo code implementation, please refer to the specific implementation of \code{MonitoredSession} for details).
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 MonitoredSession(
   RecoverableSession(
     CoordinatedSession(
@@ -123,104 +123,104 @@ MonitoredSession(
 
 \end{content}
 
-\section{生命周期}
+\section{Lifecycle}
 
 \begin{content}
 
-\code{MonitoredSession}具有\code{Session}的生命周期特征(但并非\ascii{IS-A}关系，而是\ascii{Like-A}关系，这是一种典型的按照鸭子编程的风格)。
+\code{MonitoredSession} has the lifecycle feature of \code{Session} (but not the \ascii{IS-A} relationship, but the \ascii{Like-A} relationship, which is a typical style of duck programming) .
 
-在生命周期过程中，插入了\code{SessionRunHook}的回调钩子，用于监听\code{MonitoredSession}的生命周期过程。
+During the lifecycle, a callback hook for \code{SessionRunHook} is inserted to monitor the lifecycle of \code{MonitoredSession}.
 
-\subsection{初始化}
+\subsection{initialization}
 
-在初始化阶段，\code{MonitoredSession}主要完成如下过程：
+In the initialization phase, \code{MonitoredSession} mainly completes the following process:
 
 \begin{enum}
-  \eitem{运行所有回调钩子的\code{begin}方法；}
-  \eitem{通过调用\code{scaffold.finalize()}冻结计算图；} 
-  \eitem{创建会话：使用\code{SessionCreator}多态创建\code{Session}}   
-  \eitem{运行所有回调钩子的\code{after\_create\_session}方法}
+  \eitem{Run the \code{begin} method of all callback hooks;}
+  \eitem{Freeze the calculation graph by calling \code{scaffold.finalize()};} 
+  \eitem{Create session: Create \code{Session} using \code{SessionCreator} polymorphism}   
+  \eitem{The \code{after\_create\_session} method that runs all callback hooks}
 \end{enum}
 
-其中，使用\code{SessionCreator}多态创建\ascii{Session}的过程，存在两种类型。
+Among them, there are two types of procedures for creating \ascii{Session} using \code{SessionCreator} polymorphism.
 
 \begin{enum}
-  \eitem{\code{ChiefSessionCreator}：调用\code{SessionManager.prepare\_session}，通过从最近的\ascii{Checkpoing}恢复模型，或运行\code{init\_op}，完成模型的初始化；然后，启动所有\code{QueueRunner}实例；}
-  \eitem{\code{WorkerSessionCreator}：调用\code{SessionManager.wait\_for\_session}，等待\code{Chief}完成模型的初始化。} 
+  \eitem{\code{ChiefSessionCreator}: Call \code{SessionManager.prepare\_session} to complete the model initialization by restoring the model from the nearest \ascii{Checkpoing}, or by running \code{init\_op}; then, launch All \code{QueueRunner} instances;}
+  \eitem{\code{WorkerSessionCreator}: Call \code{SessionManager.wait\_for\_session} and wait for \code{Chief} to complete the initialization of the model. }
 \end{enum}
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-initialization.png}
-\caption{MonitoredSession：初始化}
+\caption{MonitoredSession: Initialization}
  \label{fig:py-train-monitored-session-initialization}
 \end{figure}
 
-\subsection{执行}
+\subsection{execution}
 
-在执行阶段，在运行\code{Session.run}前后分别回调钩子的\code{before\_run}和\code{after\_run}方法。如果在运行过程发生了\code{AbortedError}或\code{UnavailableError}异常，则重启会话服务。
+In the execution phase, call the \code{before\_run} and \code{after\_run} methods of the hook before and after running \code{Session.run}. If a \code{AbortedError} or \code{UnavailableError} exception occurs during the run, the session service is restarted.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-execution.png}
-\caption{MonitoredSession：执行}
+\caption{MonitoredSession: Execute}
  \label{fig:py-train-monitored-session-execution}
 \end{figure}
 
-\subsection{关闭}
+\subsection{close}
 
-当训练过程结束后，通过调用\code{close}方法，关闭\code{MonitoredSession}，释放系统的计算资源。
+When the training process is finished, close the \code{MonitoredSession} by calling the \code{close} method to release the computing resources of the system.
 
-此时，将回调钩子的\code{end}方法，并且会通过调用\code{Coordinator.request\_stop}方法，停止所有\code{QueueRunner}实例。最终，听过调用\code{tf.Session.close}方法，释放系统的资源。
+At this point, the \code{end} method of the hook will be called back and all \code{QueueRunner} instances will be stopped by calling the \code{Coordinator.request\_stop} method. Finally, I heard that the \code{tf.Session.close} method was called to release the system resources.
 
-另外，如果发生\code{OutOfRangeError}异常，\code{MonitoredSession}认为训练过程正常终止，并忽略该异常。
+In addition, if a \code{OutOfRangeError} exception occurs, \code{MonitoredSession} considers the training process to terminate normally and ignores the exception.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-close.png}
-\caption{MonitoredSession：关闭}
+\caption{MonitoredSession: Close}
  \label{fig:py-train-monitored-session-close}
 \end{figure}
 
 \end{content}
 
-\section{模型初始化}
+\section{Model Initialization}
 
 \begin{content}
 
-\code{MonitoredSession}在初始化时，使用\code{SessionCreator}完成会话的创建和模型的初始化。
+\code{MonitoredSession} At initialization, use \code{SessionCreator} to complete session creation and model initialization.
 
-一般地，在分布式环境下，存在两中类型的\ascii{Worker}:
+In general, in a distributed environment, there are two types of \ascii{Worker}:
 
 \begin{enum}
-  \eitem{\ascii{Chief}: 负责模型的初始化；}
-  \eitem{\ascii{Non-Chief}: 等待\ascii{Chief}完成模型的初始化。} 
+  \eitem{\ascii{Chief}: Responsible for the initialization of the model;}
+  \eitem{\ascii{Non-Chief}: Wait for \ascii{Chief} to complete the initialization of the model. }
 \end{enum}
 
-两者之间，通过一个简单的协调协议共同完成模型的初始化。
+The initialization of the model is done together through a simple coordination protocol.
 
-\subsection{协调协议}
+\subsection{Coordination Agreement}
 
-对于\ascii{Chief}，它会尝试从\ascii{Checkpoint}文件中恢复模型；如果没有成功，则会通过执行\code{init\_op}全新地初始化模型；其初始化算法，可以形式化描述为：
+For \ascii{Chief}, it will try to recover the model from the \ascii{Checkpoint} file; if it is not successful, it will initialize the model completely by executing \code{init\_op}; its initialization algorithm can be formalized as :
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def prepare_session(master, init_op, saver, ckp_dir):
   if is_chief():
-    sess = tf.Session(master)
-    sess.run(init_op) if not saver.restore(sess, ckp_dir)
+    sess = tf.Session (master)
+    sess.run (init_op) if not saver.restore (sess, ckp_dir)
 \end{python}
 \end{leftbar}
 
-对于\ascii{Non-Chief}，它会周期性地通过运行\ascii{ready\_op}，查看\ascii{Chief}是否已经完成模型的初始化。
+For \ascii{Non-Chief}, it periodically checks if \ascii{Chief} has completed the initialization of the model by running \ascii{ready\_op}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def wait_for_session(master, ready_op, recovery_wait_secs):
   while True:
-    sess = tf.Session(master)
+    sess = tf.Session (master)
     if sess.run(ready_op):
-      return sess
+      sex return
     else:
       sess.close()
       time.sleep(recovery_wait_secs)   
@@ -229,18 +229,18 @@ def wait_for_session(master, ready_op, recovery_wait_secs):
 
 \subsection{SessionManager}
 
-事实上，上述算法主要由\code{SessionManager}实现，它主要负责从\ascii{Checkpoint}文件中完成模型的恢复，或直接通过运行\code{init\_op}完成模型的初始化，最终创建可工作的\code{Session}实例。
+In fact, the above algorithm is mainly implemented by \code{SessionManager}, which is mainly responsible for the recovery of the model from the \ascii{Checkpoint} file, or the initialization of the model is completed directly by running \code{init\_op}, and finally the creation can work. The \code{Session} instance.
 
 \begin{enum}
-  \eitem{对于\ascii{Chief}，通过调用\code{prepare\_session}方法，完成模型的初始化；}
-  \eitem{对于\ascii{Non-Chief}，通过调用\code{wait\_for\_session}方法，等待\ascii{Chief}完成模型的初始化。} 
+  \eitem{For \ascii{Chief}, complete the initialization of the model by calling the \code{prepare\_session} method;}
+  \eitem{For \ascii{Non-Chief}, wait for \ascii{Chief} to complete the initialization of the model by calling the \code{wait\_for\_session} method. }
 \end{enum}
 
-详情可以参考\code{SessionManager}的具体实现。
+For details, please refer to the specific implementation of \code{SessionManager}.
 
-\subsection{引入工厂}
+\subsection{Introduction factory}
 
-使用工厂方法，分别使用\code{ChiefSessionCreator}和\code{WorkerSessionCreator}分别完成上述算法。
+Using the factory method, use \code{ChiefSessionCreator} and \code{WorkerSessionCreator} respectively to complete the above algorithm.
 
 \begin{figure}[!htbp]
 \centering
@@ -251,21 +251,21 @@ def wait_for_session(master, ready_op, recovery_wait_secs):
 
 \subsection{Scaffold}
 
-当要构建一个模型训练，需要\code{init\_op}初始化变量；需要\code{Saver}周期性实施\ascii{Checkpoint}；需要\code{ready\_op}查看一个模型是否已经初始化完毕；需要\code{summary\_op}搜集所有\ascii{Summary}，用于训练过程的可视化。
+To build a model training, you need \code{init\_op} to initialize the variables; you need \code{Saver} to periodically implement \ascii{Checkpoint}; you need \code{ready\_op} to see if a model has been initialized; \code{summary\_op} collects all \ascii{Summary} for visualization of the training process.
 
-一般地，在计算图中通过\code{GraphKey}标识了这些特殊的OP或对象，以便可以从计算图中检索出这些特殊的\ascii{OP}或对象。
+In general, these special OPs or objects are identified by \code{GraphKey} in the calculation graph so that these special \ascii{OP} or objects can be retrieved from the calculation graph.
 
-在训练模型的特殊领域中，提供了一个基础工具库：\code{Scaffold}，用于创建这些\ascii{OP}或对象的默认值，并添加到计算图的集合中，并且\code{Scaffold}提供了查询接口可以方便地获取到这些\ascii{OP}或对象。
+In the special area of ​​the training model, a basic tool library is provided: \code{Scaffold}, which is used to create default values ​​for these \ascii{OP} or objects, and added to the collection of calculation graphs, and \code{Scaffold } Provides a query interface to easily get these \ascii{OP} or objects.
 
-可以通过调用\code{Scaffold.finalize}方法，如果对应的\ascii{OP}或对象为\code{None}，则默认创建该类型的实例。最终冻结计算图，之后禁止再往图中增加节点。
+You can create an instance of this type by default by calling the \code{Scaffold.finalize} method. If the corresponding \ascii{OP} or object is \code{None}. Finally, the calculation graph is frozen, and then it is forbidden to add nodes to the graph.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Scaffold(object):
   def finalize(self):
     """Creates operations if needed and finalizes the graph."""
     
-    # create init\_op
+    # create init \ _on
     if self._init_op is None:
       def default_init_op():
         return control_flow_ops.group(
@@ -306,7 +306,7 @@ class Scaffold(object):
             variables.local_variables_initializer(),
             lookup_ops.tables_initializer())
       self._local_init_op = Scaffold.get_or_default(
-          'local_init_op',
+          'local_init_on',
           ops.GraphKeys.LOCAL_INIT_OP,
           _default_local_init_op)
     
@@ -320,37 +320,37 @@ class Scaffold(object):
     # create Saver
     if self._saver is None:
       self._saver = training_saver._get_saver_or_default()
-    self._saver.build()
+    self._saver.build ()
 
     ops.get_default_graph().finalize()
     return self
 \end{python}
 \end{leftbar}
 
-从\code{finalize}的实现可以看出，以下\ascii{OP}完成的功能为：
+As can be seen from the implementation of \code{finalize}, the following \ascii{OP} completes the functions:
 
 \begin{enum}
-  \eitem{\code{init\_op}: 完成所有全局变量和全局资源的初始化；}
-  \eitem{\code{local\_init\_op}: 完成所有本地变量和表格的初始化；} 
-  \eitem{\code{ready\_op}: 查看所有的全局变量和全局资源是否已经初始化了；否则报告未初始化的全局变量和全局资源的列表；}   
-  \eitem{\code{ready\_for\_local\_init\_op}: 查看所有的本地变量和表格是否已经初始化了；否则报告未初始化的本地变量和表格的列表；}   
-  \eitem{\code{summary\_op}: 汇总所有\ascii{Summary}的输出；}       
+  \eitem{\code{init\_op}: Complete initialization of all global variables and global resources;}
+  \eitem{\code{local\_init\_op}: Complete initialization of all local variables and tables;} 
+  \eitem{\code{ready\_op}: See if all global variables and global resources have been initialized; otherwise report a list of uninitialized global variables and global resources;}   
+  \eitem{\code{ready\_for\_local\_init\_op}: See if all local variables and tables have been initialized; otherwise report a list of uninitialized local variables and tables;}   
+  \eitem{\code{summary\_op}: summarizes the output of all \ascii{Summary};}       
 \end{enum}
 
-其中，本地变量不能持久化到\ascii{Checkpoint}文件中；当然，也就不能从\ascii{Checkpoint}文件中恢复本地变量的值。
+Among them, local variables can not be persisted to the \ascii{Checkpoint} file; of course, the value of the local variable cannot be restored from the \ascii{Checkpoint} file.
 
-\subsection{初始化算法}
+\subsection{initialization algorithm}
 
-通过观测上面的\ascii{OP}的定义，理解\code{prepare\_session}模型初始化的完整语义便不是那么困难了。
+Understanding the complete semantics of the \code{prepare\_session} model initialization is not that difficult by observing the definition of \ascii{OP} above.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class SessionManager(object):
   def prepare_session(self,
                       master,
                       saver=None
                       checkpoint_filename=None
-                      init_op=None,
+                      init_op = None,
                       init_feed_dict=None,
                       init_fn=None):
     """Creates a Session. Makes sure the model is ready."""
@@ -358,43 +358,43 @@ class SessionManager(object):
     def _restore_checkpoint():
       sess = session.Session(master)
       if not saver or not checkpoint_filename):
-        return sess, False
+        Sex return, False
       else:
         saver.restore(sess, checkpoint_filename)
         return sess, True
 
-    def _try_run_init_op(sess):
+    def _try_run_init_op (sess):
       if init_op is not None:
         sess.run(init_op, feed_dict=init_feed_dict)
       if init_fn:
-        init_fn(sess)
+        init_fn (sex)
     
     sess, is_succ = self._restore_checkpoint()
     if not is_succ:
-      _try_run_init_op(sess)
-    self._try_run_local_init_op(sess)
+      _try_run_init_op (sess)
+    self._try_run_local_init_op (sess)
     self._model_ready(sess)
-    return sess
+    sex return
 \end{python}
 \end{leftbar}
 
-其初始化算法非常简单。首先，尝试从\ascii{Checkpoint}文件中恢复(此处为了简化问题，省略了部分实现)；如果失败，则调用\code{init\_op}和\code{init\_fn}完成全局变量和资源的初始化；然后，才能实施本地变量和表格的初始化；最后，验证所有全局变量和资源是否已经初始化了。
+Its initialization algorithm is very simple. First, try to recover from the \ascii{Checkpoint} file (some implementations are omitted here to simplify the problem); if it fails, call \code{init\_op} and \code{init\_fn} to complete global variables and resources. Initialization; then, to initialize local variables and tables; finally, verify that all global variables and resources have been initialized.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/py-train-session-initialization-algo.png}
-\caption{模型初始化算法}
+\caption{model initialization algorithm}
  \label{fig:py-train-session-initialization-algo}
 \end{figure}
 
-\subsection{本地变量初始化}
+\subsection{local variable initialization}
 
-对于非空的\code{local\_init\_op}，必须等所有全局变量已经初始化完毕后才能进行初始化(通过调用\code{\_ready\_for\_local\_init\_op})；否则，报告未初始化的全局变量列表到\code{msg}字段中。
+For non-empty \code{local\_init\_op}, you must wait until all global variables have been initialized before initializing (by calling \code{\_ready\_for\_local\_init\_op}); otherwise, the report is not initialized List of global variables into the \code{msg} field.
 
-也就是说，本地变量初始化在全局变量初始化之后，且本地变量不会持久化到\ascii{Checkpoint}文件中。
+That is, local variables are initialized after the global variable is initialized, and local variables are not persisted into the \ascii{Checkpoint} file.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class SessionManager(object):
   def _ready_for_local_init(self, sess):
     """Checks if the model is ready to run local_init_op.
@@ -411,19 +411,19 @@ class SessionManager(object):
     
     is_ready, msg = self._ready_for_local_init(sess)
     if is_ready:
-      sess.run(self._local_init_op)
+      sess.run (self._local_init_op)
       return True, None
     else:
       return False, msg
 \end{python}
 \end{leftbar}
 
-\subsection{验证模型}
+\subsection{Verify model}
 
-最后，通过执行\code{\_ready\_op}，查看所有全局变量和全局资源是否都已经初始化了；否则，报告未初始化的变量列表到\code{msg}字段中。
+Finally, by executing \code{\_ready\_op}, see if all global variables and global resources have been initialized; otherwise, report the list of uninitialized variables to the \code{msg} field.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class SessionManager(object):
   def _model_ready(self, sess):
     """Checks if the model is ready or not.
@@ -432,10 +432,10 @@ class SessionManager(object):
 \end{python}
 \end{leftbar}
 
-其中，\code{\_ready}使用函数，用于运行相应的\code{ready\_op}，查看相应的变量或资源是否完成初始化。
+Among them, \code{\_ready} uses a function to run the corresponding \code{ready\_op} to see if the corresponding variable or resource is initialized.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def _ready(op, sess, msg):
   """Checks if the model is ready or not, as determined by op.
   """
@@ -454,18 +454,18 @@ def _ready(op, sess, msg):
 
 \end{content}
 
-\section{异常安全}
+\section{Exception safe}
 
 \begin{content}
 
-一般地，常常使用\code{with}的上下文管理器，实现\code{MonitoredSession}的异常安全和资源安全释放。
+In general, the \code{with} context manager is often used to implement the exception security and resource security release of \code{MonitoredSession}.
 
-\subsection{上下文管理器}
+\subsection{Context Manager}
 
-当退出\code{with}语句后，将停止运行所有\code{QueueRunner}实例，并实现\code{tf.Session}的安全关闭。
+When the \code{with} statement is exited, all \code{QueueRunner} instances will be stopped and a secure shutdown of \code{tf.Session} will be implemented.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class _MonitoredSession(object):
   def __exit__(self, exception_type, exception_value, traceback):
     if exception_type in [errors.OutOfRangeError, StopIteration]:
@@ -477,7 +477,7 @@ class _MonitoredSession(object):
     try:
       if not exception_type:
         for h in self._hooks:
-          h.end(self.tf_sess)
+          h.end (self.tf_sess)
     finally:
       try:
         self._sess.close()
@@ -488,14 +488,14 @@ class _MonitoredSession(object):
 \end{python}
 \end{leftbar}
 
-特殊地，当发生\code{OutOfRangeError}或\code{StopIteration}，则认为正常终止，忽视该异常。如果抛出了其它类型的异常，则不会调用\code{end}的回调钩子。
+In particular, when \code{OutOfRangeError} or \code{StopIteration} occurs, it is considered to terminate normally, ignoring the exception. If other types of exceptions are thrown, the callback hook for \code{end} will not be called.
 
-\subsection{停止QueueRunner}
+\subsection{Stop QueueRunner}
 
-另外，当执行\code{self.\_sess.close()}，最终将调用\code{\_CoordinatedSession}的\code{close}方法。通过调用\code{coord.request\_stop}通知所有\code{QueueRunner}实例停止运行，并且通过调用\code{coord.join}方法等待所有\code{QueueRunner}实例运行完毕。
+In addition, when \code{self.\_sess.close()} is executed, the \code{close} method of \code{\_CoordinatedSession} will eventually be called. Notify all \code{QueueRunner} instances to stop running by calling \code{coord.request\_stop} and wait for all \code{QueueRunner} instances to run by calling the \code{coord.join} method.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class _CoordinatedSession(_WrappedSession):
   def close(self):
     self._coord.request_stop()
@@ -511,14 +511,14 @@ class _CoordinatedSession(_WrappedSession):
 
 \end{content}
 
-\section{回调钩子}
+\section{callback hook}
 
 \begin{content}
 
-可以通过定制\code{SessionRunHook}，实现对\code{MonitorSession}生命周期过程的监听和管理。
+You can monitor and manage the \code{MonitorSession} lifecycle process by customizing \code{SessionRunHook}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class SessionRunHook(object):
   def begin(self):
     pass
@@ -537,12 +537,12 @@ class SessionRunHook(object):
 \end{python}
 \end{leftbar}
 
-其中，最常见的\code{Hook}包括：
+Among them, the most common \code{Hook} includes:
 
 \begin{enum}
-  \eitem{\code{CheckpointSaverHook}：周期性地\ascii{Checkpoint}；}
-  \eitem{\code{SummarySaverHook}：周期性地运行\ascii{Summary}；} 
-  \eitem{\code{StepCounterHook}：周期性地统计每秒运行的\ascii{Step}数目。}   
+  \ item {\ code {CheckpointSaverHook}: 周期性 地 \ ascii {Checkpoint};}
+  \eitem{\code{SummarySaverHook}: Run \ascii{Summary} periodically;} 
+  \eitem{\code{StepCounterHook}: Periodically counts the number of \ascii{Step} running per second. }   
 \end{enum}
 
 \begin{figure}[!htbp]
@@ -553,7 +553,6 @@ class SessionRunHook(object):
 \end{figure}
 
 \end{content}
-
 
 
 

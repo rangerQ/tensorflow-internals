@@ -3,31 +3,31 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{OP本质论} 
-\label{ch:essential-op}
+\chapter{OP Essentials} 
+\ label {ch: essential-op}
 
 \begin{content}
 
 \end{content}
 
-\section{OP的注册}
+\section{OP registration}
 
 \begin{content}
 
-在\cpp{}后端系统，系统初始化时，系统完成所有\ascii{OP}的注册。\ascii{OP}的注册是通过\code{REGISTER\_OP}宏完成的。
+In the \cpp{} backend system, the system completes the registration of all \ascii{OP} when the system is initialized. The registration of \ascii{OP} is done via the \code{REGISTER\_OP} macro.
 
-\subsection{REGISTER\_OP}
+\ subsection {REGISTER \ _OP}
 
-实施上，\code{REGISTER\_OP}定义了一套精致的内部\ascii{DSL}，系统自动完成字符串表示的翻译表达，并将其转换为\code{OpDef}的内部表示，最后保存在\code{OpDef}的仓库中。
+In practice, \code{REGISTER\_OP} defines a set of exquisite internal \ascii{DSL}, the system automatically completes the translation of the string representation, and converts it to the internal representation of \code{OpDef}, and finally saves it in \code{OpDef} in the repository.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/cc-op-repo.png}
-\caption{REGISTER\_OP：注册OP的实用宏}
+\caption{REGISTER\_OP: Utility macro for registering OP}
  \label{fig:cc-op-repo}
 \end{figure}
 
-\subsection{查询接口}
+\subsection{Query Interface}
 
 \begin{leftbar}
 \begin{c++}
@@ -36,13 +36,13 @@ struct OpRegistryInterface {
 
   virtual Status LookUp(
     const string& op_name,
-    const OpRegistrationData** op_reg_data) const = 0;
+    const OpRegistrationData ** on_reg_data) const = 0;
   Status LookUpOpDef(const string& op_name, const OpDef** op_def) const;
 };
 \end{c++}
 \end{leftbar}
 
-其中，\code{OpRegistrationData}描述了\ascii{OP}两种基本的元数据：\code{OpDef}与\code{OpShapeInferenceFn}；前者用于描述\ascii{OP}的输入/输出参数信息，属性名列表，及其约束关系。后者用于描述\ascii{OP}的\ascii{Shape}的推演规则。
+Among them, \code{OpRegistrationData} describes the two basic metadata of \ascii{OP}: \code{OpDef} and \code{OpShapeInferenceFn}; the former is used to describe the input/output parameter information of \ascii{OP}, attribute Name list, and its constraint relationship. The latter is used to describe the deduction rules for \ascii{Shape} of \ascii{OP}.
 
 \begin{leftbar}
 \begin{c++}
@@ -56,9 +56,9 @@ using OpRegistrationDataFactory =
 \end{c++}
 \end{leftbar}
 
-\subsection{OpDef仓库}
+\subsection{OpDef repository}
 
-实现中，采用延迟初始化的技术。为了简化问题的描述，此处做了简单的代码重构，以便帮助大家理解\code{OpRegistry}的工作原理。
+In the implementation, the technique of delay initialization is adopted. To simplify the description of the problem, here is a simple code refactoring to help you understand how \code{OpRegistry} works.
 
 \begin{leftbar}
 \begin{c++}
@@ -91,13 +91,13 @@ Status OpRegistry::Register(
   Status s = factory(op_reg_data.get());
   if (s.ok()) {
     gtl::InsertIfNotPresent(&registry_, 
-      op_reg_data->op_def.name(),
-      op_reg_data.get())
+      op_reg_data-> op_def.name (),
+      op_reg_data.get ())
   }
   if (s.ok()) {
-    op_reg_data.release();
+    op_reg_data.release ();
   } else {
-    op_reg_data.reset();
+    op_reg_data.reset ();
   }
   return watcher_status;
 }

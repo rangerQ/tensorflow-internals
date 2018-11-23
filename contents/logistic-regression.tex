@@ -3,438 +3,438 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{线性模型} 
+\chapter{linear model} 
 \label{ch:linear-model}
 
-\section{逻辑回归}
+\section{logical regression}
 
 \begin{content}
 
-在逻辑回归(\ascii{Logistic Regression})中，$y$是一个实数值，且$y \in \{ 0,1\}$。但是，逻辑回归解决的是二分类问题。一般地，如果$y \ge 0.5$则判定为正类；否则判定为负类。
+In logistic regression (\ascii{Logistic Regression}), $y$ is a real value, and $y \in \{ 0,1\}$. However, logistic regression solves the problem of two classifications. Generally, if $y \ge 0.5$, it is judged to be a positive class; otherwise, it is judged to be a negative class.
 
 \[c = \left\{ \begin{gathered}
   1,y \ge 0.5 \hfill \\
   0,y < 0.5 \hfill \\ 
-\end{gathered}  \right.\]
+\end{gathered} \right.\]
 
-另外，常常使用\emph{指示函数}表达上式。
+In addition, the above expression is often expressed using \emph{instruction function}.
 
 \[
 c = \mathbb I(y \ge 0.5)
 \]
 
-其中，$\mathbb I(true) = 1$；否则$\mathbb I(false) = 0$。
+Where $\mathbb I(true) = 1$; otherwise $\mathbb I(false) = 0$.
 
-\subsection{符号定义}
+\subsection{symbol definition}
 
-为了形式化地描述逻辑回归问题，此处定义了一些常用符号。需要注意的是，为了区分预测值与标签值的符号，因此使用$y, t$分别表示它们。
+To formalize the problem of logistic regression, some common symbols are defined here. It should be noted that in order to distinguish between the predicted value and the sign of the tag value, they are represented by $y, t$ respectively.
 
  \begin{itemize}
-   \item \ascii{训练样本集}: $ S = \{ ({x^{(i)}},{t^{(i)}});i = 1,2,...,m\} $
-   \item \ascii{第$i$个训练样本}: $ ({x^{(i)}},{t^{(i)}}) $
-   \item \ascii{样本输入}: $ x = ({x_1},{x_2},...,{x_n})^{T}  \in {\mathbb{R}^n} $
-   \item \ascii{样本标签}: $ t \in {\mathbb{R}} $
-   \item \ascii{预测值}: $ y \in {\mathbb{R}} $   
-   \item \ascii{误差值}: $ e = y - t \in {\mathbb{R}} $
-   \item \ascii{权重}: $ w \in {\mathbb{R}^{n}} $   
-   \item \ascii{偏置}: $ b \in {\mathbb{R}} $
-   \item \ascii{线性加权和}: $ z = w^Tx + b \in {\mathbb{R}} $   
-   \item \ascii{激活函数}: $ f(z) = \frac{1}{{1 + {e^{ - z}}}} \in {[0, 1]} $
-   \item \ascii{正则项}: $ R(w) \in {\mathbb{R}} $
-   \item \ascii{L2正则项}: $ \parallel w\parallel _2^2 \in {\mathbb{R}} $
-   \item \ascii{损失函数(无正则项)}: $ L(w, b) \in {\mathbb{R}} $
-   \item \ascii{损失函数(含正则项)}: $ J(w, b) = L(w, b) + \lambda R(w)\in {\mathbb{R}} $
-   \item \ascii{梯度函数}: $ {\nabla _w}L( {w,b}) \in {\mathbb{R}^n} $
+   \item \ascii{training sample set}: $ S = \{ ({x^{(i)}},{t^{(i)}});i = 1,2,...,m\} $
+   \item \ascii{第$i$ training sample}: $ ({x^{(i)}},{t^{(i)}}) $
+   \item \ascii{sample input}: $ x = ({x_1},{x_2},...,{x_n})^{T} \in {\mathbb{R}^n} $
+   \item \ascii{sample tag}: $ t \in {\mathbb{R}} $
+   \item \ascii{predicted value}: $ y \in {\mathbb{R}} $   
+   \item \ascii{error value}: $ e = y - t \in {\mathbb{R}} $
+   \item \ascii{weight}: $ w \in {\mathbb{R}^{n}} $   
+   \item \ascii{offset}: $ b \in {\mathbb{R}} $
+   \item \ascii{linear weighted sum}: $ z = w^Tx + b \in {\mathbb{R}} $   
+   \item \ascii{activation function}: $ f(z) = \frac{1}{{1 + {e^{ - z}}}} \in {[0, 1]} $
+   \item \ascii{regular item}: $ R(w) \in {\mathbb{R}} $
+   \item \ascii{L2 regular item}: $ \parallel w\parallel _2^2 \in {\mathbb{R}} $
+   \item \ascii{loss function (no regular items)}: $ L(w, b) \in {\mathbb{R}} $
+   \item \ascii{loss function (with regular items)}: $ J(w, b) = L(w, b) + \lambda R(w)\in {\mathbb{R}} $
+   \item \ascii{gradient function}: $ {\nabla _w}L( {w,b}) \in {\mathbb{R}^n} $
  \end{itemize}
 
-\subsection{模型定义}
+\subsection{model definition}
 
-如\refig{logistic-regression-nn}所示，逻辑回归等价于仅具有一个神经元的网络模型。
+As shown by \refig{logistic-regression-nn}, logistic regression is equivalent to a network model with only one neuron.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/logistic-regression-nn.png}
-\caption{逻辑回归：神经元模型}
+\caption{logical regression: neuron model}
  \label{fig:logistic-regression-nn}
 \end{figure}
 
-首先，逻辑回归完成$z = {w^T}x + b$的线性加权和；然后，使用\ascii{sigmoid}的激活函数，完成非线性变换。
+First, the logistic regression completes the linear weighted sum of $z = {w^T}x + b$; then, using the activation function of \ascii{sigmoid}, the nonlinear transformation is done.
 
 \[\begin{aligned}
-  y =  & {h_{w,b}}(x) \\ 
-   =  & f({w^T}x + b) \\ 
-   =  & \frac{1}{{1 + {e^{ - {w^T}x + b}}}} \\ 
+  y = & {h_{w,b}}(x) \\ 
+   = & f({w^T}x + b) \\ 
+   = & \frac{1}{{1 + {e^{ - {w^T}x + b}}}} \\ 
 \end{aligned} \]
 
-$w$表示模型的权重，它是一个$n$维的向量；$b$表示神经元的偏置，它是一个标量。
+$w$ represents the weight of the model, which is a vector of $n$ dimensions; $b$ represents the bias of the neuron, which is a scalar.
 
 \[\begin{gathered}
   w = \left[ {\begin{array}{*{20}{c}}
   {{w_1}} \\ 
   {{w_2}} \\ 
-   \vdots  \\ 
+   \vdots \\ 
   {{w_n}} 
 \end{array}} \right] \in {\mathbb{R}^n} \\ 
   b \in \mathbb{R} \\ 
 \end{gathered} \]
 
-$x$表示模型的输入，它是一个$n$维的向量；其中，$\forall {x_i} \in x,i = 1,2,...,n$，它表示输入向量$x$的一个特征值；$y$表示模型的输出，它是一个标量。
+$x$ represents the input to the model, which is a vector of $n$ dimensions; where $\forall {x_i} \in x,i = 1,2,...,n$, which represents the input vector $x$ An eigenvalue; $y$ represents the output of the model, which is a scalar.
 
 \[\begin{gathered}
   x = \left[ {\begin{array}{*{20}{c}}
   {{x_1}} \\ 
   {{x_2}} \\ 
-   \vdots  \\ 
+   \vdots \\ 
   {{x_n}} 
 \end{array}} \right] \in {\mathbb{R}^n} \\ 
   {\text{y}} \in {\mathbb{R}} \\ 
 \end{gathered}\]
 
-$f(z)$是神经元的激活函数，此处使用\ascii{sigmoid}函数。
+$f(z)$ is the activation function of the neuron, using the \ascii{sigmoid} function here.
 
-\subsection{Sigmoid函数}
+\subsection{Sigmoid function}
 
-\ascii{sigmoid}函数将无穷的定义域空间压缩为$[0, 1]$的值域空间，因此具有天然的概率解释意义。
+The \ascii{sigmoid} function compresses the infinite domain space into the range space of $[0, 1]$, so it has a natural probability interpretation.
 
 \[
 f(z) = \frac{1}{{1 + {e^{ - z}}}}
 \]
 
 
-\subsubsection{软饱和性}
+\subsubsection{soft saturation}
 
-如\refig{sigmoid}所示，\ascii{sigmoid}函数具有软饱和性，即
+As shown by \refig{sigmoid}, the \ascii{sigmoid} function has soft saturation, ie
 
 \[\begin{gathered}
-  \mathop {\lim }\limits_{z \to  + \infty } f(z) = 1 \hfill \\
-  \mathop {\lim }\limits_{z \to  - \infty } f(z) = 0 \hfill \\ 
+  \mathop {\lim }\limits_{z \to + \infty } f(z) = 1 \hfill \\
+  \mathop {\lim }\limits_{z \to - \infty } f(z) = 0 \hfill \\ 
 \end{gathered} \]
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/sigmoid.png}
-\caption{sigmoid函数}
+\caption{sigmoidfunction}
  \label{fig:sigmoid}
 \end{figure}
 
-\subsubsection{导数}
+\subsubsection{derivative}
 
-\ascii{sigmoid}的导数具有特殊的表现形式，其导函数是$y$的二次函数。令
+The derivative of \ascii{sigmoid} has a special form, and its derivative function is a quadratic function of $y$. make
 
 \[
 y = \frac{1}{{1 + {e^{ - z}}}}
 \]
 
-根据链式求导法则，可以很容易地推导出\ascii{sigmoid}的导数。
+The derivative of \ascii{sigmoid} can be easily derived from the chain-based derivation rule.
 
 \[\begin{aligned}
-  y' =  & \frac{d}{{dz}}\left( {\frac{1}{{1 + {e^{ - z}}}}} \right) \\ 
-   =  & \frac{d}{{dz}}{\left( {1 + {e^{ - z}}} \right)^{ - 1}} \\ 
-   =  &  - {\left( {1 + {e^{ - z}}} \right)^{ - 2}}\frac{d}{{dz}}\left( {{e^{ - z}}} \right) \\ 
-   =  &  - {\left( {1 + {e^{ - z}}} \right)^{ - 2}}{e^{ - z}}\frac{d}{{dz}}\left( { - z} \right) \\ 
-   =  &  - {\left( {1 + {e^{ - z}}} \right)^{ - 2}}{e^{ - z}}\left( { - 1} \right) \\ 
-   =  & \frac{{{e^{ - z}}}}{{{{\left( {1 + {e^{ - z}}} \right)}^2}}} \\ 
-   =  & \frac{1}{{1 + {e^{ - z}}}}\left( {1 - \frac{1}{{1 + {e^{ - z}}}}} \right) \\ 
-   =  & y(1 - y) \\ 
+  y' = & \frac{d}{{dz}}\left( {\frac{1}{{1 + {e^{ - z}}}}} \right) \\ 
+   = & \frac{d}{{dz}}{\left( {1 + {e^{ - z}}} \right)^{ - 1}} \\ 
+   = & - {\left( {1 + {e^{ - z}}} \right)^{ - 2}}\frac{d}{{dz}}\left( {{e^{ - z}} } \right) \\ 
+   = & - {\left( {1 + {e^{ - z}}} \right)^{ - 2}}{e^{ - z}}\frac{d}{{dz}}\left( { - z} \right) \\ 
+   = & - {\left( {1 + {e^{ - z}}} \right)^{ - 2}}{e^{ - z}}\left( { - 1} \right) \\ 
+   = & \frac{{{e^{ - z}}}}{{{{\left( {1 + {e^{ - z}}} \right)}^2}}} \\ 
+   = & \frac{1}{{1 + {e^{ - z}}}}\left( {1 - \frac{1}{{1 + {e^{ - z}}}}} \right) \\ 
+   = & y(1 - y) \\ 
 \end{aligned} \]
 
-\subsection{概率解释}
+\subsection{probability explanation}
 
-对于任意的$(x,t) \in S$，根据\ascii{Sigmoid}的函数特性，假设$t|x$服从$Bernoulli(y)$的概率分布。
+For any $(x,t) \in S$, according to the functional properties of \ascii{Sigmoid}, assume that $t|x$ obeys the probability distribution of $Bernoulli(y)$.
 
 \[\begin{aligned}
   P(t = 1|x;w,b) = & y \\ 
   P(t = 0|x;w,b) = & 1 - y \\ 
 \end{aligned} \]
 
-众所周知，$Bernoulli(y)$概率分布可以描述为如下更为简洁的表达方式。
+As we all know, the $Bernoulli(y)$ probability distribution can be described as a more concise expression.
 
 \[P(t|x;w,b) = {y^t}{(1 - y)^{1 - t}}\]
 
-推而广之，假如存在$m$个独立同分布的训练样本$\{ ({x^{(i)}},{t^{(i)}});i = 1,2,...,m\}$，以$(w,b)$为参数的似然函数可表达为:
+By extension, if there are $m$ independent and identically distributed training samples $\{ ({x^{(i)}}, {t^{(i)}}); i = 1,2,.. .,m\}$, the likelihood function with the parameter $(w,b)$ can be expressed as:
 
 \[\begin{aligned}
-  L(w,b) =  & P\left( {\vec y|X} \right) \\ 
-   =  & \prod\limits_{i = 1}^m {P\left( {{t^{(i)}}|{x^{(i)}};w,b} \right)}  \\ 
-   =  & \prod\limits_{i = 1}^m {{{\left( {{y^{(i)}}} \right)}^{{t^{(i)}}}}{{\left( {1 - {y^{(i)}}} \right)}^{1 - {t^{(i)}}}}}  \\ 
+  L(w,b) = & P\left( {\vec y|X} \right) \\ 
+   = & \prod\limits_{i = 1}^m {P\left( {{t^{(i)}}|{x^{(i)}};w,b} \right)} \\ 
+   = & \prod\limits_{i = 1}^m {{{\left( {{y^{(i)}}} \right)}^{{t^{(i)}}}}{{\ Left( {1 - {y^{(i)}}} \right)}^{1 - {t^{(i)}}}}} \\ 
 \end{aligned} \]
 
-其中，
-${y^{(i)}} = {h_{w,b}}({x^{(i)}}), i=1,2,...,m $。一般地，根据对数函数的单调递增性，将其变换为对数似然函数，使得连乘运算转换为连加运算，简化了问题的复杂度。
+among them,
+${y^{(i)}} = {h_{w,b}}({x^{(i)}}), i=1,2,...,m $. Generally, according to the monotonous increment of the logarithmic function, it is transformed into a log likelihood function, so that the multiplication operation is converted into a continuous addition operation, which simplifies the complexity of the problem.
 
 \[l(w,b) = \log L(w,b) = \sum\limits_{i = 1}^m {{t^{(i)}}\log {y^{(i)}} + \left( {1 - {t^{(i)}}} \right)\log \left( {1 - {y^{(i)}}} \right)} \]
 
-因此，逻辑回归问题可以转换为最大化对数似然函数的参数估计问题。
+Therefore, the logistic regression problem can be transformed into a parameter estimation problem that maximizes the log likelihood function.
 
-\[\hat w,\hat b = \arg \mathop {\max }\limits_{w,b} \sum\limits_{i = 1}^m {{t^{(i)}}\log {y^{(i)}} + \left( {1 - {t^{(i)}}} \right)\log \left( {1 - {y^{(i)}}} \right)} \]
+\[\hat w,\hat b = \arg \mathop {\max }\limits_{w,b} \sum\limits_{i = 1}^m {{t^{(i)}}\log {y ^{(i)}} + \left( {1 - {t^{(i)}}} \right)\log \left( {1 - {y^{(i)}}} \right)} \ ]
 
-可以使用梯度上升的优化方法，迭代求取最优的参数$(\hat w,\hat b)$。
+You can use the gradient-rising optimization method to iteratively find the optimal parameter $(\hat w,\hat b)$.
 
-\subsection{交叉熵损失函数}
+\subsection{cross entropy loss function}
 
-在机器学习领域中，常常使用\emph{损失函数}，并使用\emph{梯度下降}的优化算法，迭代求取最优的参数$(\hat w,\hat b)$。根据上一节的推导，给定一个训练样本$(x, t)$，逻辑回归可以使用如下定义的损失函数，它是交叉熵损失函数在二分类问题下的特殊表现形式。
+In the field of machine learning, \emph{loss function} is often used, and the optimization algorithm of \emph{gradient drop} is used to iteratively find the optimal parameter $(\hat w,\hat b)$. According to the derivation of the previous section, given a training sample $(x, t)$, logistic regression can use the loss function defined below, which is a special representation of the cross-entropy loss function under the two-class problem.
 
-\[L(w,b;x,t) =  - \left\{ {t\log y + \left( {1 - t} \right)\log \left( {1 - y} \right)} \right\}\]
+\[L(w,b;x,t) = - \left\{ {t\log y + \left( {1 - t} \right)\log \left( {1 - y} \right)} \ Right\}\]
 
-推而广之，给定训练数据集$ S = \{ ({x^{(i)}},{t^{(i)}});i = 1,2,...,m\} $，逻辑回归的损失函数可以表达为：
+By extension, given training data set $ S = \{ ({x^{(i)}}, {t^{(i)}});i = 1,2,...,m\} $, the loss function of logistic regression can be expressed as:
 
-\[L(w,b; S) =  - \sum\limits_{i = 1}^m {{t^{(i)}}\log {y^{(i)}} + \left( {1 - {t^{(i)}}} \right)\log \left( {1 - {y^{(i)}}} \right)} \]
+\[L(w,b; S) = - \sum\limits_{i = 1}^m {{t^{(i)}}\log {y^{(i)}} + \left( {1 - {t^{(i)}}} \right)\log \left( {1 - {y^{(i)}}} \right)} \]
 
-因此，逻辑回归的学习问题便转换为最小化损失函数$L(w,b)$的优化问题。
+Therefore, the learning problem of logistic regression is transformed into an optimization problem that minimizes the loss function $L(w,b)$.
 
 \[\hat w,\hat b = \arg \mathop {\min }\limits_{w,b} L(w, b)\]
 
-\subsection{正则项}
+\subsection{regular item}
 
-为了控制模型的复杂度，可以增加$L2$的正则项，它等于向量$w$的内积。
+To control the complexity of the model, you can increase the regular term of $L2$, which is equal to the inner product of the vector $w$.
 
 \[R(w) = \lambda \parallel w\parallel _2^2 = {w^T}w \]
 
-其中，$\lambda$称为正则项因子，用于控制正则项的影响程度；它是模型的超参数，可以通过交叉验证试验获取最佳的数值。增加了正则项后，模型的损失函数可以表达为：
+Among them, $\lambda$ is called the regular term factor, which is used to control the degree of influence of the regular term; it is the hyperparameter of the model, and the best value can be obtained through the cross-validation test. After adding the regular term, the model's loss function can be expressed as:
 
 \[J(w,b) = L(w,b) + \lambda \parallel w\parallel _2^2\]
 
-其优化问题也随之表达为：
+The optimization problem is also expressed as:
 
 \[\hat w,\hat b = \arg \mathop {\min }\limits_{w,b} J(w, b)\]
 
-\subsection{梯度下降}
+\subsection{gradient drop}
 
-可以使用梯度下降算法，迭代求取最优的$(\hat w,\hat b)$。其中，$\alpha$表示学习速率，表示参数更新的大小。
+You can use the gradient descent algorithm to iteratively find the optimal $(\hat w,\hat b)$. Where $\alpha$ represents the learning rate, which represents the size of the parameter update.
 
 \[\begin{aligned}
   w \leftarrow & w - \alpha {\nabla _w}L(w,b) \\ 
   b \leftarrow & b - \alpha {\nabla _b}L(w,b) \\ 
 \end{aligned} \]
 
-其中，$w,b$的梯度分别定义为：
+Among them, the gradients of $w and b$ are defined as:
 
 \[\begin{aligned}
   {\nabla _w}L(w,b) = & \frac{{\partial L}}{{\partial w}} \\ 
   {\nabla _b}L(w,b) = & \frac{{\partial L}}{{\partial b}} \\ 
 \end{aligned} \]
 
-如\refig{mnist-gd}所示，可以将损失函数比作一座山，登山者试图寻找最佳的行动方案达到山谷。登山者站在某个山坡上环顾四周，决定沿梯度的反方向向下走一小步，直到获得更优的解。当实施梯度下降更新算法时，初始点不同，获得的最小值可能也不同。因此梯度下降求得的只是局部最小值。
+As shown by \refig{mnist-gd}, the loss function can be likened to a mountain, and the climber tries to find the best course of action to reach the valley. The climber stood on a hillside and decided to take a small step down the opposite direction of the gradient until a better solution was obtained. When the gradient descent update algorithm is implemented, the initial points are different and the minimum values ​​obtained may be different. Therefore, the gradient drop is only a local minimum.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/mnist-gd.jpeg}
-\caption{梯度下降算法}
+\caption{gradient descent algorithm}
  \label{fig:mnist-gd}
 \end{figure}
 
-梯度下降的步伐大小非常重要，如果太小，则找到函数最小值的速度就很慢；如果太大，则可能会越过极值点。一般地，在模型训练初期，因为离模型收敛的目标还比较远，因此将其学习速率调得大一些；随着迭代次数增加，学习速率调得小一些。因此，学习速率$\alpha$是自适应的，目前理论上存在很多学习速率$\alpha$随时间衰减的优化算法，例如\ascii{Adagrad}等。因此，优化问题的关键在于梯度如何计算。
+The step size of the gradient drop is very important. If it is too small, the speed of finding the minimum value of the function is very slow; if it is too large, it may exceed the extreme point. Generally, in the early stage of model training, because the target of convergence from the model is still far away, the learning rate is adjusted to be larger; as the number of iterations increases, the learning rate is adjusted to be smaller. Therefore, the learning rate $\alpha$ is adaptive, and there are theoretically many optimization algorithms that learn the rate of $\alpha$ decay with time, such as \ascii{Adagrad}. Therefore, the key to the optimization problem is how the gradient is calculated.
 
-\subsection{计算梯度}
+\subsection{calculation gradient}
 
-根据链式求导法则，给定任意一个样本$ (x,t) \in S $，可以推导出$ L(y, t) $相对于$ w_i, i=1,2,...,n $的梯度公式。
+According to the chain-based derivation rule, given any sample $ (x,t) \in S $, we can infer $ L(y, t) $ relative to $ w_i, i=1,2,...,n The gradient formula of $.
 
 \[\begin{aligned}
   \frac{{\partial L}}{{\partial {w_i}}}
-   =  & \frac{{\partial L}}{{\partial y}}\frac{{\partial y}}{{\partial z}}\frac{{\partial z}}{{\partial {w_i}}} \\ 
-   =  & \left( {\frac{{1 - t}}{{1 - y}} - \frac{t}{y}} \right)y(1 - y){x_i} \\ 
-   =  & (y - t){x_i} \\ 
+   = & \frac{{\partial L}}{{\partial y}}\frac{{\partial y}}{{\partial z}}\frac{{\partial z}}{{\partial {w_i} }} \\ 
+   = & \left( {\frac{{1 - t}}{{1 - y}} - \frac{t}{y}} \right)y(1 - y){x_i} \\ 
+   = & (y - t){x_i} \\ 
 \end{aligned} \]
 
-同理，可以推导出$ L(W,b) $相对于$ b $的梯度公式。
+Similarly, a gradient formula for $L(W,b)$ relative to $b$ can be derived.
 
 \[\begin{aligned}
   \frac{{\partial L}}{{\partial b}} 
-   =  & \frac{{\partial L}}{{\partial y}}\frac{{\partial y}}{{\partial z}}\frac{{\partial z}}{{\partial b}} \\ 
-   =  & \left( {\frac{{1 - t}}{{1 - y}} - \frac{t}{y}} \right)y(1 - y) \\ 
-   =  & y - t \\ 
+   = & \frac{{\partial L}}{{\partial y}}\frac{{\partial y}}{{\partial z}}\frac{{\partial z}}{{\partial b}} \\ 
+   = & \left( {\frac{{1 - t}}{{1 - y}} - \frac{t}{y}} \right)y(1 - y) \\ 
+   = & y - t \\ 
 \end{aligned} \]
 
-进一步，通过矢量化得到$w,b$的梯度计算公式。其中，$\nabla _w}L( {w,b;x,t}) \in {\mathbb{R}^{n}}$，$\nabla _b}L( {w,b;x,t}) \in {\mathbb{R}}$。
+Further, a gradient calculation formula of $w, b$ is obtained by vectorization. Where $\nabla _w}L( {w,b;x,t}) \in {\mathbb{R}^{n}}$,$\nabla _b}L( {w,b;x,t} ) \in {\mathbb{R}}$.
 
 \[\begin{gathered}
-  {\nabla _w}L( {w,b;x,t}) =  \left({y - t} \right)x \\ 
-  {\nabla _b}L( {w,b;x,t) =   y - t  \\ 
+  {\nabla _w}L( {w,b;x,t}) = \left({y - t} \right)x \\ 
+  {\nabla _b}L( {w,b;x,t) = y - t \\ 
 \end{gathered} \]
 
-推而广之，给定训练数据集$ S = \{ ({x^{(i)}},{t^{(i)}});i = 1,2,...,m\} $，得到$w,b$的矢量化的梯度计算公式为：
+By extension, given training data set $ S = \{ ({x^{(i)}}, {t^{(i)}});i = 1,2,...,m\} $, get the vectorized gradient formula for $w,b$ as:
 
 \[\begin{gathered}
-  {\nabla _w}L(w,b;S) = \left( {\frac{1}{m}\sum\limits_{i = 1}^m {\left( {{y^{(i)}} - {t^{(i)}}} \right)} } \right)x \\ 
-  {\nabla _b}L(w,b;S) = \frac{1}{m}\sum\limits_{i = 1}^m {\left( {{y^{(i)}} - {t^{(i)}}} \right)}  \\ 
+  {\nabla _w}L(w,b;S) = \left( {\frac{1}{m}\sum\limits_{i = 1}^m {\left( {{y^{(i)} } - {t^{(i)}}} \right)} } \right)x \\ 
+  {\nabla _b}L(w,b;S) = \frac{1}{m}\sum\limits_{i = 1}^m {\left( {{y^{(i)}} - {t ^{(i)}}} \right)} \\ 
 \end{gathered} \]
 
-\subsection{参数更新}
+\subsection{parameter update}
 
-参数更新存在三种基本的算法。对于给定一个训练样本$ ({x^{(i)}},{t^{(i)}}) $，根据$w, b$的梯度公式，完成本次迭代的参数更新，该算法常称为\emph{随机梯度下降法}(\ascii{SGD})。因为更新一次参数，\ascii{SGD}只需读取一个训练样本，而单个样本并不能代表普遍性，可能存在很多噪声，因此模型的收敛情况较为抖动。但是，\ascii{SGD}可以实现模型的快速收敛，效率较为高效。
+There are three basic algorithms for parameter updating. For a given training sample $ ({x^{(i)}}, {t^{(i)}}) $, according to the gradient formula of $w, b$, complete the parameter update of this iteration, the algorithm Often referred to as \emph{random gradient descent method} (\ascii{SGD}). Because the parameters are updated once, \ascii{SGD} only needs to read one training sample, and a single sample does not represent universality. There may be a lot of noise, so the convergence of the model is more jittery. However, \ascii{SGD} can achieve rapid convergence of the model and is more efficient.
 
 \[\begin{gathered}
   w \leftarrow w - \alpha \left( {{y^{(i)}} - {t^{(i)}}} \right)x \\ 
   b \leftarrow b - \alpha \left( {{y^{(i)}} - {t^{(i)}}} \right) \\ 
 \end{gathered} \]
 
-另外一种极端，给定整个训练样本数据$ S $，根据$w, b$的梯度公式，完成本次迭代的参数更新，该算法常称为\emph{批式梯度下降法}(\ascii{BGD})。因为更新一次参数，需要遍历整个训练数据集，因此模型收敛较为平稳。但是，由于计算量大，模型收敛速度相对\ascii{SGD}较为缓慢。
+At the other extreme, given the entire training sample data $ S $, according to the gradient formula of $w, b$, the parameter update of this iteration is completed. This algorithm is often called \emph{batch gradient descent method} (\ascii {BGD}). Because the parameters are updated once, the entire training data set needs to be traversed, so the model convergence is relatively stable. However, due to the large amount of computation, the model convergence speed is slower than \ascii{SGD}.
 
 \[\begin{gathered}
-  w \leftarrow w - \alpha \left( {\frac{1}{m}\sum\limits_{i = 1}^m {\left( {{y^{(i)}} - {t^{(i)}}} \right)} } \right)x \\ 
-  b \leftarrow b - \alpha \left( {\frac{1}{m}\sum\limits_{i = 1}^m {\left( {{y^{(i)}} - {t^{(i)}}} \right)} } \right) \\ 
+  w \leftarrow w - \alpha \left( {\frac{1}{m}\sum\limits_{i = 1}^m {\left( {{y^{(i)}} - {t^{( i)}}} \right)} } \right)x \\ 
+  b \leftarrow b - \alpha \left( {\frac{1}{m}\sum\limits_{i = 1}^m {\left( {{y^{(i)}} - {t^{( i)}}} \right)} } \right) \\ 
 \end{gathered} \]
 
-而在现实应用中，既不会使用\ascii{BGD}，也不会使用\ascii{SGD}，而使用\ascii{MiniBatch}的\ascii{SGD}算法。更为甚者，由于\ascii{MiniBatch}的\ascii{SGD}的大规模应用，因此常简称\ascii{MiniBatch}的\ascii{SGD}为\ascii{SGD}算法。
+In real-world applications, neither \ascii{BGD} nor \ascii{SGD} will be used, but the \ascii{SGD} algorithm of \ascii{MiniBatch} will be used. What's more, due to the large-scale application of \ascii{MiniBatch}'s \ascii{SGD}, \ascii{SGD}, often referred to as \ascii{MiniBatch}, is the \ascii{SGD} algorithm.
 
 \[\begin{aligned}
-  w \leftarrow w - \alpha \left( {\frac{1}{{batch\_zie}}\sum\limits_{i = 1}^{batch\_size} {\left( {{y^{(i)}} - {t^{(i)}}} \right)} } \right)x \\ 
-  b \leftarrow b - \alpha \left( {\frac{1}{{batch\_size}}\sum\limits_{i = 1}^{batch\_size} {\left( {{y^{(i)}} - {t^{(i)}}} \right)} } \right) \\ 
+  w \leftarrow w - \alpha \left( {\frac{1}{{atch#\zie}}\sum\limits_{i = 1}^{batch\_size} {\left( {{y^{(i) }} - {t^{(i)}}} \right)} } \right)x \\ 
+  b \leftarrow b - \alpha \left( {\frac{1}{{atch#\size}}\sum\limits_{i = 1}^{batch\_size} {\left( {{y^{(i) }} - {t^{(i)}}} \right)} } \right) \\ 
 \end{aligned} \]
 
-相对于\ascii{BGD}，\ascii{MiniBatch}的\ascii{SGD}每次跟新参数不用遍历真个训练数据集，只需遍历一个\ascii{batch\_size}个训练样本；因此，相对\ascii{BGD}，\ascii{MiniBatch}的\ascii{SGD}的收敛速度更快。而相对于\ascii{SGD}，\ascii{MiniBatch}的\ascii{SGD}每次跟新参数，读取携带更多普遍性的\ascii{batch\_size}个训练样本；因此，相对\ascii{SGD}，\ascii{MiniBatch}的\ascii{SGD}的收敛更为平稳。
+Compared to \ascii{BGD}, \ascii{MiniBatch}'s \ascii{SGD} does not need to traverse the real training data set with new parameters, just traverse a \ascii{batch\_size} training samples; therefore, relative \ascii{BGD}, \ascii{MiniBatch}'s \ascii{SGD} converges faster. And relative to \ascii{SGD}, \ascii{MiniBatch}'s \ascii{SGD} reads new \ascii{batch\_size} training samples with new parameters each time; therefore, relative \ascii {SGD}, \ascii{MiniBatch}'s \ascii{SGD}'s convergence is more stable.
 
-\subsection{计算图}
+\subsection{calculation chart}
 
-一般地，当使用神经网络表示学习模型时，其训练过程都包括两个基本步骤：
+In general, when a neural network is used to represent a learning model, its training process involves two basic steps:
 
 \begin{itemize}
-  \item \ascii{正向计算}: 计算损失
-  \item \ascii{反向传播}: 计算梯度
+  \item \ascii{forward calculation}: Calculating loss
+  \item \ascii{backpropagation}: Calculate the gradient
 \end{itemize}
 
-为了实现正向的损失计算，及其反向的梯度计算，可以将网络翻译为等价的计算图。在正向的计算图中，节点描述了某种抽象的数学运算，例如矩阵乘法，向量内积，激活函数等；边表示函数的输出值，并作为下游节点函数的输入。
+To achieve a positive loss calculation, and its inverse gradient calculation, the network can be translated into an equivalent computational map. In the forward computational graph, the node describes some abstract mathematical operations, such as matrix multiplication, vector inner product, activation function, etc.; the edge represents the output value of the function and serves as the input to the downstream node function.
 
 
 
-如\refig{logistic-bp}所示，逻辑回归的正向
+Positive as logistic regression as shown by \refig{logistic-bp}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/logistic-bp.png}
-\caption{逻辑回归：前向计算与反向传播}
+\caption{logical regression: forward calculation and back propagation}
  \label{fig:logistic-bp}
 \end{figure}
 
 
 \end{content}
 
-\section{单层感知器}
+\section{Single layer perceptron}
 
 \begin{content}
 
-首先，尝试构建\ascii{10}个神经元的单层感知器。如\refig{mnist-slp}所示，对于诸如手写数字识别的多分类问题，理论上常使用\ascii{softmax}的激活函数。
+First, try to build a single layer perceptron for \ascii{10} neurons. As shown by \refig{mnist-slp}, for multi-classification problems such as handwritten digit recognition, the activation function of \ascii{softmax} is often used in theory.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/mnist-slp.png}
-\caption{单层感知器}
+\caption{Single layer perceptron}
  \label{fig:mnist-slp}
 \end{figure}
 
-\subsection{理论基础}
+\subsection{theory basis}
 
-理论上，\ascii{softmax}回归是\ascii{logistic}回归的广义扩展。其中，\ascii{logistic}回归是为了解决二分类问题，即$y \in \{ 0,1\}$；而\ascii{softmax}回归是为了解决$ k $分类问题，即$y \in \{ 1,2,...,k\}$。
+In theory, the \ascii{softmax} regression is a generalized extension of the \ascii{logistic} regression. Among them, \ascii{logistic} regression is to solve the two classification problem, namely $y \in \{ 0,1\}$; and \ascii{softmax} regression is to solve the $k $ classification problem, namely $y \in \{ 1,2,...,k\}$.
 
-\subsubsection{符号定义}
+\subsubsection{symbol definition}
 
-为了形式化地描述\ascii{softmax}回归问题，此处定义了一些常用符号。
+To formalize the \ascii{softmax} regression problem, some common symbols are defined here.
 
  \begin{itemize}
-   \item \ascii{训练样本集}: $ S = \{ ({x^{(i)}},{y^{(i)}});i = 1,2,...,m\} $
-   \item \ascii{第$i$个训练样本}: $ ({x^{(i)}},{y^{(i)}}) $
-   \item \ascii{样本输入}: $ x = ({x_1},{x_2},...,{x_n})^{T}  \in {\mathbb{R}^n} $
-   \item \ascii{样本标签(one-hot)}: $ y = ({y_1},{y_2},...,{y_k})^{T} \in {\mathbb{R}^k} $
-   \item \ascii{权重}: $ W \in {\mathbb{R}^{n \times k}} $   
-   \item \ascii{偏置}: $ b \in {\mathbb{R}^k} $   
-   \item \ascii{softmax函数}: $ 
-softmax {(z_i)} = \tfrac{{{e^{{z_i}}}}}{{\sum\limits_{j = 1}^k {{e^{{z_j}}}} }}  \quad i = 1,2,...,k
+   \item \ascii{training sample set}: $ S = \{ ({x^{(i)}}, {y^{(i)}});i = 1,2,...,m\} $
+   \item \ascii{第$i$ training sample}: $ ({x^{(i)}}, {y^{(i)}}) $
+   \item \ascii{sample input}: $ x = ({x_1},{x_2},...,{x_n})^{T} \in {\mathbb{R}^n} $
+   \item \ascii{sample tag (one-hot)}: $ y = ({y_1},{y_2},...,{y_k})^{T} \in {\mathbb{R}^k} $
+   \item \ascii{weight}: $ W \in {\mathbb{R}^{n \times k}} $   
+   \item \ascii{offset}: $ b \in {\mathbb{R}^k} $   
+   \item \ascii{softmax function}: $ 
+Softmax {(z_i)} = \tfrac{{{e^{{z_i}}}}}{{\sum\limits_{j = 1}^k {{e^{{z_j}}}} }} \quad i = 1,2,...,k
 $
  \end{itemize}
 
-\subsubsection{softmax函数}
+\subsubsection{softmax function}
 
-如\refig{softmax}所示，模型先求取线性加权和$z$，然后求取$e^z$，最后再实施归一化操作。
+As shown by \refig{softmax}, the model first obtains the linear weighted sum $z$, then evaluates to $e^z$, and finally implements the normalization operation.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/softmax.png}
-\caption{softmax函数}
+\caption{softmax function}
  \label{fig:softmax}
 \end{figure}
 
-\subsubsection{权重与偏置}
+\subsubsection{weights and offsets}
 
-权重$W$为一个$n \times k$的二维矩阵。
+The weight $W$ is a two-dimensional matrix of $n \times k$.
 
 \[
 W = \left( {{W_1},{W_2},...,{W_k}} \right) = \left( {\begin{array}{*{20}{c}}
   {{w_{11}}}& \ldots &{{w_{1k}}} \\ 
-   \vdots & \ddots & \vdots  \\ 
+   \vdots & \ddots & \vdots \\ 
   {{w_{n1}}}& \cdots &{{w_{nk}}} 
 \end{array}} \right) \in {\mathbb{R}^{n \times k}}
 \]
 
-其中，$W_j$是一个长度为$n$的向量。
+Where $W_j$ is a vector of length $n$.
 
 \[
-{W_j} = {\left( {{w_{1j}},{w_{2j}},...,{w_{nj}}} \right)^T} \in {\mathbb{R}^n}, j = 1,2,...,k \\
+{W_j} = {\left( {{w_{1j}},{w_{2j}},...,{w_{nj}}} \right)^T} \in {\mathbb{R}^n }, j = 1,2,...,k \\
 \]
 
-而偏置$b$是一个长度为$k$的\ascii{\quo{one-hot}}向量。
+The offset $b$ is a \ascii{\quo{one-hot}} vector of length $k$.
 
 \[
 b = {({b_1},{b_2},...,{b_k})^T} \in {\mathbb{R}^k}
 \]
 
-\subsubsection{模型定义}
+\subsubsection{model definition}
 
-多分类问题的单层感知器模型，使用\ascii{softmax}激活函数，可以如此定义。
+The single-layer perceptron model for multi-classification problems, using the \ascii{softmax} activation function, can be defined as such.
 
 \[\begin{aligned}
-  y =  & {h_{W,b}}(x) = softmax (z) = softmax ({W^T}x + b) \\ 
-   =  & {\left( {{y_1},{y_2},...,{y_k}} \right)^T} \\ 
-   =  & \frac{1}{{\sum\limits_{j = 1}^k {{e^{{z_j}}}} }}{\left( {{e^{{z_1}}},{e^{{z_2}}},...,{e^{{z_k}}}} \right)^T} \\ 
-   =  & \frac{1}{{\sum\limits_{j = 1}^k {{e^{W_j^Tx + {b_j}}}} }}{\left( {{e^{W_1^Tx + {b_1}}},{e^{W_2^Tx + {b_2}}},...,{e^{W_k^Tx + {b_k}}}} \right)^T} \ 
+  y = & {h_{W,b}}(x) = softmax (z) = softmax ({W^T}x + b) \\ 
+   = & {\left( {{y_1},{y_2},...,{y_k}} \right)^T} \\ 
+   = & \frac{1}{{\sum\limits_{j = 1}^k {{e^{{z_j}}}} }}{\left( {{e^{{z_1}}},{e ^{{z_2}}},...,{e^{{z_k}}}} \right)^T} \\ 
+   = & \frac{1}{{\sum\limits_{j = 1}^k {{e^{W_j^Tx + {b_j}}}} }}{\left( {{e^{W_1^Tx + {b_1}}},{e^{W_2^Tx + {b_2}}},...,{e^{W_k^Tx + {b_k}}}} \right)^T} \ 
 \end{aligned} \]
 
-其中，对于任意给定的样本$ (x, y) \in S $，$ z_i $表示$W_i^Tx+b_i$的线性加权和，而$y_i(i=1,2,...,k)$表示将其划归为类$i$的概率。
+Where, for any given sample $ (x, y) \in S $, $ z_i $ represents the linear weighted sum of $W_i^Tx+b_i$, and $y_i(i=1,2,...,k )$ indicates the probability of classifying it as class $i$.
 
 \[\begin{gathered}
-  P\left( {y = i|x;W,b} \right) = \frac{{{e^{W_i^Tx + b_i}}}}{{\sum\limits_{j = 1}^k {{e^{W_j^Tx + b_j}}} }} \hfill \\
+  P\left( {y = i|x;W,b} \right) = \frac{{{e^{W_i^Tx + b_i}}}}{{\sum\limits_{j = 1}^k { {e^{W_j^Tx + b_j}}} }} \hfill \\
   i = 1,2,...,k \hfill \\ 
 \end{gathered} \]
 
 
-\subsubsection{交叉熵函数}
+\subsubsection{cross entropy function}
 
-基于样本数据集$ S = \{ ({x^{(i)}},{y^{(i)}});i = 1,2,...,m\} $，交叉熵损失函数可以如此定义。
+Based on the sample data set $ S = \{ ({x^{(i)}}, {y^{(i)}});i = 1,2,...,m\} $, cross entropy loss function Can be defined as such.
 
 \[\begin{aligned}
-  J(W,b) =  &  - \frac{1}{m}\sum\limits_{i = 1}^m {{y^{(i)}}\log \left( {{{\widehat y}^{(i)}}} \right)}  \\ 
-   =  &  - \frac{1}{m}\sum\limits_{i = 1}^m {\sum\limits_{j = 1}^k {y_j^{(i)}\log \left( {\widehat y_j^{(i)}} \right)} }  \\
+  J(W,b) = & - \frac{1}{m}\sum\limits_{i = 1}^m {{y^{(i)}}\log \left( {{{\widehat y} ^{(i)}}} \right)} \\ 
+   = & - \frac{1}{m}\sum\limits_{i = 1}^m {\sum\limits_{j = 1}^k {y_j^{(i)}\log \left( {\widehat Y_j^{(i)}} \right)} } \\
 \end{aligned} \]
 
-\ascii{softmax}多分类问题，就是求取最优解$(W^*,b^*)$，使得
+The \ascii{softmax} multi-classification problem is to find the optimal solution $(W^*,b^*)$, so that
 
 \[W^*,b^* = \mathop {\arg \min }\limits_{W,b} J(W,b)\]
 
-\subsubsection{计算梯度}
+\subsubsection{calculation gradient}
 
-对于任意一个样本$ (x,y) \in S $，可以推导出$ J(W,b) $相对于$ W $与$ b $的梯度公式。
+For any sample $(x,y) \in S $, you can derive a gradient formula for $ J(W,b) $ relative to $ W $ and $ b $.
 
 \[\begin{aligned}
-  {\nabla _W}J\left( {W,b;x,y} \right) =  & \left( {\widehat y - y} \right)x \\ 
-  {\nabla _b}J\left( {W,b;{x^{(i)}},{y^{(i)}}} \right) =  & \left( {\widehat y - y} \right) \\ 
+  {\nabla _W}J\left( {W,b;x,y} \right) = & \left( {\widehat y - y} \right)x \\ 
+  {\nabla _b}J\left( {W,b;{x^{(i)}},{y^{(i)}}} \right) = & \left( {\widehat y - y} \ Right) \\ 
 \end{aligned} \]
 
 
-\subsubsection{参数更新}
+\subsubsection{parameter update}
 
-对于训练样本数据$ S $，根据$W, b$的梯度公式，完成本次迭代的参数更新。
+For the training sample data $S$, according to the gradient formula of $W, b$, the parameter update of this iteration is completed.
 
 \[\begin{aligned}
-  W \leftarrow  & W - \alpha \frac{{\sum\limits_{i = 1}^m {{\nabla _W}J\left( {W,b;{x^{(i)}},{y^{(i)}}} \right)} }}{m} \\ 
-  b \leftarrow  & b - \alpha \frac{{\sum\limits_{i = 1}^m {{\nabla _b}J\left( {W,b;{x^{(i)}},{y^{(i)}}} \right)} }}{m} \\ 
+  W \leftarrow & W - \alpha \frac{{\sum\limits_{i = 1}^m {{\nabla _W}J\left( {W,b;{x^{(i)}},{y ^{(i)}}} \right)} }}{m} \\ 
+  b \leftarrow & b - \alpha \frac{{\sum\limits_{i = 1}^m {{\nabla _b}J\left( {W,b;{x^{(i)}},{y ^{(i)}}} \right)} }}{m} \\ 
 \end{aligned} \]
 
-\subsection{定义模型}
+\subsection{define model}
 
-接下来，使用\tf{}完成该模型的搭建和训练。需要注意的是，理论上的公式与\tf{}具体实现存在微妙的差异。理论上，公式中的$x$常表示一个样本，但\tf{}中的\code{x}常表示一个\ascii{mini-batch}的样本数据集。因此，使用\tf{}设计网络模型时，需要特别关注各个张量大小的变化是否符合预期。
+Next, use \tf{} to complete the construction and training of the model. It should be noted that there are subtle differences between the theoretical formula and the concrete implementation of \tf{}. In theory, $x$ in a formula often represents a sample, but \code{x} in \tf{} often represents a sample dataset of \ascii{mini-batch}. Therefore, when using \tf{} to design a network model, you need to pay special attention to whether the changes in the individual tensors are in line with expectations.
 
-\subsubsection{输入和标签}
+\subsubsection{input and tag}
 
-首先，使用\code{tf.placeholder}分别定义训练样本的输入和标签。
+First, use \code{tf.placeholder} to define the input and label of the training sample separately.
 
 \begin{leftbar}
 \begin{python}
@@ -443,9 +443,9 @@ t = tf.placeholder(tf.float32, [None, 10])
 \end{python}
 \end{leftbar}
 
-\code{tf.placeholder}定义了一个占位的\ascii{OP}。\code{None}表示未确定的样本数目，此处表示\code{batch\_size}的大小；当\code{Session.run}时，将通过\code{feed\_dict}的字典提供一个\ascii{mini-batch}的样本数据集，从而自动推导出\code{tf.placeholder}的大小。
+\code{tf.placeholder} defines a placeholder \ascii{OP}. \code{None} represents the number of undetermined samples, which represents the size of \code{batch\_size}; when \code{Session.run}, a \ascii is provided via the \code{feed\_dict} dictionary The sample dataset of {mini-batch} automatically derives the size of \code{tf.placeholder}.
 
-另外，每张图片使用$ 28 \times 28 \times 1 $的三维数据表示(灰度为\ascii{1})。为了简化问题，此处将输入的样本数据扁平化，将其变换为长度为\ascii{784}的一维向量。其中，\ascii{-1}表示\ascii{mini-batch}的样本数目，由运行时自动推演其大小。
+In addition, each image is represented by a three-dimensional data of $ 28 \times 28 \times 1 $ (the scale is \ascii{1}). To simplify the problem, the input sample data is flattened here and transformed into a one-dimensional vector of length \ascii{784}. Where \ascii{-1} represents the number of samples of \ascii{mini-batch}, which is automatically deduced by the runtime.
 
 \begin{leftbar}
 \begin{python}
@@ -453,9 +453,9 @@ x = tf.reshape(x, [-1, 784])
 \end{python}
 \end{leftbar}
 
-\subsubsection{定义变量}
+\subsubsection{define variable}
 
-然后，使用\code{tf.Variable}定义模型参数。定义训练参数时，必须指定参数的初始化值；训练参数将根据初始值，自动推演数据的类型，及其大小。
+Then, define the model parameters using \code{tf.Variable}. When defining the training parameters, you must specify the initialization value of the parameters; the training parameters will automatically derive the type of the data and its size based on the initial values.
 
 \begin{leftbar}
 \begin{python}
@@ -464,17 +464,17 @@ b = tf.Variable(tf.zeros([10]))
 \end{python}
 \end{leftbar}
 
-此外，变量在使用之前，必须完成初始化。此处，\code{init\_op}将初始化所有全局的训练参数。
+In addition, the variables must be initialized before they are used. Here, \code{init\_op} will initialize all global training parameters.
 
 \begin{leftbar}
 \begin{python}
-init_op = tf.global_variables_initializer()
+Init_op = tf.global_variables_initializer()
 \end{python}
 \end{leftbar}
 
-\subsubsection{模型定义}
+\subsubsection{model definition}
 
-接下来，便可以很容易地得到多分类问题的单层感知器模型。
+Next, the single-layer perceptron model for multi-classification problems can be easily obtained.
 
 \begin{leftbar}
 \begin{python}
@@ -482,105 +482,105 @@ y = tf.nn.softmax(tf.matmul(x, w) + b)
 \end{python}
 \end{leftbar}
 
-如\refig{mnist-linear-sum}所示，首先计算\code{x}与\code{w}的矩阵乘法，让后将\code{b}广播(\ascii{broadcast})到矩阵的每一行相加，最终得到训练参数的线性加权和。
+As shown in \refig{mnist-linear-sum}, first calculate the matrix multiplication of \code{x} and \code{w}, then let \code{b} broadcast (\ascii{broadcast}) to each of the matrices. Add a line and finally get a linear weighted sum of the training parameters.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/mnist-linear-sum.png}
-\caption{线性加权和}
+\caption{linear weighted sum}
  \label{fig:mnist-linear-sum}
 \end{figure}
 
-如\refig{mnist-softmax}所示，\ascii{softmax}将逐行实施运算，最终，\code{y}的大小为\code{[100, 10]}。
+As shown by \refig{mnist-softmax}, \ascii{softmax} will implement the operation line by line. Finally, the size of \code{y} is \code{[100, 10]}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/mnist-softmax.png}
-\caption{激活函数：softmax}
+\caption{Activation function: softmax}
  \label{fig:mnist-softmax}
 \end{figure}
 
-\subsubsection{损失函数}
+\subsubsection{loss function}
 
-对于多分类问题，可以使用交叉熵的损失函数。
+For multi-classification problems, the loss function of cross entropy can be used.
 
 \begin{leftbar}
 \begin{python}
-cross_entropy = -tf.reduce_sum(t * tf.log(y))
+Cross_entropy = -tf.reduce_sum(t * tf.log(y))
 \end{python}
 \end{leftbar}
 
-如\refig{mnist-cross-entropy}所示，\code{t}和\code{y}的大小都为\code{[100, 10]}；特殊地，\code{t}的每一行都是一个\quo{\ascii{one-hot}}向量。
+As shown by \refig{mnist-cross-entropy}, \code{t} and \code{y} are both \code{[100, 10]}; in particular, every line of \code{t} Is a \quo{\ascii{one-hot}} vector.
 
-对\code{y}实施\code{tf.log}操作，也将得到一个大小为\code{[100, 10]}的矩阵。然后，\code{t}与\code{tf.log(y)}逐位相乘(并非矩阵相乘)，也将得到大小为\code{[100, 10]}的矩阵。最终，\code{tf.reduce\_sum}将矩阵中所有元素相加，得到一个标量(\ascii{scalar})值。
+Implementing the \code{tf.log} operation on \code{y} will also result in a matrix of size \code{[100, 10]}. Then, \code{t} is multiplied bit by bit with \code{tf.log(y)} (not multiplied by the matrix), and a matrix of size \code{[100, 10]} will also be obtained. Finally, \code{tf.reduce\_sum} adds all the elements in the matrix to get a scalar (\ascii{scalar}) value.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/mnist-cross-entropy.png}
-\caption{交叉熵损失函数}
+\caption{cross entropy loss function}
  \label{fig:mnist-cross-entropy}
 \end{figure}
 
-\subsubsection{精度}
+\subsubsection{accuracy}
 
-\code{tf.argmax(y,1)}将按第\ascii{1}个维度计算最大值的索引。既按照$ y_{100 \times 10} $的每一行，计算得到在每一行中最大值的的索引值。因此，\code{tf.argmax(y,1)}将得到大小为\code{[100, 1]}的矩阵，或大小为\ascii{100}的向量。同样地，\code{tf.argmax(t,1)}也是一个大小为\ascii{100}的向量。
+\code{tf.argmax(y,1)} will calculate the index of the maximum value by the \ascii{1} dimension. The index value of the maximum value in each row is calculated for each row of $ y_{100 \times 10} $ . Therefore, \code{tf.argmax(y,1)} will get a matrix of size \code{[100, 1]}, or a vector of size \ascii{100}. Similarly, \code{tf.argmax(t,1)} is also a vector of size \ascii{100}.
 
-然后，使用\code{tf.equal}将它们逐元素(\ascii{element-wise})进行相等性比较，得到大小为\ascii{100}的布尔向量。为了计算精度，先将布尔向量转别为数值向量，最终求取该数值向量的均值。
+Then, use \code{tf.equal} to compare them by element (\ascii{element-wise}) for equality, and get a Boolean vector of size \ascii{100}. In order to calculate the precision, the Boolean vector is first converted to a numerical vector, and finally the mean of the numerical vector is obtained.
 
 \begin{leftbar}
 \begin{python}
-is_correct = tf.equal(tf.argmax(y,1), tf.argmax(t,1))
-accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
+Is_correct = tf.equal(tf.argmax(y,1), tf.argmax(t,1))
+Accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
 \end{python}
 \end{leftbar}
 
-\subsection{优化算法}
+\subsection{Optimization Algorithm}
 
-接下来，使用梯度下降算法实现交叉熵损失函数的最小化。其中，\code{learning\_rate}表示学习速率，描述参数更新的快慢和步伐大小，是一个典型的超参。
+Next, a gradient descent algorithm is used to minimize the cross entropy loss function. Among them, \code{learning\_rate} indicates the learning rate, describes the speed of the parameter update and the size of the step, which is a typical super parameter.
 
 \begin{leftbar}
 \begin{python}
-optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.003)
-train_step = optimizer.minimize(cross_entropy)
+Optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.003)
+Train_step = optimizer.minimize(cross_entropy)
 \end{python}
 \end{leftbar}
 
-\subsection{训练模型}
+\subsection{training model}
 
-在此之前，\tf{}仅构造计算图，并没有启动计算图的执行。接下来，客户端创建一个会话，建立与本地或远端计算设备集的通道，启动计算图的执行过程。
+Prior to this, \tf{} only constructed the calculation graph and did not initiate the execution of the calculation graph. Next, the client creates a session, establishes a channel with the local or remote computing device set, and initiates the execution of the computation map.
 
-首先，完成训练参数的初始化。通过运行模型参数的初始化子图，并发地执行各个训练参数的初始化器，将初始值就地修改到相应的训练参数内。
+First, the initialization of the training parameters is completed. The initial value is modified in situ to the corresponding training parameter by running the initialization subgraph of the model parameters and executing the initializer of each training parameter concurrently.
 
 \begin{leftbar}
 \begin{python}
-with tf.Session() as sess:
-  sess.run(init_op)
+With tf.Session() as sess:
+  Sess.run(init_op)
 \end{python}
 \end{leftbar}
 
-然后，开始迭代地执行\code{train\_step}，完成模型的一次迭代训练。其中，每\ascii{100}次迭代，计算当前模型在训练数据集及测试数据集的精度和损失。
+Then, iteratively executes \code{train\_step} to complete an iterative training of the model. Among them, every \ascii {100} iterations, calculate the accuracy and loss of the current model in the training data set and the test data set.
 
 \begin{leftbar}
 \begin{python}
-with tf.Session() as sess:
-  for step in range(1000):
-    batch_xs, batch_ys = mnist.train.next_batch(100)        
-    sess.run(train_step, feed_dict={x: batch_xs, t: batch_ys})
+With tf.Session() as sess:
+  For step in range(1000):
+    Batch_xs, batch_ys = mnist.train.next_batch(100)        
+    Sess.run(train_step, feed_dict={x: batch_xs, t: batch_ys})
     
-    if step % 100 == 0:
-      acc, loss = sess.run([accuracy, cross_entropy], 
-        feed_dict={x: batch_xs, t: batch_ys})
-      acc, loss = sess.run([accuracy, cross_entropy], 
-        feed_dict={x: mnist.test.images, t: mnist.test.labels}) 
+    If step % 100 == 0:
+      Acc, loss = sess.run([accuracy, cross_entropy], 
+        Feed_dict={x: batch_xs, t: batch_ys})
+      Acc, loss = sess.run([accuracy, cross_entropy], 
+        Feed_dict={x: mnist.test.images, t: mnist.test.labels}) 
 \end{python}
 \end{leftbar}
 
-据统计，经过\ascii{1000}次迭代，可得到大约\percent{92}的精度。
+According to statistics, after \ascii{1000} iterations, you get an accuracy of about \percent{92}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/mnist-slp-accuracy.png}
-\caption{可视化：单层感知器，运行1000次step}
+\caption{Visualization: Single layer perceptron, running 1000 times step}
  \label{fig:mnist-slp-accuracy}
 \end{figure}
 

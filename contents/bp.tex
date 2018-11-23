@@ -3,38 +3,38 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{BP算法} 
+\chapter{BP algorithm} 
 \label{ch:bp}
 
 \begin{content}
 
 \end{content}
 
-\section{TensorFlow实现}
+\section{TensorFlow implementation}
 
 \begin{content}
 
-\tf{}是一个实现了自动微分的软件系统。首先，它构造正向的计算图，实现计算图的前向计算。当调用\code{Optimizer.minimize}方法时，使用\code{compute\_gradients}方法，实现反向计算图的构造；使用\code{apply\_gradients}方法，实现参数更新的子图构造。
+\tf{} is a software system that implements automatic differentiation. First, it constructs a forward computational graph that implements the forward computation of the computational graph. When calling the \code{Optimizer.minimize} method, use the \code{compute\_gradients} method to implement the construction of the inverse calculation graph; use the \code{apply\_gradients} method to implement the submap construction of the parameter update.
 
 \begin{leftbar}
 \begin{python}
-class Optimizer(object):
-  def minimize(self, loss, var_list=None, global_step=None):
+Class Optimizer(object):
+  Def minimize(self, loss, var_list=None, global_step=None):
     """Add operations to minimize loss by updating var_list.
     """
-    grads_and_vars = self.compute_gradients(
-      loss, var_list=var_list)
-    return self.apply_gradients(
-      grads_and_vars, 
-      global_step=global_step)
+    Grads_and_vars = self.compute_gradients(
+      Loss, var_list=var_list)
+    Return self.apply_gradients(
+      Grads_and_vars, 
+      Global_step=global_step)
 \end{python}
 \end{leftbar}
 
-\subsection{计算梯度}
+\subsection{calculation gradient}
 
-\code{compute\_gradients}将根据\code{loss}的值，求解\code{var\_list=[v1, v2, ..., vn]}的梯度，最终返回的结果为：\code{[(grad\_v1, v1), (grad\_v2, v2), ..., (grad\_vn, vn)]}。其中，\code{compute\_gradients}将调用\code{gradients}方法，构造反向传播的子图。
+\code{compute\_gradients} will solve the gradient of \code{var\_list=[v1, v2, ..., vn]} according to the value of \code{loss}, and the final result will be: \code{[ (grad\_v1, v1), (grad\_v2, v2), ..., (grad\_vn, vn)]}. Among them, \code{compute\_gradients} will call the \code{gradients} method to construct a submap of backpropagation.
 
-以一个简单实例，讲解反向子图的构造过程。首先，构造前向的计算图。
+Explain the construction process of the reverse subgraph with a simple example. First, construct a forward calculation graph.
 
 \begin{leftbar}
 \begin{python}
@@ -42,178 +42,178 @@ X = tf.placeholder("float", name="X")
 Y = tf.placeholder("float", name="Y")
 w = tf.Variable(0.0, name="w")
 b = tf.Variable(0.0, name="b")
-loss = tf.square(Y - X*w - b)
-global_step = tf.Variable(0, trainable=False, collections=[])
+Loss = tf.square(Y - X*w - b)
+Global_step = tf.Variable(0, trainable=False, collections=[])
 \end{python}
 \end{leftbar}
 
-使用\code{compute\_gradients}构造反向传播的子图。
+Construct a backpropagated subgraph with \code{compute\_gradients}.
 
 \begin{leftbar}
 \begin{python}
-sgd = tf.train.GradientDescentOptimizer(0.01)
-grads_and_vars = sgd.compute_gradients(loss)
+Sgd = tf.train.GradientDescentOptimizer(0.01)
+Grads_and_vars = sgd.compute_gradients(loss)
 \end{python}
 \end{leftbar}
 
-\subsubsection{构造算法}
+\subsubsection{structuring algorithm}
 
-反向子图的构建算法可以形式化地描述为：
+The construction algorithm of the reverse subgraph can be formally described as:
 
 \begin{leftbar}
 \begin{python}
-def gradients(loss, grad=I):
-  vrg = build_virtual_reversed_graph(loss)
-  for op in vrg.topological_sort():
-    grad_fn = ops.get_gradient_function(op)
-    grad = grad_fn(op, grad)
+Def gradients(loss, grad=I):
+  Vrg = build_virtual_reversed_graph(loss)
+  For op in vrg.topological_sort():
+    Grad_fn = ops.get_gradient_function(op)
+    Grad = grad_fn(op, grad)
 \end{python}
 \end{leftbar}
 
-首先，根据正向子图的拓扑图，构造一个虚拟的反向子图。之所以称为虚拟的，是因为真实的反向子图要比它复杂得多；更准确的说，虚拟的反向子图中的一个节点，对应于真实的反向子图中的一个局部子图。
+First, construct a virtual reverse subgraph based on the topological map of the forward subgraph. It is called virtual because the real reverse subgraph is much more complicated than it is; more accurately, a node in the virtual reverse subgraph corresponds to a local part of the real reverse subgraph Subgraph.
 
-同时，正向子图输出的最后一个节点，其输出梯度全为\ascii{1}的一个\code{Tensor}，作为反向子图的初始的梯度值，常常记为\code{I}。
+At the same time, the output of the last node of the forward subgraph has an output gradient of \code{Tensor} of \ascii{1} as the initial gradient value of the reverse subgraph, often denoted as \code{I}.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/bp-back-graph-construction.png}
-\caption{构造反向传播子图}
+\caption{Construct backpropagation subgraph}
  \label{fig:bp-back-graph-construction}
 \end{figure}
 
-接下来，根据虚拟的反向子图构造真实的反向子图。首先，根据该反向的虚拟子图执行拓扑排序算法，得到该虚拟的反向子图的一个拓扑排序；然后，按照该拓扑排序，对每个正向子图中的\ascii{OP}寻找其「梯度函数」；最后，调用该梯度函数，该梯度函数将构造该\ascii{OP}对应的反向的局部子图。
+Next, construct a real reverse subgraph based on the virtual reverse subgraph. First, performing a topological sorting algorithm according to the reverse virtual subgraph, and obtaining a topological sorting of the virtual reverse subgraph; and then, according to the topological sorting, searching for \ascii{OP} in each forward subgraph Its "gradient function"; finally, the gradient function is called, which will construct the inverse partial subgraph corresponding to \ascii{OP}.
 
-综上述，正向的一个\ascii{OP}对应反向的一个局部子图，并由该\ascii{OP}的梯度函数负责构造。当整个拓扑排序算法完成后，正向子图中的每个\ascii{OP}在反向子图中都能找到对应的局部子图。
+In summary, a positive \ascii{OP} corresponds to a reverse partial local subgraph and is constructed by the gradient function of \ascii{OP}. When the entire topological sorting algorithm is completed, each \ascii{OP} in the forward subgraph can find the corresponding local subgraph in the reverse subgraph.
 
-例如，在上例中，正向图中最后一个\ascii{OP}：求取平方的函数为例，讲述梯度函数的工作原理。
+For example, in the above example, the last \ascii{OP} in the forward graph: the function of finding the square is used as an example to describe how the gradient function works.
 
-\subsubsection{梯度函数原型}
+\subsubsection{gradient function prototype}
 
-一般地，梯度函数满足如下原型：
+In general, the gradient function satisfies the following prototype:
 
 \begin{leftbar}
 \begin{python}
 @ops.RegisterGradient("op_name")
-def op_grad_func(op, grad):
+Def op_grad_func(op, grad):
 \end{python}
 \end{leftbar}
 
-其中，梯度函数由\code{ops.RegisterGradient}完成注册，并放在保存梯度函数的仓库中。以后，便可以根据正向\ascii{OP}的名字，索引对应的梯度函数了。
+Among them, the gradient function is registered by \code{ops.RegisterGradient} and placed in the repository where the gradient function is saved. Later, you can index the corresponding gradient function according to the name of the forward \ascii{OP}.
 
-对于一个梯度函数，第一个参数\code{op}表示正向计算的\ascii{OP}，根据它可以获取正向计算时\ascii{OP}的输入和输出；第二个参数\code{grad}，是反向子图中上游节点传递过来的梯度，它是一个已经计算好的梯度值(初始梯度值全为1)。
+For a gradient function, the first parameter \code{op} represents the forward calculation of \ascii{OP}, according to which it can get the input and output of \ascii{OP} in the forward calculation; the second parameter \code{ Grad} is the gradient passed by the upstream node in the reverse subgraph. It is a calculated gradient value (the initial gradient value is all 1).
 
-\subsubsection{实战：平方函数}
+\subsubsection{actual combat: square function}
 
-举个简单的例子，仅使用输入计算梯度。\code{y=square(x)}，用于求取\code{x}的平方。首先，构造正向计算图：
+As a simple example, use only the input to calculate the gradient. \code{y=square(x)}, used to find the square of \code{x}. First, construct a forward calculation graph:
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.5\textwidth]{figures/bp-square-forward-graph.png}
-\caption{Square函数：正向传播子图}
+\caption{Square function: forward propagation subgraph}
  \label{fig:bp-square-forward-graph}
 \end{figure}
 
-然后，反向构造虚拟的反向子图。根据该虚拟的反向子图的拓扑排序，构造真正的反向计算子图。假如，当前节点为\code{Square}，根据其OP名称，从仓库中找到对应的梯度函数\code{SquareGrad}。
+Then, construct a virtual reverse subgraph in reverse. Construct a true inverse computation subgraph based on the topological ordering of the virtual inverse subgraph. If the current node is \code{Square}, find the corresponding gradient function \code{SquareGrad} from the repository based on its OP name.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.5\textwidth]{figures/bp-square-backward-graph.png}
-\caption{Square函数：反向传播子图}
+\caption{Square function: backpropagation subgraph}
  \label{fig:bp-square-backward-graph}
 \end{figure}
 
-因为，\code{y=Square(x)}的导数为\code{y'=2*x}。因此，其梯度函数\code{SquareGrad}的实现为：
+Because the derivative of \code{y=Square(x)} is \code{y'=2*x}. Therefore, the implementation of its gradient function \code{SquareGrad} is:
 
 \begin{leftbar}
 \begin{python}
 @ops.RegisterGradient("Square")
-def SquareGrad(op, grad):
+Def SquareGrad(op, grad):
   x = op.inputs[0]
-  with ops.control_dependencies([grad.op]):
+  With ops.control_dependencies([grad.op]):
     x = math_ops.conj(x)
-    return grad * (2.0 * x)
+    Return grad * (2.0 * x)
 \end{python}
 \end{leftbar}
 
-调用该梯度函数后，将得到正向\code{Square}的\ascii{OP}，对应的反向子图\code{SquareGrad}。它需要使用\code{Square}的输入，完成相应的梯度计算。
+After calling the gradient function, you will get \ascii{OP} of the forward \code{Square}, corresponding to the reverse subgraph \code{SquareGrad}. It needs to use the input of \code{Square} to complete the corresponding gradient calculation.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.5\textwidth]{figures/bp-square-backward-graph-2.png}
-\caption{Square函数：反向传播子图}
+\caption{Square function: backpropagation subgraph}
  \label{fig:bp-square-backward-graph-2}
 \end{figure}
 
-一般地，正向子图中的一个\ascii{OP}，对应反向子图中的一个局部子图。因为，正向\ascii{OP}的梯度函数实现，可能需要多个\ascii{OP}才能完成相应的梯度计算。例如，\code{Square}的\ascii{OP}，对应梯度函数构造了包含两个\ascii{2}个乘法\ascii{OP}。
+In general, a \ascii{OP} in the forward subgraph corresponds to a local subgraph in the reverse subgraph. Because, for the gradient function implementation of \ascii{OP}, multiple \ascii{OP} may be required to complete the corresponding gradient calculation. For example, \ascii{OP} of \code{Square}, corresponding to the gradient function constructed with two \ascii{2} multiplications \ascii{OP}.
 
-\subsubsection{实战：指数函数}
+\subsubsection{actual warfare: exponential function}
 
-再举个简单的例子，仅使用输出计算梯度。\code{y=exp(x)}，指数函数；其导数为\code{y'=exp(x)}，即\code{y'=y}。因此，其梯度函数实现为：
+To give a simple example, use only the output to calculate the gradient. \code{y=exp(x)}, exponential function; its derivative is \code{y'=exp(x)}, which is \code{y'=y}. Therefore, its gradient function is implemented as:
 
 \begin{leftbar}
 \begin{python}
 @ops.RegisterGradient("Exp")
-def _ExpGrad(op, grad):
+Def _ExpGrad(op, grad):
   """Returns grad * exp(x)."""
   y = op.outputs[0]
-  with ops.control_dependencies([grad.op]):
+  With ops.control_dependencies([grad.op]):
     y = math_ops.conj(y)
-    return grad * y
+    Return grad * y
 \end{python}
 \end{leftbar}
 
-如下图所示，正向子图中该\ascii{OP}的输出，用于对应的反向的局部子图的梯度运算。而且，该局部子图进包含一个节点。
+As shown in the figure below, the output of the \ascii{OP} in the forward subgraph is used for the gradient operation of the corresponding inverse local subgraph. Moreover, the local subgraph contains one node.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.5\textwidth]{figures/bp-exp-backward-graph.png}
-\caption{Exp函数：反向传播子图}
+\caption{Exp function: backpropagation subgraph}
  \label{fig:bp-exp-backward-graph}
 \end{figure}
 
-\subsection{应用梯度}
+\subsection{Apply gradient}
 
-再做一个简单的总结，当调用\code{Optimizer.minimize}方法时，使用\code{compute\_gradients}方法，实现反向计算图的构造；使用\code{apply\_gradients}方法，实现参数更新的子图构造。
+To make a simple summary, when calling the \code{Optimizer.minimize} method, use the \code{compute\_gradients} method to implement the construction of the inverse computation graph; use the \code{apply\_gradients} method to implement parameter updates. Subgraph construction.
 
-\subsubsection{构造算法}
+\subsubsection{structuring algorithm}
 
-首先，\code{compute\_gradients}在运行时将根据\code{loss}的值，求解\code{var\_list=[v1, v2, ..., vn]}的梯度，最终返回的结果为：\code{vars\_and\_grads = [(grad\_v1, v1), (grad\_v2, v2), ..., (grad\_vn, vn)]}。
+First, \code{compute\_gradients} will solve the gradient of \code{var\_list=[v1, v2, ..., vn]} at runtime based on the value of \code{loss}, and the final result will be :\code{vars\_and\_grads = [(grad\_v1, v1), (grad\_v2, v2), ..., (grad\_vn, vn)]}.
 
-然后，\code{apply\_gradients}迭代\code{grads\_and\_vars}，对于每个\code{(grad\_vi, vi)}，构造一个更新\code{vi}的子图。其中，算法可以形式化地描述为：
+Then, \code{apply\_gradients} iteration \code{grads\_and\_vars}, for each \code{(grad\_vi, vi)}, construct a submap that updates \code{vi}. Among them, the algorithm can be formally described as:
 
 \begin{leftbar}
 \begin{python}
-def apply_gradients(grads_and_vars, learning_rate):
-  for (grad, var) in grads_and_vars:
-    apply_gradient_descent(learning_rate, grad, var)
+Def apply_gradients(grads_and_vars, learning_rate):
+  For (grad, var) in grads_and_vars:
+    Apply_gradient_descent(learning_rate, grad, var)
 \end{python}
 \end{leftbar}
 
-其中，\code{apply\_gradient\_descent}将构造一个使用梯度下降算法更新参数的计算子图。将\code{(grad, var)}的二元组，及其\code{learning\_rate}的\code{Const OP}作为\code{ApplyGradientDescent}的输入。
+Among them, \code{apply\_gradient\_descent} will construct a computational subgraph that uses the gradient descent algorithm to update the parameters. Use the binary of \code{(grad, var)} and its \code{learning\_rate}\code{Const OP} as input to \code{ApplyGradientDescent}.
 
-\code{ApplyGradientDescent}将应用\code{var <- var - learning*grad}的运算规则，实现\code{var}的就地更新。
+\code{ApplyGradientDescent} will apply the \code{var <- var - learning*grad} algorithm to implement an in-place update of \code{var}.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.6\textwidth]{figures/bp-update-w.png}
-\caption{参数更新子图}
+\caption{Parameter update submap}
  \label{fig:bp-update-w}
 \end{figure}
 
-\subsubsection{参数更新汇总}
+\subsubsection{Parameter Update Summary}
 
-如果存在多个训练的Variable，最终生成多个更新参数的局部子图。它们通过一个名为\code{update}的\code{NoOp}，使用控制依赖边汇总在一起。因为各个\code{Variable}之间相互独立，可以实现最大化的并发。
+If there are multiple trained Variables, a partial subgraph of multiple update parameters is finally generated. They are aggregated together using a control dependency edge via a \code{NoOp} named \code{update}. Because each \code{Variable} is independent of each other, maximum concurrency can be achieved.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/bp-update-all-params.png}
-\caption{参数更新汇总}
+\caption{Parameter update summary}
  \label{fig:bp-update-all-params}
 \end{figure}
 
-\subsubsection{探秘train\_op}
+\subsubsection{Exploring train\_op}
 
-经过一轮\ascii{Step}运算，根据梯度，完成参数的更新，最终完成\code{global\_step}加1。而实现\code{global\_step}加\ascii{1}的\ascii{OP}为\code{AssignAdd}，并标记为\code{train\_op}；它持有\code{global\_step}变量的引用，然后完成就地修改，使其值加\ascii{1}。
+After a round of \ascii{Step} operation, the parameters are updated according to the gradient, and finally \code{global\_step} is added. The \ascii{OP} that implements \code{global\_step} plus \ascii{1} is \code{AssignAdd} and is marked as \code{train\_op}; it holds the \code{global\_step} variable The reference, then complete the in-place modification and add its value to \ascii{1}.
 
 \begin{figure}[!h]
 \centering
@@ -222,20 +222,20 @@ def apply_gradients(grads_and_vars, learning_rate):
  \label{fig:bp-train-op}
 \end{figure}
 
-\subsubsection{工作流}
+\subsubsection{workflow}
 
-如\refig{bp-train-pipeline}所示，整个训练过程，一次\ascii{Step}的训练过程由前向计算，反向梯度计算，参数更新，及其\code{global\_step}计数四个基本过程组成。
+As shown in \refig{bp-train-pipeline}, the entire training process, a \ascii{Step} training process is calculated by forward calculation, reverse gradient calculation, parameter update, and its \code{global\_step} The four basic processes are composed.
 
-其中，每一轮\ascii{Step}从开始\code{Session.run}执行开始。通过前向子图的计算，得到每个\ascii{OP}的输出，并作为下游\ascii{OP}的输入。
+Among them, each round \ascii{Step} starts from the start of \code{Session.run}. The output of each \ascii{OP} is obtained by the calculation of the forward subgraph and is used as the input of the downstream \ascii{OP}.
 
-当前向子图完成计算后，再以初始梯度向量$ I $为输入，反向计算各个训练参数的梯度，最终得到各个训练参数的梯度列表，并以\code{grads\_and\_vars = [(grad\_v1, v1), ..., (grad\_vn, vn)]}的二元组列表表示。
+After the calculation is completed on the subgraph, the gradient of each training parameter is inversely calculated by using the initial gradient vector $I$ as input, and finally the gradient list of each training parameter is obtained, and \code{grads\_and\_vars = [( A two-tuple list representation of grad\_v1, v1), ..., (grad\_vn, vn)]}.
 
-随后，参数更新子图以\code{grads\_and\_vars}为输入，执行梯度下降的更新算法；最后，通过\code{train\_op}完成\code{global\_step}值加\ascii{1}，至此一轮\ascii{Step}执行完成。
+Subsequently, the parameter update subgraph takes \code{grads\_and\_vars} as input and performs the gradient descent update algorithm; finally, the \code{global\_step} value is added by \code{train\_op} plus \ascii{1 }, the round of \ascii{Step} is completed.
 
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\textwidth]{figures/bp-train-pipeline.png}
-\caption{模型训练的工作流}
+\caption{Model training workflow}
  \label{fig:bp-train-pipeline}
 \end{figure}
 

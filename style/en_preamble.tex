@@ -1,18 +1,18 @@
-%%%%%%%%------------------------------------------------------------------------
-%%%% 日常所用宏包
+%%%%%%%% ------------------------------------------ ------------------------------
+%%%% daily package
 
-%%设置行间距
+%% sets the line spacing
 \usepackage{setspace}
 
-%% 控制项目列表
+%% control item list
 \usepackage{enumerate}
 
-%% 多栏显示
+%% multi-column display
 \usepackage{multicol}
 
-%% hyperref宏包，生成可定位点击的超链接，并且会生成pdf书签
+%% hyperref package, generates hyperlinks that can locate clicks, and generates pdf bookmarks
 \usepackage[%
-    pdfstartview=FitH,%
+    pdfstartview = FitH,%
     CJKbookmarks=true,%
     bookmarks=true,%
     bookmarksnumbered=true,%
@@ -24,58 +24,58 @@
     urlcolor=blue%
 ]{hyperref}
 
-%% 控制标题
+%% control title
 \usepackage{titlesec}
 
-%% 控制表格样式
-\usepackage{booktabs}
+%% control table style
+\ usepackage {booktabs}
 
-%% 控制目录
+%% control directory
 \usepackage{titletoc}
 
-%% 控制字体大小
+%% controls font size
 \usepackage{type1cm}
 
-%% 首行缩进，用\noindent取消某段缩进
+%% indent the first line, cancel some indentation with \noindent
 \usepackage{indentfirst}
 
-%% 支持彩色文本、底色、文本框等
+%% supports color text, background, text box, etc.
 \usepackage{color,xcolor}
 
-%% AMS LaTeX宏包
+%% AMS LaTeX package
 \usepackage{amsmath}
 \usepackage{amssymb}
 
-%% 一些特殊符号
+%% some special symbols
 % \usepackage{bbding}
 
-%% 支持引用
+%% support reference
 % \usepackage{cite}
 
-%% LaTeX一些特殊符号宏包
+%% LaTeX some special symbol package
 % \usepackage{latexsym}
 
-%% 数学公式中的黑斜体
+%% black italic in math formula
 % \usepackage{bm}
 
-%% 调整公式字体大小：\mathsmaller, \mathlarger
+%% adjust formula font size: \mathsmaller, \mathlarger
 % \usepackage{relsize}
 
-%% 生成索引
-% \makeindex
+%% build index
+% \ makeindex
 
-%%%% 基本插图方法
-%% 图形宏包
+%%%% basic illustration method
+%% graphics package
 \usepackage{graphicx}
 \usepackage{float}
-%% 如果插入的图片没有指定扩展名，那么依次搜索下面的扩展名所对应的文件
+%% If the inserted image does not specify an extension, search for the file corresponding to the extension below.
 \DeclareGraphicsExtensions{.pdf,.eps,.png,.jpg}
-%% 让 latex 从 .bb 中读取 Bounding Box 信息
-%\DeclareGraphicsRule{.jpg}{eps}{.bb}{}
+%% lets latex read Bounding Box information from .bb
+% \ DeclareGraphicsRule {.jpg} {eps} {.bb} {}
 %\DeclareGraphicsRule{.png}{eps}{.bb}{}
-%\DeclareGraphicsRule{.pdf}{eps}{.bb}{}
+% \ DeclareGraphicsRule {.pdf} {eps} {.bb} {}
 
-%% 多个图形并排，参加lnotes.pdf
+%% multiple graphics side by side, participate in lnotes.pdf
 %\usepackage{subfig}
 \usepackage{subfigure}
 
@@ -87,112 +87,112 @@
 \usepackage[perpage,stable]{footmisc}
 
 \usepackage{longtable}
-% \begin{figure}[htbp]               %% 控制插图位置
+% \begin{figure}[htbp] %% Controls the position of the illustration
 %   \setlength{\abovecaptionskip}{0pt}
 %   \setlength{\belowcaptionskip}{10pt}
-                                     %% 控制图形和上下文的距离
-%   \centering                       %% 使图形居中显示
+                                     %% controls the distance between graphics and context
+% \centering %% centered the graphic
 %   \includegraphics[width=0.8\textwidth]{CTeXLive2008.jpg}
-                                     %% 控制图形显示宽度为0.8\textwidth
-%   \caption{CTeXLive2008安装过程} \label{fig:CTeXLive2008}
-                                     %% 图形题目和交叉引用标签
+                                     %% control graphic display width is 0.8\textwidth
+% \caption{CTeXLive2008 installation process} \label{fig:CTeXLive2008}
+                                     %% graphic title and cross-reference label
 % \end{figure}
-%%%% 基本插图方法结束
+%%%% Basic illustration method ends
 
-%%%% pgf/tikz绘图宏包设置
-\usepackage{pgf,tikz}
+%%%% pgf/tikz drawing package settings
+\ Usepackage {pgf, TikZ}
 \usetikzlibrary{shapes,automata,snakes,backgrounds,arrows}
 \usetikzlibrary{mindmap, trees,  calendar}
-\usetikzlibrary{positioning}
+\ usetikzlibrary {positioning}
 \usepackage{pgf-umlsd}
-%% 可以直接在latex文档中使用graphviz/dot语言，
-%% 也可以用dot2tex工具将dot文件转换成tex文件再include进来
+%% can use the graphviz/dot language directly in the latex documentation.
+%% can also use the dot2tex tool to convert the dot file to a tex file and then include it.
 %% \usepackage[shell,pgf,outputdir={docgraphs/}]{dot2texi}
-%%%% pgf/tikz设置结束
+%%%% pgf/tikz setting ends
 
 
 \input{style/page}
-%%%% fancyhdr设置结束
+%%%% fancyhdr set end
 
-%%设置行间距离
+%% sets the distance between lines
 \usepackage{framed}  
-%%%% listings宏包设置结束
+%%%% listings package end
 
-%%%% 附录设置
+%%%% Appendix settings
 \usepackage[title,titletoc,header]{appendix}
-%%%% 附录设置结束
+%%%% End of appendix setting
 
-%%%% 日常宏包设置结束
-%%%%%%%%------------------------------------------------------------------------
+%%%% End of daily macro package setting
+%%%%%%%% ------------------------------------------ ------------------------------
 
-%%%%%%%%------------------------------------------------------------------------
-%%%% 英文字体设置结束
-%% 这里可以加入自己的英文字体设置
-%%%%%%%%------------------------------------------------------------------------
+%%%%%%%% ------------------------------------------ ------------------------------
+%%%% English font setting ends
+%% can add your own English font settings here.
+%%%%%%%% ------------------------------------------ ------------------------------
 
-%%%%%%%%------------------------------------------------------------------------
-%%%% 设置常用字体字号，与MS Word相对应
+%%%%%%%% ------------------------------------------ ------------------------------
+%%%% Set common font size, corresponding to MS Word
 
-%% 一号, 1.4倍行距
+%% number one, 1.4 times line spacing
 \newcommand{\yihao}{\fontsize{26pt}{36pt}\selectfont}
-%% 二号, 1.25倍行距
+%% number two, 1.25 times line spacing
 \newcommand{\erhao}{\fontsize{22pt}{28pt}\selectfont}
-%% 小二, 单倍行距
+%% small two, single line spacing
 \newcommand{\xiaoer}{\fontsize{18pt}{18pt}\selectfont}
-%% 三号, 1.5倍行距
+%% third, 1.5 times line spacing
 \newcommand{\sanhao}{\fontsize{16pt}{24pt}\selectfont}
-%% 小三, 1.5倍行距
+%% small three, 1.5 times line spacing
 \newcommand{\xiaosan}{\fontsize{15pt}{22pt}\selectfont}
-%% 四号, 1.5倍行距
+%% four, 1.5 times the line spacing
 \newcommand{\sihao}{\fontsize{14pt}{21pt}\selectfont}
-%% 半四, 1.5倍行距
+%% half four, 1.5 times line spacing
 \newcommand{\bansi}{\fontsize{13pt}{19.5pt}\selectfont}
-%% 小四, 1.5倍行距
+%% small four, 1.5 times line spacing
 \newcommand{\xiaosi}{\fontsize{12pt}{18pt}\selectfont}
-%% 大五, 单倍行距
+%% big five, single line spacing
 \newcommand{\dawu}{\fontsize{11pt}{11pt}\selectfont}
-%% 五号, 单倍行距
+%% number five, single line spacing
 \newcommand{\wuhao}{\fontsize{10.5pt}{10.5pt}\selectfont}
-%%%%%%%%------------------------------------------------------------------------
+%%%%%%%% ------------------------------------------ ------------------------------
 
-%%%%%%%%------------------------------------------------------------------------
-%%%% 一些个性设置
+%%%%%%%% ------------------------------------------ ------------------------------
+%%%% some personality settings
 
-%% 设定页码方式，包括arabic、roman等方式
+%% set the page number mode, including arabic, roman, etc.
 %% \pagenumbering{arabic}
 
-%% 有时LaTeX无从断行，产生overfull的错误，这条命令降低LaTeX断行标准
+%% Sometimes LaTeX has no line breaks, generating overfull errors. This command lowers LaTeX line break criteria.
 %% \sloppy
 
-%% 设定目录显示深度\tableofcontents
+%% set the directory display depth \tableofcontents
 %% \setcounter{tocdepth}{2}
-%% 设定\listoftables显示深度
+%% set the depth of \listoftables display
 %% \setcounter{lotdepth}{2}
-%% 设定\listoffigures显示深度
+%% set the depth of the \listoffigures display
 %% \setcounter{lofdepth}{2}
 
-%% 中文破折号，据说来自清华模板
+%% Chinese dash, said to come from Tsinghua template
 \newcommand{\pozhehao}{\kern0.3ex\rule[0.8ex]{2em}{0.1ex}\kern0.3ex}
 
-%% 设定itemize环境item的符号
+%% sets the symbol of the itemize environment item
 \renewcommand{\labelitemi}{$\bullet$}
 
-%\makeatletter
+% \ Makeatletter
 %\@addtoreset{lstlisting}{section} 
-%\makeatother
+% \ Confectionery Other
 
 \input{style/command}
-%% 设定正文字体大小
+%% set the font size
 % \renewcommand{\normalsize}{\sihao}
 
-%%%% 个性设置结束
-%%%%%%%%------------------------------------------------------------------------
+%%%% End of personality setting
+%%%%%%%% ------------------------------------------ ------------------------------
 
 
-%%%%%%%%------------------------------------------------------------------------
-%%%% bibtex设置
+%%%%%%%% ------------------------------------------ ------------------------------
+%%%% bibtex settings
 
-%% 设定参考文献显示风格
+%% set reference display style
 
-%%%% bibtex设置结束
-%%%%%%%%------------------------------------------------------------------------
+%%%% end of bibtex setting
+%%%%%%%% ------------------------------------------ ------------------------------

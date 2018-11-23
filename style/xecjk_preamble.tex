@@ -1,177 +1,177 @@
-%%%%%%%%------------------------------------------------------------------------
-%%%% xeCJK相关宏包
+%%%%%%%% ------------------------------------------ ------------------------------
+%%%% xeCJK related package
 
 \usepackage{xltxtra,fontspec,xunicode}
 
-%% \CJKsetecglue{\hskip 0.15em plus 0.05em minus 0.05em}
-%% slanfont: 允许斜体
-%% boldfont: 允许粗体
-%% CJKnormalspaces: 仅忽略汉字之间的空白,但保留中英文之间的空白。 
-%% CJKchecksingle: 避免单个汉字单独占一行。
+%% \ CJKsetecglue {\ hskip 0.15em plus 0.05em minus 0.05th}
+%% slanfont: Allow italic
+%% boldfont: Allow bold
+%% CJKnormalspaces: Only whitespace between Chinese characters is ignored, but the gap between Chinese and English is preserved. 
+%% CJKchecksingle: Avoid single characters in a single line.
 \usepackage[slantfont, boldfont]{xeCJK} 
 % \usepackage{ctex}
 
-%% 针对中文进行断行
+%% breaks the line for Chinese
 \XeTeXlinebreaklocale "zh"             
 
-%% 给予TeX断行一定自由度
+%% gives TeX a certain degree of freedom
 \XeTeXlinebreakskip = 0pt plus 1pt minus 0.1pt
 
-%%%% xeCJK设置结束                                       
-%%%%%%%%------------------------------------------------------------------------
+%%%% xeCJK setting ends                                       
+%%%%%%%% ------------------------------------------ ------------------------------
 
-%%%%%%%%------------------------------------------------------------------------
-%%%% xeCJK字体设置
+%%%%%%%% ------------------------------------------ ------------------------------
+%%%% xeCJK font settings
 
-%% 设置中文标点样式，支持quanjiao、banjiao、kaiming等多种方式
+%% Set Chinese punctuation style, support quanjiao, banjiao, kaiming, etc.
 \punctstyle{quanjiao}                                        
                                                      
-%% 设置缺省中文字体
+%% set default Chinese font
 \setCJKmainfont[BoldFont={Adobe Heiti Std}, ItalicFont={Adobe Kaiti Std}]{Adobe Song Std}   %  FZBaoSongZ04
-%% 设置中文无衬线字体
-\setCJKsansfont[BoldFont={Adobe Heiti Std}, ItalicFont={Adobe Kaiti Std}]{Adobe Kaiti Std}  
-%% 设置等宽字体
-\setCJKmonofont{Adobe Heiti Std}                            
-%\setCJKmonofont{Monaco}                            
+%% set Chinese sans serif font
+\ setCJKsubscribe [BoldFont = {Adobe Head Std}, ItalicFont = {Adobe Cash Std}] {Adobe Cash Std}  
+%% set the monospaced font
+\ setCJKmonofont {Adobe Name Std}                            
+% \ SetCJKmonofont Monaco {}                            
 
-%% 英文衬线字体
-\setmainfont{Lucida Bright}                                  
-%% 英文等宽字体
+%% English serif font
+\ setmainfont {Lucida Bright}                                  
+%% English monospaced font
 %\setmonofont{Courier}
-\setmonofont{Monaco}                             
-%\setmonofont{Consolas}                              
-%% 英文无衬线字体
+\ Setmonofont Monaco {}                             
+% \ setmonofont {Consoles}                              
+%% English sans serif font
 \setsansfont{Optima}                                   
 
-%% 定义新字体
+%% defines new font
 \setCJKfamilyfont{song}{Adobe Song Std}                     
-\setCJKfamilyfont{kai}{Adobe Kaiti Std}
-\setCJKfamilyfont{hei}{Adobe Heiti Std}
+\ setCJKfamilyfont {kai} {Adobe Kaiti Std}
+\ setCJKfamilyfont {hey} {Adobe Name Std}
 \setCJKfamilyfont{fangsong}{Adobe Song Std}
 \setCJKfamilyfont{lisu}{LiShu}
 \setCJKfamilyfont{youyuan}{Adobe Kaiti Std}
 
-%%自定义英文字体
-\newfontfamily\couriernew{Lucida Grande}
-\newfontfamily\optima{Optima}
-\newfontfamily\lucida{Lucida Bright}
+%% custom English font
+\ newfontfamily \ couriernew {Lucida Grande}
+\ Newfontfamily \ optimal} {Optima
+\ newfontfamily \ shine {Lucida Bright}
 
 \newcommand{\ascii}[1]{{\sffamily #1}}
-\newcommand{\speak}[1]{{\itshape #1}}
-\renewcommand{\emph}[1]{{\hei #1}}
+\ newcommand {\ speak} [1] {{\ \ n \ n \ n \ n}}}
+\ Renewcommand {\ emph} [1] {{\ hex # 1}}
 
-%% 自定义宋体
+%% custom Song
 \newcommand{\song}{\CJKfamily{song}}                       
-%% 自定义楷体
-\newcommand{\kai}{\CJKfamily{kai}}                         
-%% 自定义黑体
-\newcommand{\hei}{\CJKfamily{hei}}                         
-%% 自定义仿宋体
+%% custom body
+\ newcommand {\ kai} {\ CJKfamily {kai}}                         
+%% custom blackbody
+\ Newcommand {\ hi} {\ CJKfamily {hi}}                         
+%% custom imitation
 \newcommand{\fangsong}{\CJKfamily{fangsong}}               
-%% 自定义隶书
-\newcommand{\lisu}{\CJKfamily{lisu}}                       
-%% 自定义幼圆
+%% custom librarian
+\ newcommand {\ lisu} {\ CJKfamily {press}}                       
+%% custom young round
 \newcommand{\youyuan}{\CJKfamily{youyuan}}                 
 
-%%%% xeCJK字体设置结束
-%%%%%%%%------------------------------------------------------------------------
+%%%% xeCJK font setting ends
+%%%%%%%% ------------------------------------------ ------------------------------
 
-%%%%%%%%------------------------------------------------------------------------
-%%%% 一些关于中文文档的重定义
+%%%%%%%% ------------------------------------------ ------------------------------
+%%%% Some redefinitions about Chinese documents
 
-%% 数学公式定理的重定义
+Redefinition of the %% mathematical formula theorem
 
 \newtheorem{example}{例}[section]                                   
-\newtheorem{algorithm}{算法}
-%% 按section编号
-\newtheorem{theorem}{定理}[section]                         
-\newtheorem{definition}{定义}
-\newtheorem{axiom}{公理}
-\newtheorem{property}{性质}
-\newtheorem{proposition}{命题}
-\newtheorem{lemma}{引理}
-\newtheorem{corollary}{推论}
-\newtheorem{condition}{条件}
-\newtheorem{conclusion}{结论}
-\newtheorem{assumption}{假设}
+\newtheorem{algorithm}{algorithm}
+%% by section number
+\newtheorem{theorem}{Theorem}[section]                         
+\newtheorem{definition}{definition}
+\newtheorem{axiom}{Axiom}
+\newtheorem{property}{nature}
+\newtheorem{proposition}{proposition}
+\newtheorem{lemma}{lemma}
+\newtheorem{corollary}{inference}
+\newtheorem{condition}{conditions}
+\newtheorem{conclusion}{Conclusion}
+\newtheorem{assumption}{hypothesis}
 
-\newtheorem{principle}{原则}[section]
-\newtheorem{regulation}{规则}[section]
-\newtheorem{advise}{建议}[section]
-\newtheorem{concept}{概念}[section]
+\newtheorem{principle}{principle}[section]
+\newtheorem{regulation}{rules}[section]
+\newtheorem{advise}{recommendation}[section]
+\newtheorem{concept}{concept}[section]
 
 \usepackage{titlesec}
 
 \renewcommand{\partname}{}
-\renewcommand{\thepart}{第\Roman{part}部分}
+\renewcommand{\thepart}{第\Roman{part} section}
 
-%% 章节等名称重定义
-\renewcommand{\contentsname}{目录}
-%\renewcommand{\abstractname}{摘要}
-\renewcommand{\indexname}{索引}
-\renewcommand{\listfigurename}{插图目录}
-\renewcommand{\listtablename}{表格目录}
+%% chapter and other name redefinition
+\renewcommand{\contentsname}{catalog}
+%\renewcommand{\abstractname}{Abstract}
+\renewcommand{\indexname}{index}
+\renewcommand{\listfigurename}{Illustration directory}
+\renewcommand{\listtablename}{table directory}
 \renewcommand{\figurename}{图}
 \renewcommand{\tablename}{表}
-\renewcommand{\appendixname}{附录}
-\renewcommand{\appendixpagename}{附录}
-\renewcommand{\appendixtocname}{附录}
-%\renewcommand\refname{参考文献} 
+\renewcommand{\appendixname}{Appendix}
+\renewcommand{\appendixpagename}{Appendix}
+\renewcommand{\appendixtocname}{Appendix}
+%\renewcommand\refname{References} 
 
-%%设置内容环境
+%% set content environment
 \newenvironment{content}{%
-  \setlength{\parskip}{0.5\baselineskip}
+  \ setlength {\ parskip} {0.5 \ baselineskip}
   \begin{spacing}{1.5}
-}{%
+} {%
   \end{spacing}
-  \setlength{\parskip}{-0.5\baselineskip}
-  \vskip -0.5\baselineskip
+  \ setlength {\ parskip} {- 0.5 \ baselineskip}
+  \ vskip -0.5 \ baselineskip
 }
 
-% 插入小段故事的语法：
+% The syntax for inserting a short story:
 % \begin{story}
 %   \begin{center}
-%     \inlinetitle{分水岭}
+% \inlinetitle{watershed}
 %   \end{center}
 % \end{story}
 \newenvironment{story}
 {
-  \setlength{\parskip}{0.5\baselineskip}
+  \ setlength {\ parskip} {0.5 \ baselineskip}
   \hbox to \textwidth{\hfil\rule{\linewidth}{0.5mm}\hfil}
   \begin{spacing}{1.5}
-}{%
+} {%
   \end{spacing}
   \hbox to \textwidth{\hfil\rule{\linewidth}{0.5mm}\hfil}
-  \setlength{\parskip}{-0.5\baselineskip}
-  \vskip -0.5\baselineskip
+  \ setlength {\ parskip} {- 0.5 \ baselineskip}
+  \ vskip -0.5 \ baselineskip
 }
 
-%% 设置chapter、section与subsection的格式
-%\titleformat{\chapter}[display]{\flushright\yihao}{\thechapter{}}{1em}{\textbf}
+%% sets the format of chapter, section and subsection
+% \ Titleformat {\ Chapter} [display] {\ flushright \ Yihao} {\ thechapter} {} {1em} {\ textbf}
 \titleformat{\section}[block]{\flushleft\sanhao}{\optima{\thesection}}{1em}{\textbf}
 \titleformat{\subsection}{\sihao}{\optima{\thesubsection}}{0.5em}{\textbf}
 \titleformat{\subsubsection}{\xiaosi}{\thesubsubsection}{0.5em}{\textbf}
 
 %\titlespacing{\chapter}{0pt}{0pt}{-\baselineskip}
 \titlespacing{\section}{0pt}{0pt}{0\baselineskip}
-\titlespacing{\subsection}{0pt}{0.5\baselineskip}{0\baselineskip}
+\ titlespacing {\ subsection} {0pt} {0.5 \ baselineskip} {0 \ baselineskip}
 
-%% 设置章格式
+%% set chapter format
 \usepackage{quotchap}
 
 \renewcommand\chapterheadstartvskip{
-   \vspace*{-5\baselineskip}
+   \ vspace * {- 5 \ baselineskip}
 }
 
 \renewcommand\chapterheadendvskip{
-   \vspace*{0.5\baselineskip}
+   \ vspace * {0.5 \ baselineskip}
 }
 
 \usepackage{helvet}
 \renewcommand\sectfont{\rmfamily\bfseries}
 
 \newcommand\refig[1]{{\itshape \figurename\ascii{\ref{fig:#1}（第\pageref{fig:#1}页）}}}
-\newcommand\reftbl[1]{{\itshape \tablename\ascii{\ref{tbl:#1}（第\pageref{tbl:#1}页）}}}
+\newcommand\reftbl[1]{{\itshape \tablename\ascii{\ref{tbl:#1}(page\pageref{tbl:#1}page}}}}
 
 \renewcommand{\footnoterule}{\vspace*{3pt}%
   \hrule width 0.382\textwidth height 0.4pt \vspace*{2.6pt}}
@@ -185,5 +185,5 @@
 \node[draw=red!60,line width=1pt,circle,fill=red!25,font=\sffamily\bfseries,inner sep=2pt,outer sep=0pt] at (-15pt,0pt){\textcolor{red}{R}};\end{tikzpicture}}
 \advance\baselineskip -1pt}{\end{list}\vskip5pt}
 
-%%%% 中文重定义结束
-%%%%%%%%------------------------------------------------------------------------
+%%%% Chinese redefinition end
+%%%%%%%% ------------------------------------------ ------------------------------

@@ -13,8 +13,8 @@
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 %%%%%%%%------------------------------------------------------------------------
-%%%% 导言区 
-%% 文档类型为article
+%%%% Introduction area
+%% Document type is article
 \documentclass[a4paper, 10pt]{book}
 %1m = 39.4 inch
 %大18开 （18.5cm * 23cm)
@@ -22,10 +22,10 @@
 \usepackage{geometry}
 \geometry{left=3.75cm,right=3.25cm,top=3cm,bottom=2.5cm}
 
-%% en_preamble包含基本的宏包配置
+%% en_preamble Contains basic package configuration
 \input{style/en_preamble}
 
-%% 如果不写中文的话就不需要引用xecjk_preamble里面的配置
+%% If you don't write Chinese, you don't need to quote xecjk_preamble inside configuration.
 \input{style/xecjk_preamble}
 
 \input{style/coding}
@@ -39,27 +39,27 @@
 %   %vshift=-5
 % ]{background}
 
-% \backgroundsetup{contents={样章}}
+% \backgroundsetup{contents={Sample chapter}}
 % \backgroundsetup{contents={\includegraphics[width=0.2\textwidth]{figures/cock.jpg}}}
 
 \newcommand{\myclearpage}{\clearpage{\pagestyle{empty}\cleardoublepage}}
 \newcommand{\mydedicate}{\clearpage{\pagestyle{empty}\cleardedicatepage}}
 
-%%%% 导言区结束
+%%%% End of the introduction area
 %%%%%%%%------------------------------------------------------------------------
 
 %%%%%%%%------------------------------------------------------------------------
-%%%% 正文部分
+%%%% Body section
 
 \begin{document}
 
 \frontmatter
 \pagestyle{empty}
 
-%%自定义封面
-\def\titlename{TensorFlow内核剖析}
+%%Custom cover
+\def\titlename{TensorFlow kernel analysis}
 \def\subtitle{TensorFlow Internals}
-\def\authors{刘光聪\ 著}
+\def\authors{Liu Guangcong}
 % \def\orgnization{\ascii{}}
 
 \input{style/title}
@@ -77,28 +77,28 @@
 \myclearpage
 
 \def\thelstlisting{\thechapter-\arabic{lstlisting}}
-%% 中文习惯是设定首行缩进为2em。
-%% 注意此设置一定要在document环境之中，这可能与\setlength作用范围相关
+%% Chinese rule of thumb is to set the first line indented to 2em.
+%% Note that this setting must be in document. In the environment, this may be related to \setlength scope of action
 \setlength{\parindent}{2em}
 
 %%%%%%%%%%%%%%%%%%%%%%
-%%开始正文，页面计数从正文开始
+%%Start the body, the page count starts from the body
 \mainmatter
 \setcounter{page}{1}
 \pagestyle{fancy}
 
 % \input{contents/logistic-regression}
 
-\part{基础知识}
+\part{Basic knowledge}
 \input{contents/introduction}
 \input{contents/prog-env}
 \input{contents/ice-breaker}
 
-\part{系统架构}
+\part{System structure}
 \input{contents/architecture}
 \input{contents/c-api}
 
-\part{编程模型}
+\part{Programming model}
 \input{contents/graph}
 \input{contents/device}
 \input{contents/session}
@@ -106,11 +106,11 @@
 \input{contents/queue}
 \input{contents/essential-op}
 
-\part{运行模型}
+\part{Runtime model}
 \input{contents/local}
 \input{contents/distributed}
 
-\part{模型训练}
+\part{Model training}
 \input{contents/bp}
 \input{contents/input-pipeline}
 \input{contents/saver}
@@ -119,7 +119,7 @@
 %%%%%%%%%%%%%%%%%%％%%
 \appendix
 
-\part{附录}
+\part{Appendix}
 \input{contents/code-reading}
 \input{contents/learning}
 
@@ -135,5 +135,5 @@
 \input{contents/biblio}
 
 \end{document}
-%%%% 正文部分结束
+%%%% End of the body part
 %%%%%%%%------------------------------------------------------------------------

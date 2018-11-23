@@ -3,16 +3,16 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{介绍} 
+\chapter{introduction} 
 \label{ch:introduction}
 
 \begin{content}
 
-\tf{}是一个使用\emph{数据流图}\ascii{(Dataflow Graph)}表达数值计算的开源软件库。它使用\emph{节点}表示抽象的数学计算，并使用\ascii{OP}表达计算的逻辑；而\emph{边}表示节点间传递的数据流，并使用\ascii{Tensor}表达数据的表示。\upcite{tf-white-paper}。数据流图是一种\emph{有向无环图}\ascii{(DAG)}，当图中的\ascii{OP}按照特定的拓扑排序依次被执行时，\ascii{Tensor}在图中流动形成数据流，\tf{}因此而得名。
+\tf{} is an open source software library that uses \emph{dataflow graph}\ascii{(Dataflow Graph)} to express numerical calculations. It uses \emph{node} to represent abstract mathematical calculations and uses \ascii{OP} to express the computational logic; and \emph{edge} represents the data flow passed between nodes, and uses \ascii{Tensor} to express the representation of the data. . \upcite{tf-white-paper}. The data flow graph is a \emph{directed acyclic graph}\ascii{(DAG)}. When the \ascii{OP} in the graph is sequentially executed according to a specific topological order, \ascii{Tensor} is in the graph. The flow forms the data stream, and \tf{} gets its name.
 
-在分布式运行时，数据流图的被分裂为多个子图，并被有效地部署到集群中的多个机器上并发执行。在一个机器内，注册的子图被二次分裂为更小的子图，它们被部署在\emph{本地设备集}上并发执行。\tf{}支持多种异构设备的分布式计算，包括\ascii{CPU, GPU, ASIC}。\tf{}跨平台的卓越表现，使得它能够灵活地部署在各种计算平台上，包括台式机、服务器、移动终端。
+In a distributed runtime, the data flow graph is split into multiple subgraphs and effectively deployed to multiple machines in the cluster for concurrent execution. Within a machine, registered subgraphs are split twice into smaller subgraphs that are deployed concurrently on \emph{local device set}. \tf{} supports distributed computing for a variety of heterogeneous devices, including \ascii{CPU, GPU, ASIC}. \tf{}Peripheral performance makes it flexible to deploy on a variety of computing platforms, including desktops, servers, and mobile devices.
 
-\tf{}最初由\ascii{Google Brain}的研究员和工程师们开发出来，用于开展机器学习和深度神经网络的研究，包括语言识别、计算机视觉、自然语言理解、机器人、信息检索。但是，\tf{}系统架构的通用性和灵活性，使其广泛地用于其他科学领域的数值计算。
+\tf{} was originally developed by \ascii{Google Brain} researchers and engineers for machine learning and deep neural network research, including speech recognition, computer vision, natural language understanding, robotics, and information retrieval. However, the versatility and flexibility of the \tf{} system architecture makes it widely used for numerical calculations in other scientific fields.
 
 \end{content}
 
@@ -20,121 +20,121 @@
 
 \begin{content}
 
-\ascii{Google Brain}项目始于\ascii{2011}年，用于研究超大规模的深度神经网络。在项目早期阶段，\ascii{Google Brain}构建了第一代分布式深度学习框架\ascii{DistBelief}，并在\ascii{Google}内部的产品中得到了大量的应用。
+The \ascii{Google Brain} project began in \ascii{2011} and was used to study ultra-large-scale deep neural networks. In the early stages of the project, \ascii{Google Brain} built the first generation of distributed deep learning framework \ascii{DistBelief} and got a lot of applications in the \ascii{Google} internal products.
 
-基于\ascii{DistBelief}的经验，\ascii{Google Brain}对深度学习训练和推理的需求，及其深度学习框架的系统行为和属性，有了更全面更深刻地理解，并于\ascii{2015.11}重磅推出第二代分布式深度学习框架\tf{}。\tf{}作为\ascii{DistBelief}的后继者，革命性地对既有系统架构做了全新设计和实现，\tf{}一经发布，便在深度学习领域一鸣惊人，在社区中形成了巨大的影响力。
+Based on the experience of \ascii{DistBelief}, \ascii{Google Brain} has a more comprehensive and deeper understanding of the requirements for deep learning training and reasoning, and the system behavior and attributes of its deep learning framework, and at \ascii{2015.11 } Introducing the second generation distributed deep learning framework \tf{}. \tf{} As the successor of \ascii{DistBelief}, revolutionized the design and implementation of the existing system architecture, \tf{} once released, it has become a blockbuster in the field of deep learning, and has formed a huge Influence.
 
 \subsection{DistBelief}
 
-\ascii{DistBelief}是一个用于训练大规模神经网络的的分布式系统，是\ascii{Google}第一代分布式机器学习框架。自\ascii{2011}年以来，在\ascii{Google}内部大量使用\ascii{DistBelief}训练大规模的神经网络，并广泛地用于机器学习和深度学习领域的研究和应用，包括非监督学习、语言表示、图像分类、目标检测、视频分类、语音识别、序列预测、行人检测、强化学习等。
+\ascii{DistBelief} is a distributed system for training large-scale neural networks. It is the first generation distributed machine learning framework of \ascii{Google}. Since \ascii{2011}, \ascii{DistBelief} has been used extensively within \ascii{Google} to train large-scale neural networks and is widely used in the research and application of machine learning and deep learning, including unsupervised learning. , language representation, image classification, target detection, video classification, speech recognition, sequence prediction, pedestrian detection, reinforcement learning, etc.
 
-\subsubsection{编程模型}
+\subsubsection{programming model}
 
-\ascii{DistBelief}的编程模型是基于\emph{层}的\ascii{DAG}图。层可以看做是一种组合多个运算操作符的复合运算符，它完成特定的计算任务。例如，全连接层完成$f({W^T}x + b)$的复合计算，包括输入与权重的矩阵乘法，随后再与偏置相加，最后在线性加权值的基础上应用激活函数，实施非线性变换。
+The programming model for \ascii{DistBelief} is based on the \asphii{DAG} diagram of \emph{layer}. A layer can be thought of as a compound operator that combines multiple arithmetic operators to perform specific computational tasks. For example, the fully connected layer performs a composite calculation of $f({W^T}x + b)$, including matrix multiplication of input and weight, then adds it to the bias, and finally applies the activation function based on the linear weighted value. , implementing a nonlinear transformation.
 
-\subsubsection{架构}
+\subsubsection{Schema}
 
-\ascii{DistBelief}使用\emph{参数服务器}\ascii{(Parameter Server, 常称为PS)}的系统架构，训练作业包括两个分离的进程：无状态的\ascii{Worker}进程，用于模型的训练；有状态的\ascii{PS}进程，用于维护模型的参数。如\refig{parameter-server}所示，在分布式训练过程中，各个\emph{模型副本}异步地从\ascii{PS}上拉取训练参数$w$，当完成一步迭代运算后，推送参数的梯度$ \Delta w $到\ascii{PS}上去，并完成参数的更新。
+\ascii{DistBelief} uses the system architecture of \emph{parameter server}\ascii{(Parameter Server, often called PS)}. The training job consists of two separate processes: a stateless \ascii{Worker} process for Model training; stateful \ascii{PS} process for maintaining model parameters. As shown in \refig{parameter-server}, in the distributed training process, each \emph{model copy} asynchronously pulls the training parameter $w$ from \ascii{PS}, and after completing one-step iteration, push The gradient of the parameter $\Delta w $ to \ascii{PS} goes up and the parameter is updated.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.5\textwidth]{figures/parameter-server.png}
-\caption{DistBelief: Parameter Server架构}
+\caption{DistBelief: Parameter Server Architecture}
  \label{fig:parameter-server}
 \end{figure}
 
-\subsubsection{缺陷}
+\subsubsection{defect}
 
-但是，对于深度学习领域的高级用户，\ascii{DistBelief}的编程模型，及其基于\ascii{PS}的系统架构，缺乏足够的灵活性和可扩展性。
+However, for advanced users in the field of deep learning, the programming model of \ascii{DistBelief} and its system architecture based on \ascii{PS} lack sufficient flexibility and scalability.
 
 \begin{enum}
-  \eitem{优化算法：添加新的优化算法，必须修改\ascii{PS}的实现；\code{get(), put()}的抽象方法，对某些优化算法并不高效。}
-  \eitem{训练算法：支持非前馈的神经网络面临巨大的挑战性；例如，包含循环的\ascii{RNN}，交替训练的对抗网络，及其损失函数由分离的代理完成的增强学习模型。} 
-  \eitem{加速设备：\ascii{DistBelief}设计之初仅支持多核\ascii{CPU}，并不支持多卡的\ascii{GPU}，遗留的系统架构对支持新的计算设备缺乏良好的可扩展性。}
+  \eitem{Optimization algorithm: Adding a new optimization algorithm, you must modify the implementation of \ascii{PS}; the abstract methods of \code{get(), put()} are not efficient for some optimization algorithms. }
+  \eitem{Training algorithm: Supporting non-feedforward neural networks faces enormous challenges; for example, \ascii{RNN} with loops, alternately trained confrontation networks, and enhanced learning models whose loss functions are performed by separate agents. }
+  \eitem{Acceleration device: \ascii{DistBelief} designed to support only multi-core\ascii{CPU}, does not support multi-card \ascii{GPU}, legacy system architecture lacks good scalability to support new computing devices Sex. }
 \end{enum}
 
 \subsection{TensorFlow}
 
-\ascii{DistBelief}遗留的架构和设计，不再满足深度学习与日俱增的需求变化，\ascii{Google}毅然放弃了既有的\ascii{DistBelief}实现，并决定在其基础上做全新的系统架构设计，\ascii{TensorFlow}应运而生，开创了深度学习领域的新纪元。
+\ascii{DistBelief} The legacy architecture and design no longer meet the deeper learning and increasing demand changes. \ascii{Google} resolutely gave up the existing \ascii{DistBelief} implementation and decided to build a new system architecture based on it. Design, \ascii{TensorFlow} came into being, creating a new era of deep learning.
 
-\subsubsection{编程模型}
+\subsubsection{programming model}
 
-\ascii{TensorFlow}使用数据流图表达计算过程和共享状态，使用节点表示抽象计算，使用边表示数据流。如\refig{tf-dataflow}所示，展示了\ascii{MNIST}手写识别应用的数据流图。在该模型中，前向子图使用了\ascii{2}层全连接网络，分别为\ascii{ReLU}层和\ascii{Softmax}层。随后，使用\ascii{SGD}的优化算法，构建了与前向子图对应的反向子图，用于计算训练参数的梯度。最后，根据参数更新法则，构造训练参数的更新子图，完成训练参数的迭代更新。
+\ascii{TensorFlow} uses a dataflow graph to represent the computational process and shared state, using nodes to represent abstract computations, and edges to represent data flows. As shown in \refig{tf-dataflow}, the data flow diagram of the \ascii{MNIST} handwriting recognition application is shown. In this model, the forward subgraph uses the \ascii{2} layer fully connected network, which is the \ascii{ReLU} layer and the \ascii{Softmax} layer. Subsequently, using the optimization algorithm of \ascii{SGD}, a reverse subgraph corresponding to the forward subgraph is constructed to calculate the gradient of the training parameters. Finally, according to the parameter update rule, the update subgraph of the training parameters is constructed, and the iterative update of the training parameters is completed.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.4\textwidth]{figures/tf-dataflow.png}
-\caption{TensorFlow: 数据流图}
+\caption{TensorFlow: Data Flow Graph}
  \label{fig:tf-dataflow}
 \end{figure}
 
-\subsubsection{设计原则}
+\subsubsection{Design Principles}
 
-\tf{}的系统架构遵循了一些基本的设计原则，用于指导\tf{}的系统实现。
+The system architecture of \tf{} follows some basic design principles to guide the system implementation of \tf{}.
 
 \begin{enum}
-  \eitem{延迟计算：图的构造与执行分离，并推迟计算图的执行过程；}
-  \eitem{原子\ascii{OP}：\ascii{OP}是最小的抽象计算单元，支持构造复杂的网络模型；} 
-  \eitem{抽象设备：支持\ascii{CPU, GPU, ASIC}多种异构计算设备类型；}
-  \eitem{抽象任务：基于任务的\ascii{PS}，对新的优化算法和网络模型具有良好的可扩展性。}  
+  \eitem{Delayed calculation: The construction of the graph is separated from the execution, and the execution of the graph is deferred;}
+  \eitem{atomic\ascii{OP}:\ascii{OP} is the smallest abstract computing unit that supports the construction of complex network models; 
+  \eitem{abstract device: support \ascii{CPU, GPU, ASIC} a variety of heterogeneous computing device types;
+  \eitem{Abstract Task: Task-based \ascii{PS}, with good scalability for new optimization algorithms and network models. }  
 \end{enum}
 
-\subsubsection{优势}
+\subsubsection{ advantage}
 
-相对于其他机器学习框架，\ascii{TensorFlow}具有如下方面的优势。
+Compared to other machine learning frameworks, \ascii{TensorFlow} has the following advantages.
 
 \begin{enum}
-  \eitem{高性能：\tf{}升级至\ascii{1.0}版本性能提升显著，单机多卡(\ascii{8}卡\ascii{GPU})环境中，\ascii{Inception v3}的训练实现了\ascii{7.3}倍的加速比；在分布式多机多卡(\ascii{64}卡\ascii{GPU})环境中，\ascii{Inception v3}的训练实现了\ascii{58}倍的加速比；}
-  \eitem{跨平台：支持多\ascii{CPU/GPU/ASIC}多种异构设备的运算；支持台式机，服务器，移动设备等多种计算平台；支持\ascii{Windows，Linux，MacOS}等多种操作系统；}
-  \eitem{分布式：支持本地和分布式的模型训练和推理；}
-  \eitem{多语言：支持\ascii{Python, C++, Java, Go}等多种程序设计语言；}  
-  \eitem{通用性：支持各种复杂的网络模型的设计和实现，包括非前馈型神经网络；}
-  \eitem{可扩展：支持\ascii{OP}扩展，\ascii{Kernel}扩展，\ascii{Device}扩展，通信协议的扩展；}
-  \eitem{可视化：使用\ascii{TensorBoard}可视化整个训练过程，极大地降低了\tf{}的调试过程；}
-  \eitem{自动微分：\tf{}自动构造反向的计算子图，完成训练参数的梯度计算；}
-  \eitem{工作流：\ascii{TensorFlow}与\ascii{TensorFlow Serving}无缝集成，支持模型的训练、导入、导出、发布一站式的工作流，并自动实现模型的热更新和版本管理。}      
+  \eitem{High Performance: \tf{} Upgrade to \ascii{1.0} version performance improvement, single-machine multi-card (\ascii{8} card \ascii{GPU}) environment, \ascii{Inception v3} training implementation \ascii{7.3} times the speedup; in the distributed multi-machine multi-card (\ascii{64}card\ascii{GPU}) environment, \ascii{Inception v3} training achieved \ascii{58} times Acceleration ratio;}
+  \eitem{Cross-platform: support multiple \ascii{CPU/GPU/ASIC} computing of multiple heterogeneous devices; support desktop, server, mobile device and other computing platforms; support \ascii{Windows, Linux, MacOS}, etc. Multiple operating systems;}
+  \eitem{Distributed: Supports local and distributed model training and reasoning;}
+  \eitem{Multi-language: support \ascii{Python, C++, Java, Go} and many other programming languages;}  
+  \eitem{Universality: Supports the design and implementation of a variety of complex network models, including non-feedforward neural networks;}
+  \eitem{Extensible: Support for \ascii{OP} extensions, \ascii{Kernel} extensions, \ascii{Device} extensions, extensions to communication protocols;}
+  \eitem{Visualization: Visualize the entire training process with \ascii{TensorBoard}, greatly reducing the debugging process for \tf{};
+  \eitem{Automatic differentiation: \tf{} automatically constructs the inverse calculation subgraph to complete the gradient calculation of the training parameters;}
+  \eitem{Workflow: \ascii{TensorFlow} Seamless integration with \ascii{TensorFlow Serving}, support model training, import, export, release one-stop workflow, and automatically implement hot update and version management of the model. }      
 \end{enum}
 
 \end{content}
 
-\section{社区发展}
+\section{Community Development}
 
 \begin{content}
 
-\tf{}是目前炙手可热的深度学习框架。自开源以来，\tf{}社区相当活跃。在\ascii{Github}上收获了来自众多的非\ascii{Google}员工的数万次代码提交，并且每周拥有近百个\ascii{Issue}被提交。在\ascii{Stack Overflow}上也拥有上万个关于\tf{}的问题被提问和回答。在各种技术大会上，\tf{}也是一颗闪亮的明星，得到众多开发者的青睐。
+\tf{} is the current hot learning framework. Since the open source, the \tf{} community has been quite active. Tens of thousands of code submissions from numerous non-associative {Google} employees were received on \ascii{Github}, and nearly a hundred \ascii{Issue} were submitted each week. There are also tens of thousands of questions about \tf{} on \ascii{Stack Overflow} that are questioned and answered. At various technical conferences, \tf{} is also a shining star, which is favored by many developers.
 
-\subsection{开源}
+\subsection{Open source}
 
-\ascii{2015.11}，\ascii{Google Research}发布文章：\code{\href{https://research.googleblog.com/2015/11/tensorflow-googles-latest-machine\_9.html}{TensorFlow: Google's latest machine learning system, open sourced for everyone}}，正式宣布新一代机器学习系统\ascii{TensorFlow}开源。随后，\ascii{TensorFlow}在\ascii{Github}上代码仓库短时间内获得了大量的\ascii{Star}和\ascii{Fork}。如\refig{tf-commits}所示，\ascii{TensorFlow}的社区活跃度已远远超过其他竞争对手，成为目前最为流行的深度学习框架。
+\ascii{2015.11}, \ascii{Google Research} post: \code{\href{https://research.googleblog.com/2015/11/tensorflow-googles-latest-machine\_9.html}{TensorFlow: Google's latest machine learning system, open sourced for everyone}}, officially announced a new generation of machine learning system \ascii{TensorFlow} open source. Subsequently, \ascii{TensorFlow} obtained a large number of \ascii{Star} and \ascii{Fork} in the code repository on \ascii{Github} for a short time. As shown by \refig{tf-commits}, \ascii{TensorFlow} has far more community activity than other competitors and is now the most popular deep learning framework.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=1.0\textwidth]{figures/tf-commits.png}
-\caption{TensorFlow：社区活跃度}
+\caption{TensorFlow: Community activity}
  \label{fig:tf-commits}
 \end{figure}
 
-毫无疑问，\ascii{TensorFlow}的开源对学术界和工业界产生了巨大的影响，它极大地降低了深度学习在各个行业中应用的难度。众多的学者、工程师、企业、组织纷纷地投入到了\ascii{TensorFlow}社区，并一起完善和改进\ascii{TensorFlow}，推动其不断地向前演进和发展。
+Undoubtedly, \ascii{TensorFlow}'s open source has had a huge impact on academia and industry, which greatly reduces the difficulty of deep learning in various industries. Numerous scholars, engineers, companies, and organizations have invested in the \ascii{TensorFlow} community, and together improve and improve \ascii{TensorFlow} to promote its continuous evolution and development.
 
-\subsection{里程碑}
+\subsection{milestone}
 
-\tf{}自\ascii{2015.11}开源以来，平均一个多月发布一个版本。如\refig{tf-versions}所示，展示了\tf{}几个重要特性的发布时间。
+\tf{} Since the open source of \ascii{2015.11}, an average version has been released for more than a month. As shown in \refig{tf-versions}, it shows the release time of several important features of \tf{}.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=1.0\textwidth]{figures/tf-versions.png}
-\caption{TensorFlow重要里程碑}
+\caption{TensorFlow important milestone}
  \label{fig:tf-versions}
 \end{figure}
 
-\subsection{工业应用}
+\subsection{Industrial Application}
 
-\ascii{TensorFlow}自开源发展两年以来，在生产环境中被大量应用使用。在医疗方面，帮助医生预测皮肤癌发生的概率；在音乐、绘画领域，帮助人类更好地理解艺术；在移动端，多款移动设备搭载\ascii{TensorFlow}训练的机器学习模型，用于翻译工作。\ascii{TensorFlow}在\ascii{Google}内部应用的增长也十分迅速，多个重量级产品都有相关应用，包括：\ascii{Google Search, Google Gmail, Google Translate, Google Maps}等，如\refig{tf-google-apps}所示。
+\ascii{TensorFlow} has been used in a large number of applications in the production environment since its development in the open source for two years. In the medical field, help doctors predict the probability of skin cancer; in the field of music and painting, help humans better understand art; on the mobile side, a variety of mobile devices equipped with \ascii{TensorFlow} training machine learning model for translation jobs. \ascii{TensorFlow} is also growing rapidly within \ascii{Google}, with multiple heavyweight products having apps, including: \ascii{Google Search, Google Gmail, Google Translate, Google Maps}, etc. Refig{tf-google-apps}.
 
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=1.0\textwidth]{figures/tf-google-apps.png}
-\caption{TensorFlow：在Google内部使用情况}
+\caption{TensorFlow: Internal use within Google}
  \label{fig:tf-google-apps}
 \end{figure}
 

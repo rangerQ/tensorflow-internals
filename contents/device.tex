@@ -3,25 +3,25 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{设备} 
+\chapter{device} 
 \label{ch:device}
 
 \begin{content}
 
 \end{content}
 
-\section{设备规范}
+\section{Device Specification}
 
 \begin{content}
 
-设备规范\ascii{(Device Specification)}用于描述\ascii{OP}存储或计算设备的具体位置。
+The device specification \ascii{(Device Specification)} is used to describe the specific location of the \ascii{OP} storage or computing device.
 
-\subsection{形式化}
+\subsection{formalization}
 
-一个设备规范可以形式化地描述为：
+A device specification can be formally described as:
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 DEVICE_SPEC ::= COLOCATED_NODE | PARTIAL_SPEC
 COLOCATED_NODE ::= "@" NODE_NAME
 PARTIAL_SPEC ::= ("/" CONSTRAINT) *
@@ -32,78 +32,78 @@ CONSTRAINT ::= ("job:" JOB_NAME)
 \end{python}
 \end{leftbar}
 
-\subsubsection{完整指定}
+\subsubsection{full designation}
 
-如下例所示，完整地描述某个\ascii{OP}被放置在\ascii{PS}作业，\ascii{0}号备份，\ascii{0}号任务，\ascii{GPU 0}号设备。
+As shown in the following example, a complete description of a \ascii{OP} is placed in the \ascii{PS} job, \ascii{0} backup, \ascii{0} task, \ascii{GPU 0} device.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 /job:ps/replica:0/task:0/device:GPU:0
 \end{python}
 \end{leftbar}
 
-\subsubsection{部分指定}
+\subsubsection{partially specified}
 
-设备规范也可以部分指定，甚至为空。例如，下例仅描述了\code{GPU0}号设备。
+Equipment specifications can also be specified in part or even empty. For example, the following example only describes the device number \code{GPU0}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 /device:GPU:0
 \end{python}
 \end{leftbar}
 
-特殊地，当设备规范为空时，则表示对\ascii{OP}未实施设备约束，运行时自动选择设备放置\ascii{OP}。
+In particular, when the device specification is empty, it means that the device constraint is not implemented for \ascii{OP}, and the device is automatically selected to place \ascii{OP} at runtime.
 
-\subsubsection{同位}
+\ subsubsection {peer}
 
-使用\code{COLOCATED\_NODE}指示该\ascii{OP}与指定的节点被同时放置在相同的设备上。例如，该节点与\code{other/node}放置在相同的设备上。
+Use \code{COLOCATED\_NODE} to indicate that the \ascii{OP} is placed on the same device as the specified node. For example, the node is placed on the same device as \code{other/node}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 @other/node  # colocate with "other/node"
 \end{python}
 \end{leftbar}
 
 \subsubsection{DeviceSpec}
 
-一个设备规范可以使用字符串，或者\code{DeviceSpec}表示。其中，\code{DeviceSpec}是一个值对象，使用如下\ascii{5}个标识确定设备规范。
+A device specification can be represented using a string, or \code{DeviceSpec}. Where \code{DeviceSpec} is a value object, using the following \ascii{5} identifiers to determine the device specification.
 
 \begin{enum}
-  \eitem{作业名称}
-  \eitem{备份索引}
-  \eitem{任务索引}
-  \eitem{设备类型}
-  \eitem{设备索引}
+  \eitem{job name}
+  \eitem{backup index}
+  \eitem{Task index}
+  \eitem{device type}
+  \eitem{device index}
 \end{enum}
 
-例如，使用\code{DeviceSpec}构造的设备规范。
+For example, use the device specification constructed by \code{DeviceSpec}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 # '/job:ps/replica:0/task:0/device:CPU:0'
 DeviceSpec(job="ps", replica=0, task=0, device_type="CPU", device_index=0)
 \end{python}
 \end{leftbar}
 
-\subsection{上下文管理器}
+\subsection{Context Manager}
 
-常常使用上下文管理器\code{device(device\_spec)}指定\ascii{OP}设备规范，在该上下文的作用域内构造的\code{OP}在运行时将被放置在指定设备上运行。
+The \ascii{OP} device specification is often specified using the context manager \code{device(device\_spec)}, and the \code{OP} constructed within the scope of the context will be placed on the specified device at runtime.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with g.device('/gpu:0'):
   # All OPs constructed here will be placed on GPU 0.
 \end{python}
 \end{leftbar}
 
-其中，\code{device}是\code{Graph}的一个方法，它设计了一个栈式结构的上下文管理器，实现设备规范的闭包、合并、覆盖等特性。
+Among them, \code{device} is a method of \code{Graph}, which designs a stack structure context manager to implement the closure, merge, and overlay of device specifications.
 
-\subsubsection{合并}
+\subsubsection{Merge}
 
-可以对两个不同范围的设备规范进行合并。
+Two different ranges of device specifications can be combined.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with device("/job:ps"):
   # All OPs constructed here will be placed on PS.
   with device("/task:0/device:GPU:0"):
@@ -112,12 +112,12 @@ with device("/job:ps"):
 \end{python}
 \end{leftbar}
 
-\subsubsection{覆盖}
+\subsubsection{override}
 
-在合并两个相同范围的设备规范时，内部指定的设备规范具有高优先级，实现设备规范的覆盖。
+When merging two identical ranges of device specifications, the internally specified device specification has a high priority to achieve coverage of the device specification.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with device("/device:CPU:0"):
   # All OPs constructed here will be placed on CPU 0.
   with device("/job:ps/device:GPU:0"):
@@ -126,12 +126,12 @@ with device("/device:CPU:0"):
 \end{python}
 \end{leftbar}
 
-\subsubsection{重置}
+\subsubsection{reset}
 
-特殊地，当内部的设备规范置位为\code{None}时，将忽略外部所有设备规范的定义。
+In particular, when the internal device specification is set to \code{None}, the definition of all external device specifications is ignored.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 with device("/device:GPU:0"):
   # All OPs constructed here will be placed on CPU 0.
   with device(None):
@@ -139,12 +139,12 @@ with device("/device:GPU:0"):
 \end{python}
 \end{leftbar}
 
-\subsubsection{设备规范函数}
+\subsubsection{Device Specification Function}
 
-当指定设备规范时，常常使用字符串，或\code{DeviceSpec}进行描述。也可以使用更加灵活的\emph{设备规范函数}，它提供了一种更加灵活的扩展方式指定设备规范。设备规范函数是一个回调函数，入参为\code{Operation}，生成一个字符串格式的设备规范。
+When specifying a device specification, it is often described using a string, or \code{DeviceSpec}. You can also use the more flexible \emph{device specification function}, which provides a more flexible extension to specify device specifications. The device specification function is a callback function with the input parameter \code{Operation}, which generates a device specification in string format.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def matmul_on_gpu(n):
  if n.type == "MatMul":
    return "/gpu:0"
@@ -158,12 +158,12 @@ with g.device(matmul_on_gpu):
 \end{python}
 \end{leftbar}
 
-\subsubsection{实现}
+\subsubsection{implementation}
 
-\code{Graph.device(spec)}实现了一个栈式结构的上下文管理器，它可以接受字符串格式的设备规范，或者\emph{设备规范函数}。事实上，当给\code{device}函数传递字符串，或者\code{DeviceSpec}时，首先会对该字符串，或\code{DeviceSpec}做一个简单的适配，统一转换为设备规范函数。
+\code{Graph.device(spec)} implements a stack-structured context manager that accepts device specifications in string format, or \emph{device specification functions}. In fact, when passing a string to \code{device} function, or \code{DeviceSpec}, a simple adaptation of the string, or \code{DeviceSpec}, is first converted to a device specification function.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Graph(object):
   def device(self, device_name_or_func):
     def to_device_func():
@@ -181,22 +181,22 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-当用户使用\code{device}时，未显式地指定图实例，则隐式地使用全局唯一的默认图实例。也就是说，\code{tf.device(spec)}函数事实上是对\code{get\_default\_graph().device(spec)}的一个简单包装。
+When a user uses \code{device}, the graph instance is not explicitly specified, and the globally unique default graph instance is implicitly used. That is, the \code{tf.device(spec)} function is actually a simple wrapper around \code{get\_default\_graph().device(spec)}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 # tensorflow/python/framework/ops.py
 def device(device_name_or_function):
   return get_default_graph().device(device_name_or_function)
 \end{python}
 \end{leftbar}
 
-\subsubsection{应用}
+\subsubsection{Apply}
 
-在\code{Graph.device}实现中，\code{pydev.merge\_device}生成一个设备规范函数。该设备函数以输入的\code{spec}创建新的副本，通过调用\code{copy\_spec.merge\_from(current\_device)}，合并既有的\code{node\_def.device}设备规范，并且\code{node\_def.device}具有更高的优先级。实现较为隐晦，为什么\code{node\_def.device}具有较高优先级呢？这取决于\code{\_apply\_device\_functions}实现覆盖、合并、重置的需求。
+In the \code{Graph.device} implementation, \code{pydev.merge\_device} generates a device specification function. The device function creates a new copy with the input \code{spec} and merges the existing \code{node\_def.device} device specification by calling \code{copy\_spec.merge\_from(current\_device)} And \code{node\_def.device} has a higher priority. The implementation is more obscure, why does \code{node\_def.device} have a higher priority? This depends on the need for \code{\_apply\_device\_functions} to override, merge, and reset.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 def merge_device(spec):
   # replace string to DeviceSpec
   if not isinstance(spec, DeviceSpec):
@@ -214,17 +214,17 @@ def merge_device(spec):
 \end{python}
 \end{leftbar}
 
-当\code{Graph.create\_op}时，将调用\code{\_apply\_device\_functions}设置\code{NodeDef}的设备规范。它将对\code{\_device\_function\_stack}依次实施出栈操作，并调用相应的设备规范函数，并将结果直接设置为\code{NodeDef}的设备规范。如此，内嵌指定的\code{device}具有较高优先级，实现了合并、覆盖、重置外围指定的\code{device}。
+When \code{Graph.create\_op}, \code{\_apply\_device\_functions} is set to set the device specification for \code{NodeDef}. It will perform a pop operation on \code{\_device\_function\_stack} in turn, and call the corresponding device specification function, and set the result directly to the device specification of \code{NodeDef}. Thus, the inline specified \code{device} has a higher priority, which implements merging, overwriting, and resetting the peripheral-specific \code{device}.
 
 \begin{leftbar}
-\begin{python}
+\ Begin {python}
 class Graph(object):
   def _apply_device_functions(self, op):
     for device_function in reversed(self._device_function_stack):
       if device_function is None:
         break
       # IMPORTANT: `node\_def.device` takes precedence.  
-      op._set_device(device_function(op)) 
+      op._set_device (device_function (on)) 
 \end{python}
 \end{leftbar}
 
