@@ -1,88 +1,78 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{introduction} 
+
+\chapter{Introduction} 
 \label{ch:introduction}
 
 \begin{content}
-
-\tf{} is an open source software library that uses \emph{dataflow graph}\ascii{(Dataflow Graph)} to express numerical calculations. It uses \emph{node} to represent abstract mathematical calculations and uses \ascii{OP} to express the computational logic; and \emph{edge} represents the data flow passed between nodes, and uses \ascii{Tensor} to express the representation of the data. . \upcite{tf-white-paper}. The data flow graph is a \emph{directed acyclic graph}\ascii{(DAG)}. When the \ascii{OP} in the graph is sequentially executed according to a specific topological order, \ascii{Tensor} is in the graph. The flow forms the data stream, and \tf{} gets its name.
-
-In a distributed runtime, the data flow graph is split into multiple subgraphs and effectively deployed to multiple machines in the cluster for concurrent execution. Within a machine, registered subgraphs are split twice into smaller subgraphs that are deployed concurrently on \emph{local device set}. \tf{} supports distributed computing for a variety of heterogeneous devices, including \ascii{CPU, GPU, ASIC}. \tf{}Peripheral performance makes it flexible to deploy on a variety of computing platforms, including desktops, servers, and mobile devices.
-
-\tf{} was originally developed by \ascii{Google Brain} researchers and engineers for machine learning and deep neural network research, including speech recognition, computer vision, natural language understanding, robotics, and information retrieval. However, the versatility and flexibility of the \tf{} system architecture makes it widely used for numerical calculations in other scientific fields.
-
+\tf{} is an open source software library that uses \emph{dataflow graph} \ascii{(Dataflow Graph)} to express numerical calculations. It uses \emph{nodes} to represent abstract mathematical calculations and uses \ascii{operators} (\ascii{OP}) to express the computational logic; It uses \emph{edges} to represent the data flow passed between nodes, and uses \ascii{Tensors} to express the representation of the data \upcite{tf-white-paper}. The data flow graph is a \emph{directed acyclic graph} \ascii{(DAG)}. When the \ascii{OP} in the graph is sequentially executed according to a specific topological order, \ascii{Tensor} is in the graph. The flow forms the data  stream, and \tf{} gets its name.
+In a distributed runtime, the data flow graph is split into multiple subgraphs and effectively deployed to multiple machines in the cluster for concurrent execution. Within a machine, registered subgraphs are split twice into smaller subgraphs that are deployed concurrently on \emph{local device set}. \tf{} supports distributed computing for a variety of heterogeneous devices, including  \ascii{CPU, GPU, ASIC}. \tf{}Peripheral performance makes it flexible to deploy on a variety of computing platforms, including desktops, servers, and mobile devices.
+\tf{} was originally developed by \ascii{Google Brain} researchers and engineers for machine learning and deep neural network research, including speech recognition, computer vision, natural  language understanding, robotics, and information retrieval. However, the versatility and flexibility of the \tf{} system architecture makes it widely used for numerical calculations in other  scientific fields.
 \end{content}
 
-\section{前世今生}
 
+\section{Prehistoric life}
 \begin{content}
-
 The \ascii{Google Brain} project began in \ascii{2011} and was used to study ultra-large-scale deep neural networks. In the early stages of the project, \ascii{Google Brain} built the first generation of distributed deep learning framework \ascii{DistBelief} and got a lot of applications in the \ascii{Google} internal products.
-
 Based on the experience of \ascii{DistBelief}, \ascii{Google Brain} has a more comprehensive and deeper understanding of the requirements for deep learning training and reasoning, and the system behavior and attributes of its deep learning framework, and at \ascii{2015.11 } Introducing the second generation distributed deep learning framework \tf{}. \tf{} As the successor of \ascii{DistBelief}, revolutionized the design and implementation of the existing system architecture, \tf{} once released, it has become a blockbuster in the field of deep learning, and has formed a huge Influence.
 
+
 \subsection{DistBelief}
+\ascii{DistBelief} is a distributed system for training large-scale neural networks. It is the first generation distributed machine learning framework from \ascii{Google}. Since \ascii{2011}, \ascii{DistBelief} has been used extensively within \ascii{Google} to train large-scale neural networks and is widely used in the research and application of machine learning and deep learning, including unsupervised learning, language representation, image classification, target detection, video classification, speech recognition, sequence prediction, pedestrian detection, reinforcement learning, etc.
 
-\ascii{DistBelief} is a distributed system for training large-scale neural networks. It is the first generation distributed machine learning framework of \ascii{Google}. Since \ascii{2011}, \ascii{DistBelief} has been used extensively within \ascii{Google} to train large-scale neural networks and is widely used in the research and application of machine learning and deep learning, including unsupervised learning. , language representation, image classification, target detection, video classification, speech recognition, sequence prediction, pedestrian detection, reinforcement learning, etc.
 
-\subsubsection{programming model}
+\subsubsection{Programming Model}
+The programming model for \ascii{DistBelief} is based on the \ascii{DAG} diagram of \emph{layer}. A layer can be thought of as a compound operator that combines multiple arithmetic operators to perform specific computational tasks. For example, the fully connected layer performs a composite calculation of $f({W^T}x + b)$, including matrix multiplication of input and weight, then adds it to the bias, and finally applies the activation function based on the linear weighted value, implementing a nonlinear transformation.
 
-The programming model for \ascii{DistBelief} is based on the \asphii{DAG} diagram of \emph{layer}. A layer can be thought of as a compound operator that combines multiple arithmetic operators to perform specific computational tasks. For example, the fully connected layer performs a composite calculation of $f({W^T}x + b)$, including matrix multiplication of input and weight, then adds it to the bias, and finally applies the activation function based on the linear weighted value. , implementing a nonlinear transformation.
 
 \subsubsection{Schema}
-
-\ascii{DistBelief} uses the system architecture of \emph{parameter server}\ascii{(Parameter Server, often called PS)}. The training job consists of two separate processes: a stateless \ascii{Worker} process for Model training; stateful \ascii{PS} process for maintaining model parameters. As shown in \refig{parameter-server}, in the distributed training process, each \emph{model copy} asynchronously pulls the training parameter $w$ from \ascii{PS}, and after completing one-step iteration, push The gradient of the parameter $\Delta w $ to \ascii{PS} goes up and the parameter is updated.
-
+\ascii{DistBelief} uses the system architecture of \emph{parameter server}\ascii{(Parameter Server, often called PS)}. The training job consists of two separate processes: a stateless \ascii{Worker} process for Model training; stateful \ascii{PS} process for maintaining model parameters. As shown in \refig{parameter-server}, in the distributed training process, each \emph{model copy} asynchronously pulls the training parameter $w$ from \ascii{PS}, and after completing one-step iteration, pushes The gradient of the parameter $ \Delta w $ to \ascii{PS} goes up and the parameter is updated.
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/parameter-server.png}
-\caption{DistBelief: Parameter Server Architecture}
- \label{fig:parameter-server}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/parameter-server.png}
+  \caption{DistBelief: Parameter Server Architecture}
+  \label{fig:parameter-server}
 \end{figure}
 
-\subsubsection{defect}
 
-However, for advanced users in the field of deep learning, the programming model of \ascii{DistBelief} and its system architecture based on \ascii{PS} lack sufficient flexibility and scalability.
-
+\subsubsection{Critisism}
+However, for advanced users in the field of deep learning, the programming model of \ascii{DistBelief} and its system architecture based on \ascii{PS} lacks sufficient flexibility and scalability.
 \begin{enum}
-  \eitem{Optimization algorithm: Adding a new optimization algorithm, you must modify the implementation of \ascii{PS}; the abstract methods of \code{get(), put()} are not efficient for some optimization algorithms. }
-  \eitem{Training algorithm: Supporting non-feedforward neural networks faces enormous challenges; for example, \ascii{RNN} with loops, alternately trained confrontation networks, and enhanced learning models whose loss functions are performed by separate agents. }
-  \eitem{Acceleration device: \ascii{DistBelief} designed to support only multi-core\ascii{CPU}, does not support multi-card \ascii{GPU}, legacy system architecture lacks good scalability to support new computing devices Sex. }
+  \eitem{Optimization algorithm: Adding a new optimization algorithm, you must modify the implementation of \ascii{PS}; the abstract methods of \code{get(), put()} are not efficient for some optimization algorithms.}
+  \eitem{Training algorithm: Supporting non-feedforward neural networks faces enormous challenges; for example, \ascii{RNN} with loops, alternately trained confrontation networks, and enhanced learning models whose loss functions are performed by separate agents.}
+  \eitem{Acceleration device: \ascii{DistBelief} designed to support only multi-core\ascii{CPU}, does not support multi-card \ascii{GPU}, legacy system architecture lacks good scalability to support new computing devices.}
 \end{enum}
+
 
 \subsection{TensorFlow}
-
 \ascii{DistBelief} The legacy architecture and design no longer meet the deeper learning and increasing demand changes. \ascii{Google} resolutely gave up the existing \ascii{DistBelief} implementation and decided to build a new system architecture based on it. Design, \ascii{TensorFlow} came into being, creating a new era of deep learning.
 
-\subsubsection{programming model}
 
+\subsubsection{Programming model}
 \ascii{TensorFlow} uses a dataflow graph to represent the computational process and shared state, using nodes to represent abstract computations, and edges to represent data flows. As shown in \refig{tf-dataflow}, the data flow diagram of the \ascii{MNIST} handwriting recognition application is shown. In this model, the forward subgraph uses the \ascii{2} layer fully connected network, which is the \ascii{ReLU} layer and the \ascii{Softmax} layer. Subsequently, using the optimization algorithm of \ascii{SGD}, a reverse subgraph corresponding to the forward subgraph is constructed to calculate the gradient of the training parameters. Finally, according to the parameter update rule, the update subgraph of the training parameters is constructed, and the iterative update of the training parameters is completed.
-
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.4\textwidth]{figures/tf-dataflow.png}
-\caption{TensorFlow: Data Flow Graph}
- \label{fig:tf-dataflow}
+  \centering
+  \includegraphics[width=0.4 \textwidth]{figures/tf-dataflow.png}
+  \caption{TensorFlow: Data Flow Graph}
+  \label{fig:tf-dataflow}
 \end{figure}
 
+
 \subsubsection{Design Principles}
-
 The system architecture of \tf{} follows some basic design principles to guide the system implementation of \tf{}.
-
 \begin{enum}
   \eitem{Delayed calculation: The construction of the graph is separated from the execution, and the execution of the graph is deferred;}
-  \eitem{atomic\ascii{OP}:\ascii{OP} is the smallest abstract computing unit that supports the construction of complex network models; 
-  \eitem{abstract device: support \ascii{CPU, GPU, ASIC} a variety of heterogeneous computing device types;
-  \eitem{Abstract Task: Task-based \ascii{PS}, with good scalability for new optimization algorithms and network models. }  
+  \eitem{Atomic\ascii{OP}:\ascii{OP} is the smallest abstract computing unit that supports the construction of complex network models;}
+  \eitem{Abstract device: support \ascii{CPU, GPU, ASIC} a variety of heterogeneous computing device types;}
+  \eitem{Abstract Task: Task-based \ascii{PS}, with good scalability for new optimization algorithms and network models.}
 \end{enum}
 
-\subsubsection{ advantage}
 
+\subsubsection{Advantages}
 Compared to other machine learning frameworks, \ascii{TensorFlow} has the following advantages.
-
 \begin{enum}
   \eitem{High Performance: \tf{} Upgrade to \ascii{1.0} version performance improvement, single-machine multi-card (\ascii{8} card \ascii{GPU}) environment, \ascii{Inception v3} training implementation \ascii{7.3} times the speedup; in the distributed multi-machine multi-card (\ascii{64}card\ascii{GPU}) environment, \ascii{Inception v3} training achieved \ascii{58} times Acceleration ratio;}
   \eitem{Cross-platform: support multiple \ascii{CPU/GPU/ASIC} computing of multiple heterogeneous devices; support desktop, server, mobile device and other computing platforms; support \ascii{Windows, Linux, MacOS}, etc. Multiple operating systems;}
@@ -90,52 +80,49 @@ Compared to other machine learning frameworks, \ascii{TensorFlow} has the follow
   \eitem{Multi-language: support \ascii{Python, C++, Java, Go} and many other programming languages;}  
   \eitem{Universality: Supports the design and implementation of a variety of complex network models, including non-feedforward neural networks;}
   \eitem{Extensible: Support for \ascii{OP} extensions, \ascii{Kernel} extensions, \ascii{Device} extensions, extensions to communication protocols;}
-  \eitem{Visualization: Visualize the entire training process with \ascii{TensorBoard}, greatly reducing the debugging process for \tf{};
+  \eitem{Visualization: Visualize the entire training process with \ascii{TensorBoard}, greatly reducing the debugging process for \tf{}; }
   \eitem{Automatic differentiation: \tf{} automatically constructs the inverse calculation subgraph to complete the gradient calculation of the training parameters;}
-  \eitem{Workflow: \ascii{TensorFlow} Seamless integration with \ascii{TensorFlow Serving}, support model training, import, export, release one-stop workflow, and automatically implement hot update and version management of the model. }      
+  \eitem{Workflow: \ascii{TensorFlow} Seamless integration with \ascii{TensorFlow Serving}, support model training, import, export, release one-stop workflow, and automatically implement hot update and version management of the model. }
 \end{enum}
+
 
 \end{content}
 
+
 \section{Community Development}
-
 \begin{content}
+\tf{} is the current hot deep learning framework. Since the open source, the \tf{} community has been quite active. Tens of thousands of code submissions from numerous non-associative {Google} employees were received on \ascii{Github}, and nearly a hundred \ascii{Issue} were submitted each week. There are also tens of thousands of questions about \tf{} on \ascii{Stack Overflow} that are questioned and answered. At various technical conferences, \tf{} is also a shining star, which is favored by many developers.
 
-\tf{} is the current hot learning framework. Since the open source, the \tf{} community has been quite active. Tens of thousands of code submissions from numerous non-associative {Google} employees were received on \ascii{Github}, and nearly a hundred \ascii{Issue} were submitted each week. There are also tens of thousands of questions about \tf{} on \ascii{Stack Overflow} that are questioned and answered. At various technical conferences, \tf{} is also a shining star, which is favored by many developers.
 
 \subsection{Open source}
-
 \ascii{2015.11}, \ascii{Google Research} post: \code{\href{https://research.googleblog.com/2015/11/tensorflow-googles-latest-machine\_9.html}{TensorFlow: Google's latest machine learning system, open sourced for everyone}}, officially announced a new generation of machine learning system \ascii{TensorFlow} open source. Subsequently, \ascii{TensorFlow} obtained a large number of \ascii{Star} and \ascii{Fork} in the code repository on \ascii{Github} for a short time. As shown by \refig{tf-commits}, \ascii{TensorFlow} has far more community activity than other competitors and is now the most popular deep learning framework.
-
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/tf-commits.png}
-\caption{TensorFlow: Community activity}
- \label{fig:tf-commits}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/tf-commits.png}
+  \caption{TensorFlow: Community activity}
+  \label{fig:tf-commits}
 \end{figure}
 
 Undoubtedly, \ascii{TensorFlow}'s open source has had a huge impact on academia and industry, which greatly reduces the difficulty of deep learning in various industries. Numerous scholars, engineers, companies, and organizations have invested in the \ascii{TensorFlow} community, and together improve and improve \ascii{TensorFlow} to promote its continuous evolution and development.
 
-\subsection{milestone}
 
-\tf{} Since the open source of \ascii{2015.11}, an average version has been released for more than a month. As shown in \refig{tf-versions}, it shows the release time of several important features of \tf{}.
-
+\subsection{Milestones}
+\tf{} since the open source of \ascii{2015.11}, an average version has been released for more than a month. As shown in \refig{tf-versions}, it shows the release time of several important features of \tf{}.
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/tf-versions.png}
-\caption{TensorFlow important milestone}
- \label{fig:tf-versions}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/tf-versions.png}
+  \caption{TensorFlow important milestone}
+  \label{fig:tf-versions}
 \end{figure}
 
-\subsection{Industrial Application}
 
+\subsection{Industrial Applications}
 \ascii{TensorFlow} has been used in a large number of applications in the production environment since its development in the open source for two years. In the medical field, help doctors predict the probability of skin cancer; in the field of music and painting, help humans better understand art; on the mobile side, a variety of mobile devices equipped with \ascii{TensorFlow} training machine learning model for translation jobs. \ascii{TensorFlow} is also growing rapidly within \ascii{Google}, with multiple heavyweight products having apps, including: \ascii{Google Search, Google Gmail, Google Translate, Google Maps}, etc. Refig{tf-google-apps}.
-
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/tf-google-apps.png}
-\caption{TensorFlow: Internal use within Google}
- \label{fig:tf-google-apps}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/tf-google-apps.png}
+  \caption{TensorFlow: Internal use within Google}
+  \label{fig:tf-google-apps}
 \end{figure}
 
 \end{content}

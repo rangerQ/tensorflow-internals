@@ -1,67 +1,63 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{session} 
+
+\chapter{Session}
 \label{ch:session}
-
 \begin{content}
-
 The client uses \code{Session} as a bridge to establish a connection with the background computing engine and initiate the execution of the calculation graph. Among them, a call to \code{Session.run} will trigger a calculation of \ascii{TensorFlow}\ascii{(Step)}.
-
 In fact, \code{Session} builds a closure environment that executes computational graphs, which encapsulates the \ascii{OP} calculation and its \ascii{Tensor} evaluation environment.
-
 \end{content}
 
-\section{资源管理}
 
+\section{Resource management}
 \begin{content}
-
 In the life cycle of \code{Session}, system resources, including variables, queues, readers, etc., are allocated on demand according to the computational requirements of the calculation graph.
 
-\subsection{Close session}
 
+\subsection{Close session}
 When the calculation is complete, you need to make sure that \code{Session} is safely closed to safely release the managed system resources.
 
 \begin{leftbar}
-\ Begin {python}
-sess = tf.Session ()
+\begin{python}
+sess = tf.Session()
 sess.run(targets)
 sess.close()
 \end{python}
 \end{leftbar}
 
-\subsection{Context Manager}
 
+\subsection{Context Manager}
 In general, the context manager is often used to create \code{Session} so that \code{Session} can be automatically closed after the calculation is complete, ensuring that resources are safely released.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with tf.Session() as sess:
   sess.run(targets)
 \end{python}
 \end{leftbar}
 
-\subsection{图Instance}
 
+\subsection{Graph instance}
 A \code{Session} instance can only run one graph instance; however, a graph instance can be run in multiple \code{Session} instances. If you try to run another graph instance in the same \code{Session}, you must first close \code{Session} (do not have to destroy it) and then start the calculation process of the new graph.
 
 Although a \code{Session} instance can only run one graph instance. However, \code{Session} can be a thread-safe class that can execute different subgraphs on the graph instance concurrently. For example, in a typical machine learning training model, you can use the same \code{Session} instance to run the input subgraph, the training submap, and its \ascii{Checkpoint} submap.
 
-\subsubsection{reference counter}
 
+\subsubsection{Reference counter}
 In order to improve efficiency and avoid the frequent creation and destruction of computational graphs, there is an implementation optimization technique. Maintain a reference counter for \code{Session} in the diagram instance, and only if the number of \code{Session} is zero, the graph instance is actually destroyed.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/tf-graph-session-relation.png}
-\caption{Optimization Technique: Reference Counter for Session Instance}
- \label{fig:tf-graph-session-relation}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/tf-graph-session-relation.png}
+  \caption{Optimization Technique: Reference Counter for Session Instance}
+  \label{fig:tf-graph-session-relation}
 \end{figure}
 
-\subsubsection{data structure}
 
+\subsubsection{Data structure}
 Here, extract the key field of the \code{TF\_Graph} section on \code{Session} reference counter technology; where the \code{TF\_Graph} structure is defined in the \ascii{C API} header file.
 
 \begin{leftbar}
@@ -98,6 +94,7 @@ struct TF_Session {
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{Create session}
 
 \begin{leftbar}
@@ -120,7 +117,8 @@ TF_Session* TF_NewSession(TF_Graph* graph, const TF_SessionOptions* opt,
 \end{c++}
 \end{leftbar}
 
-\subsubsection{destroy session}
+
+\subsubsection{Destroy session}
 
 \begin{leftbar}
 \begin{c++}
@@ -140,14 +138,15 @@ void TF_DeleteSession(TF_Session* s, TF_Status* status) {
 \end{c++}
 \end{leftbar}
 
-\section{default session}
+\end{content}
 
+
+\section{Default session}
 \begin{content}
-
 The \code{Session} is set to the default \code{Session} by calling \ascii{Session.as\_default()}, and it returns a context manager. In the above default \code{Session}, you can directly implement the \ascii{OP} operation, or the evaluation of \ascii{Tensor}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 hello = tf.constant('hello, world')
 
 sess = tf.Session ()  
@@ -159,12 +158,12 @@ sess.close()
 
 However, \code{Session.as\_default()} does not automatically close \code{Session}, requiring the user to explicitly call the \code{Session.close} method.
 
-\subsection{tensor evaluation}
 
+\subsection{Tensor evaluation}
 In the above example code, \code{hello.eval()} is equivalent to \code{tf.get\_default\_session().run(hello)}. Among them, \code{Tensor.eval} is implemented as follows.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Tensor(_TensorLike):
   def eval(self, feed_dict=None, session=None):
     if session is None:
@@ -173,12 +172,12 @@ class Tensor(_TensorLike):
 \end{python}
 \end{leftbar}
 
-\subsection{OP operation}
 
+\subsection{OP operation}
 Similarly, when the user does not explicitly provide \code{Session}, \code{Operation.run} will automatically get the default \code{Session} instance and follow the current \ascii{OP} dependency to a specific The topological sorting performs the computed subgraph.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Operation(object):
   def run(self, feed_dict=None, session=None):
     if session is None:
@@ -187,14 +186,14 @@ class Operation(object):
 \end{python}
 \end{leftbar}
 
-\subsection{thread related}
 
+\subsection{Thread related}
 The default session is only valid for the current thread to track the call stack of the session at the current thread. If you use the default session in a new thread, you need to set \code{Session} as the default session in the thread function by calling \code{as\_default}.
 
 In fact, the \ascii{TensorFlow} runtime maintains a local thread stack of \code{Session}, which implements automatic management of the default \code{Session}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 _default_session_stack = _DefaultStack()
 
 def get_default_session(session):
@@ -205,7 +204,7 @@ def get_default_session(session):
 Where \code{\_DefaultStack} represents the data structure of the stack.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class _DefaultStack(threading.local):
   def __init__(self):
     super(_DefaultStack, self).__init__()
@@ -226,29 +225,28 @@ class _DefaultStack(threading.local):
 
 \end{content}
 
-\section{session type}
 
+\section{Session type}
 \begin{content}
-
 In general, there are two basic types of sessions: \code{Session} and \code{InteractiveSession}. The latter is often used in interactive environments, which set itself to default during construction, simplifying the management of the default session.
 
 In addition, there are differences in the configuration of the two at runtime. For example, \code{InteractiveSession} sets \code{GPUOptions.allow\_growth} to \code{True} to avoid monopolizing the entire GPU's storage resources in the experimental environment.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/py-session-hierarchy.png}
-\caption{Session: class hierarchy}
- \label{fig:py-session-hierarchy}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/py-session-hierarchy.png}
+  \caption{Session: class hierarchy}
+  \label{fig:py-session-hierarchy}
 \end{figure}
 
-\subsection{Session}
 
+\subsection{Session}
 \code{Session} inherits \code{BaseSession} and adds the default map to the default session's context manager to ensure safe release of system resources.
 
 In general, use \code{with} to enter the session's context manager and automatically switch the default view to the default session context; when exiting the \code{with} statement, the default view and default session context are automatically closed and automatically closed. Conversation.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Session(BaseSession):
   def __init__(self, target='', graph=None, config=None):
     super(Session, self).__init__(target, graph, config=config)
@@ -275,6 +273,7 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
+
 \subsection{InteractiveSession}
 
 Unlike \code{Session}, \code{InteractiveSession} sets itself to default during construction and implements automatic switching between default and default sessions. In contrast, \code{Session} must rely on the \code{with} statement to do this. In an interactive environment, \code{InteractiveSession} simplifies the process of managing default graphs and default sessions.
@@ -282,7 +281,7 @@ Unlike \code{Session}, \code{InteractiveSession} sets itself to default during c
 Similarly, \code{InteractiveSession} needs to be explicitly closed after the calculation is completed in order to safely release the system resources it occupies.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class InteractiveSession (BaseSession):
   def __init__(self, target='', graph=None, config=None):
     super(InteractiveSession, self).__init__(target, graph, config)
@@ -300,16 +299,16 @@ class InteractiveSession (BaseSession):
 \end{python}
 \end{leftbar}
 
-\ Subsection {Base Session}
 
+\subsection{Base Session}
 \code{BaseSession} is the base class of the two. It mainly implements the management life cycle operations such as session creation, shutdown, execution, and destruction. It is connected with the background computing engine to realize the interaction between the front and back ends.
 
-\subsubsection{Create session}
 
+\subsubsection{Create session}
 By calling the interface of \ascii{C API}, \code{self.\_session} directly holds the session handle of the background calculation engine, and the operations of executing the calculation diagram and closing the session later are identified by this handle.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class BaseSession(SessionInterface):
   def __init__(self, target='', graph=None, config=None):
     # ignore implements...
@@ -319,12 +318,12 @@ class BaseSession(SessionInterface):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Execute calculation graph}
 
+\subsubsection{Execute calculation graph}
 A calculation of the calculation graph is implemented by calling the \code{run} interface. It first registers the graph to the background calculation engine via \code{tf\_session.TF\_ExtendGraph}, and then starts the execution of the calculation graph by calling \code{tf\_session.TF\_Run}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class BaseSession(SessionInterface):
   def run(self, 
     fetches, feed_dict=None, options=None, run_metadata=None):
@@ -341,10 +340,11 @@ class BaseSession(SessionInterface):
 \end{python}
 \end{leftbar}
 
+
 \subsubsection{Close session}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class BaseSession(SessionInterface):
   def close(self):
     with errors.raise_exception_on_not_ok_status() as status:
@@ -352,10 +352,11 @@ class BaseSession(SessionInterface):
 \end{python}
 \end{leftbar}
 
-\subsubsection{destroy session}
+
+\subsubsection{Destroy session}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class BaseSession(SessionInterface):
   def __del__(self):
     try:
@@ -366,4 +367,4 @@ class BaseSession(SessionInterface):
 \end{python}
 \end{leftbar}
 
-\begin{content}
+\end{content}

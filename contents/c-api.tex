@@ -1,41 +1,37 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
 \chapter{C API: Watershed} 
 \label{ch:c-api}
-
 \begin{content}
-
 This chapter uses the implementation of the client\ascii{Session} lifecycle as an example to reveal the implementation channel of the front-end \ascii{Python} and the backend \cpp{} system, revealing the mystery of \ascii{TensorFlow} multi-language programming.
-
 \end{content}
 
+
 \section{Swig: Behind the scenes}
-
 \begin{content}
-
-The front-end multi-language programming environment and the backend \cpp{} implementation of the system's channel are attributed to the \ascii{Swig} wrapper. \ascii{TensorFlow} uses the \ascii{Bazel} build tool to start the \ascii{Swig} code generation process before the system is compiled, and automatically generates two adaptations via \code{tensorflow.i} (\ascii{Wrapper })file:
+The front-end multi-language programming environment and the backend \cpp{} implementation of the system's channel are attributed to the \ascii{Swig} wrapper. \ascii{TensorFlow} uses the \ascii{Bazel} build tool to start the \ascii{Swig} code generation process before the system is compiled, and automatically generates two adaptations via \code{tensorflow.i} (\ascii{Wrapper})file:
 
 \begin{enum}
   \eitem{\code{pywrap\_tensorflow\_internal.py}: Responsible for docking the upper \ascii{Python} call;}
   \eitem{\code{pywrap\_tensorflow\_internal.cc}: Responsible for docking the underlying \ascii{C API} call. }
 \end{enum}
 
-As shown by \refig{swig}, the \code{pywrap\_tensorflow\_internal.py} module automatically loads the dynamic link library of \code{\_pywrap\_tensorflow\_internal.so} when it is first imported; where \code {\_pywrap\_tensorflow\_internal.so} contains all the symbols for the entire \tf{} runtime. In the implementation of \code{pywrap\_tensorflow\_internal.cc}, a function symbol table is statically registered, and the binary relationship of the \ascii{Python} function name to the \ascii{C} function name is implemented. At runtime, according to the function name of \ascii{Python}, the matching finds the corresponding \ascii{C} function implementation, and finally realizes the calling relationship of \ascii{Python} to \code{c\_api.c}.
+As shown by \refig{swig}, the \code{pywrap\_tensorflow\_internal.py} module automatically loads the dynamic link library of \code{\_pywrap\_tensorflow\_internal.so} when it is first imported; where \code{\_pywrap\_tensorflow\_internal.so} contains all the symbols for the entire \tf{} runtime. In the implementation of \code{pywrap\_tensorflow\_internal.cc}, a function symbol table is statically registered, and the binary relationship of the \ascii{Python} function name to the \ascii{C} function name is implemented. At runtime, according to the function name of \ascii{Python}, the matching finds the corresponding \ascii{C} function implementation, and finally realizes the calling relationship of \ascii{Python} to \code{c\_api.c}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/swig.png}
-\caption{SwigCode Generator}
- \label{fig:swig}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/swig.png}
+  \caption{SwigCode Generator}
+  \label{fig:swig}
 \end{figure}
 
 The generation rules for \ascii{Bazel} are defined in \code{//tensorflow/python:pywrap\_tensorflow\_internal} as shown in the following code.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 tf_py_wrap_cc(
     name = "pywrap_tensorflow_internal",
     srcs = ["tensorflow.i"],
@@ -73,54 +69,52 @@ The following takes the implementation of the client\ascii{Session} lifecycle as
 
 \end{content}
 
-\section{session control}
 
+\section{Session control}
 \begin{content}
-
 Strictly speaking, \ascii{C API} is not the dividing line between \ascii{Client} and \ascii{Master}. As shown by \refig{tf-client-session}, \ascii{Client} has a partial \cpp{} implementation, ie \code{tensorflow::Session}. The \code{tf.Session} instance directly holds the handle of the \code{tensorflow::Session} instance. In the actual runtime environment, there may be multiple implementations of \code{tensorflow::Session}. For example, \code{DirectSession} is responsible for session control for \emph{local mode}. And \code{GrpcSession} is responsible for session control of \emph{distributed mode} based on \ascii{gRPC} protocol. In general, users use \code{tf.Session} to implement programming instead of \code{tensorflow::Session}.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/tf-client-session.png}
-\caption{client: tensorflow::Session instance creation process}
- \label{fig:tf-client-session}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/tf-client-session.png}
+  \caption{client: tensorflow::Session instance creation process}
+  \label{fig:tf-client-session}
 \end{figure}
 
 \end{content}
 
-\section{session life cycle}
 
+\section{Session life cycle}
 \begin{content}
-
 The life cycle of a session includes the creation of a session, the creation of a calculation graph, the expansion of a computation graph, the execution of a computation graph, the closure of a session, and the destruction of a session. The front-end \ascii{Python} and backend\cpp{} behave as two sets of compatible interface implementations.
 
-\subsection{Python frontend}
 
+\subsection{Python frontend}
 As shown in \refig{py-session-lifecycle}, in the \ascii{Python} front end, the life cycle of \code{Session} is mainly reflected in:
 
 \begin{enum}
-  \eitem{创建\code{Session(target)}；}
-  \eitem{iteration execution\code{Session.run(fetches, feed\_dict)};}
+  \eitem{Create \code{Session(target)}；}
+  \eitem{Iteration execution \code{Session.run(fetches, feed\_dict)};}
     \begin{enum}
       \eitem{\code{Session.\_extend\_graph(graph)}；}
       \eitem{\code{Session.TF\_Run(feeds, fetches, targets)}；}
     \end{enum}
-  \eitem{close\code{Session};}
+  \eitem{close \code{Session};}
   \eitem{destroy \code{Session};}
 \end{enum}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/py-session-lifecycle.png}
-\caption{Python: Session lifecycle}
- \label{fig:py-session-lifecycle}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/py-session-lifecycle.png}
+  \caption{Python: Session lifecycle}
+  \label{fig:py-session-lifecycle}
 \end{figure}
 
 For example, here the local mode \code{Session} instance is created and the training process for \code{mnist} is started.
 
 \begin{leftbar}
-\ Begin {python}
-sess = tf.Session ()
+\begin{python}
+sess = tf.Session()
 for _ in range(1000):
   batch_xs, batch_ys = mnist.train.next_batch(100)
   sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
@@ -128,24 +122,24 @@ sess.close()
 \end{python}
 \end{leftbar}
 
-\subsection{C++Backend}
 
+\subsection{C++Backend}
 Accordingly, in the \cpp{} backend, the life cycle of \code{Session} is mainly reflected in:
 
 \begin{enum}
   \eitem{Create \code{Session} based on \code{target} polymorphism;}
   \eitem{\code{Session.Create(graph)}: Yes and only once;}
   \eitem{\code{Session.Extend(graph)}: zero or more times;}
-  \eitem{迭代执行\code{Session.Run(inputs, outputs, targets)}；}
-  \eitem{关闭\code{Session.Close}；}
+  \eitem{Iterative execution \code{Session.Run(inputs, outputs, targets)}；}
+  \eitem{Shut down \code{Session.Close}；}
   \eitem{Destroy the \code{Session} object. }
 \end{enum}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/cc-session-lifecycle.png}
-\caption{C++: Session lifecycle}
- \label{fig:cc-session-lifecycle}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/cc-session-lifecycle.png}
+  \caption{C++: Session lifecycle}
+  \label{fig:cc-session-lifecycle}
 \end{figure}
 
 For example, here the local mode \code{DirectSession} instance is created and the execution of the calculation graph is started.
@@ -182,21 +176,20 @@ session->Close();
 
 \end{content}
 
+
 \section{Create session}
-
 \begin{content}
-
 The following is a detailed process of session creation. Starting from the \ascii{Python} front end, the \ascii{Python-C++} wrapper automatically generated by \ascii{Swig} is used as a medium to implement \ascii{Python } Call to \ascii{C API} of \ascii{TensorFlow}. Among them, \ascii{C API} is the watershed of the front-end system and the back-end system.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/py-create-session.png}
-\caption{Create session}
- \label{fig:py-create-session}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/py-create-session.png}
+  \caption{Create session}
+  \label{fig:py-create-session}
 \end{figure}
 
-\subsection{programming interface}
 
+\subsection{Programming interface}
 When \ascii{Client} wants to start the execution of the calculation graph, it first creates a \code{Session} instance, and then calls the constructor of the parent class \code{BaseSession}.
 
 \begin{leftbar}
@@ -270,14 +263,14 @@ class ScopedTFGraph(object):
 \end{leftbar}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.3\textwidth]{figures/tf-graph-inst.png}
-\caption{front and rear: pass the graph instance}
- \label{fig:tf-graph-inst}
+  \centering
+  \includegraphics[width=0.3\textwidth]{figures/tf-graph-inst.png}
+  \caption{front and rear: pass the graph instance}
+  \label{fig:tf-graph-inst}
 \end{figure}
 
-\subsubsection{Python wrapper}
 
+\subsubsection{Python wrapper}
 In the \code{pywrap\_tensorflow} module, through \code{\_pywrap\_tensorflow\_internal} forwarding, from \ascii{Python} to the dynamic link library \code{\_pywrap\_tensorflow\_internal.so} Function call.
 
 \begin{leftbar}
@@ -290,8 +283,8 @@ def TF_NewSession(graph, opts, status):
 \end{python}
 \end{leftbar}
 
-\subsubsection{C++ wrapper}
 
+\subsubsection{C++ wrapper}
 In the concrete implementation of \code{pywrap\_tensorflow\_internal.cc}, the symbol table of the function call is statically registered, and the function name of \ascii{Python} is implemented to the specific mapping of the \cpp{} function implementation.
 
 \begin{leftbar}
@@ -309,8 +302,8 @@ static PyMethodDef SwigMethods[] = {
 
 Finally, \code{\_wrap\_TF\_NewSession/\_wrap\_TF\_NewDeprecatedSession} will call \code{c\_api.h} to open the \ascii{API} interface: \code{TF\_NewSession/TF \_NewDeprecatedSession}. In other words, the automatically generated \code{pywrap\_tensorflow\_internal.cc} is only responsible for forwarding the \ascii{Python} function to the \ascii{C/C++} function call, and will eventually call the underlying \ascii{C} system up. The \ascii{API} interface provided.
 
-\subsection{C API}
 
+\subsection{C API}
 \code{c\_api.h} is the public \ascii{API} interface open to the front end of the \ascii{TensorFlow} backend execution system. Among them, the new interface implementation uses the technique of reference counting, and the implementation of the graph instance is shared among multiple \code{Session} instances.
 
 \begin{leftbar}
@@ -344,8 +337,8 @@ TF_DeprecatedSession* TF_NewDeprecatedSession(const TF_SessionOptions* opt,
 \end{c++}
 \end{leftbar}
 
-\subsection{backend system}
 
+\subsection{Backend system}
 \code{NewSession} will create different types of \code{tensorflow::Session} instances using \code{SessionFactory} polymorphism based on the \code{target} passed to the frontend.
 
 \begin{leftbar}
@@ -366,38 +359,37 @@ Status NewSession(const SessionOptions& options, Session** out_session) {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{factory method}
 
+\subsubsection{Factory method}
 In the backend \cpp{} implementation, the creation of \code{tensorflow::Session} uses the abstract factory method. If \code{target} in \code{SessionOptions} is an empty string (the default), create a \code{DirectSession} instance and start the local run mode; if \code{target} in \code{SessionOptions} At the beginning of \code{grpc://}, create a \code{GrpcSession} instance and start a distributed run mode based on \code{RPC}. As shown in \refig{cc-session-factory}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/cc-session-factory.png}
-\caption{tensorflow::Session creation: abstract factory method}
- \label{fig:cc-session-factory}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/cc-session-factory.png}
+  \caption{tensorflow::Session creation: abstract factory method}
+  \label{fig:cc-session-factory}
 \end{figure}
 
 \end{content}
 
+
 \section{Create/Extension Diagram}
-
 \begin{content}
-
 In the existing interface implementation, the graph constructed by the graph construction period needs to be serialized and passed to the backend \ascii{C++} system. In the new interface implementation, there is no need to implement the creation or extension of the graph. Because when you create \ascii{OP}, the node is added to the graph instance of the backend \ascii{C++} system in real time. However, the implementation of the existing interface is more important for understanding the behavior of the system.
 
-The \ascii{Python} frontend will iteratively call the \code{Session.run} interface, and the constructed calculation graph will be sent to the \cpp{} backend as \code{GraphDef}. Each time the front end calls the \code{Session.run} interface, it will try to send the calculation graph of the newly added node to the backend system, so as to add the calculation graph \ascii{Extend} of the newly added node to the original calculation diagram. . Specifically, the first computational graph will be sent to the backend system when \code{Session.run} is first called.
+The \ascii{Python} frontend will iteratively call the \code{Session.run} interface, and the constructed calculation graph will be sent to the \cpp{} backend as \code{GraphDef}. Each time the front end calls the \code{Session.run} interface, it will try to send the calculation graph of the newly added node to the backend system, so as to add the calculation graph \ascii{Extend} of the newly added node to the original calculation diagram. Specifically, the first computational graph will be sent to the backend system when \code{Session.run} is first called.
 
 The first time the backend system calls \code{Session.Extend}, it is transposed (or equivalent) \code{Session.Create}. Later, each time the backend system calls \code{Session.Extend}, the semantics of \code{Extend} will be actually executed, and the nodes of the newly added calculation graph will be added to the original calculation graph.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-session-create-graph.png}
-\caption{Create a diagram}
- \label{fig:py-session-create-graph}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-session-create-graph.png}
+  \caption{Create a diagram}
+  \label{fig:py-session-create-graph}
 \end{figure}
 
-\subsection{programming interface}
 
+\subsection{Programming interface}
 In the existing interface implementation, the extension of the graph instance is implemented by \code{\_extend\_graph}.
 
 \begin{leftbar}
@@ -411,7 +403,7 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
-When \code{self.\_extend\_graph} is called for the first time, or when a new node is added to the calculation graph, serialization is performed on the calculation graph \code{GraphDef}, which finally triggers \code{tf\_session. Call of TF\_ExtendGraph}.
+When \code{self.\_extend\_graph} is called for the first time, or when a new node is added to the calculation graph, serialization is performed on the calculation graph \code{GraphDef}, which finally triggers \code{tf\_session.TF\_ExtendGraph}.
 
 \begin{leftbar}
 \begin{python}[caption={tensorflow/python/client/session.py}]
@@ -433,8 +425,8 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Python wrapper}
 
+\subsubsection{Python wrapper}
 \begin{leftbar}
 \begin{python}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.py}]
 def TF_ExtendGraph(sess, graph_def, status):
@@ -442,8 +434,8 @@ def TF_ExtendGraph(sess, graph_def, status):
 \end{python}
 \end{leftbar}
 
-\subsubsection{C++ wrapper}
 
+\subsubsection{C++ wrapper}
 \begin{leftbar}
 \begin{c++}[caption={tensorflow/bazel-bin/tensorflow/python/pywrap\_tensorflow\_internal.cc}]
 static PyMethodDef SwigMethods[] = {
@@ -454,8 +446,8 @@ static PyMethodDef SwigMethods[] = {
 \end{c++}
 \end{leftbar}
 
-\subsection{C API}
 
+\subsection{C API}
 \code{TF\_ExtendGraph} is the interface for the \ascii{C API} docking of the upper programming environment. First, it completes the deserialization of the computed graph \code{GraphDef} and finally calls the \code{Extend} interface of \code{tensorflow::Session}.
 
 \begin{leftbar}
@@ -472,8 +464,8 @@ void TF_ExtendGraph(TF_DeprecatedSession* sess,
 \end{c++}
 \end{leftbar}
 
-\subsection{backend system}
 
+\subsection{Backend system}
 \code{tensorflow::Session} will polymorphically call the implementation of the corresponding subclass at runtime based on the dynamic type of \code{Session}.
 
 \begin{leftbar}
@@ -488,8 +480,8 @@ public:
 
 Where \code{Create} means to register the calculation graph on the current \code{tensorflow::Session} instance. If you want to register a new calculation graph, you need to close the \code{tensorflow::Session} object. \code{Extend} indicates that the node is appended to the computed graph on the \code{tensorflow::Session} instance. When \code{Extend} is first executed, it is equivalent to the semantics of \code{Create}, because for the first time \code{Extend}, the registered calculation graph is empty. In fact, the system is implemented according to the above scheme, here is an example of the \code{GrpcSession} implementation.
 
-\subsubsection{First expansion map: GrpcSession}
 
+\subsubsection{First expansion map: GrpcSession}
 If it is judged that \code{handle} of \code{Master} is not empty, execute \code{Extend}; otherwise, execute the semantics of \code{Create}, establish a connection with \code{Master}, and hold \code{handle} of \code{MasterSession}.
 
 \begin{leftbar}
@@ -514,21 +506,20 @@ Status GrpcSession::ExtendImpl
 
 \end{content}
 
-\section{iteration run}
 
+\section{Iteration run}
 \begin{content}
-
 As shown in \refig{py-session-run}, the \ascii{Python} frontend\code{Session.run} implementation passes \code{fetches, feed\_dict} to the backend system, and the backend system calls \code{ Session.Run} interface. A \code{Session.Run} execution of the backend system is often referred to as \ascii{Step}. Among them, the execution process of \ascii{Step} is the key path of \ascii{TensorFlow} runtime.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/py-session-run.png}
-\caption{iteration execution}
- \label{fig:py-session-run}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/py-session-run.png}
+  \caption{iteration execution}
+  \label{fig:py-session-run}
 \end{figure}
 
-\subsection{programming interface}
 
+\subsection{Programming interface}
 When \ascii{Client} calls \code{Session.run}, the function in the \code{pywrap\_tensorflow\_internal} module will eventually be called.
 
 \begin{leftbar}
@@ -568,6 +559,7 @@ def TF_Run(sess, options, feeds, outputs,
 \end{python}
 \end{leftbar}
 
+
 \subsubsection{C++ wrapper}
 
 \begin{leftbar}
@@ -585,8 +577,8 @@ static PyMethodDef SwigMethods[] = {
 
 Finally, \code{\_wrap\_TF\_Run/\_wrap\_TF\_SessionRun\_wrapper} will be transferred to the \code{TF\_Run/TF\_SessionRun} interface function corresponding to \ascii{C API}.
 
-\subsection{C API}
 
+\subsection{C API}
 In the existing interface, \code{TF\_Run} is the interface of the \ascii{C API} docking upper-level programming environment. First, it completes the format conversion of input data from \ascii{C} to \cpp{} and starts the execution of the background \code{tensorflow::Session}. When the execution is complete, convert the output data of \code{outputs} from \cpp{} to \ascii{C}. \code{TF\_SessionRun} is similar to \code{TF\_Run} and will not be redundant here.
 
 \begin{leftbar}
@@ -623,8 +615,8 @@ void TF_SessionRun(TF_Session* session,
 \end{c++}
 \end{leftbar}
 
-\subsection{backend system}
 
+\subsection{Backend system}
 \code{tensorflow::Session} will call the corresponding subclass implementation polymorphically at runtime according to its dynamic type.
 
 \begin{leftbar}
@@ -657,28 +649,27 @@ The output includes:
 
 \begin{enum}
   \eitem{\code{outputs}: list of output \code{Tensor};}
-  \eitem{\code{run\_metadata}: A collector for runtime metadata. }
+  \eitem{\code{run\_metadata}: a collector for runtime metadata.}
 \end{enum}
 
 Among them, the output \code{outputs} list has a one-to-one correspondence with the input \code{output\_names}. If the runtime is executed concurrently, the \code{outputs} will be executed out of order, and the final return will need to be compared with the input \code. {output\_names} name list, sorting \code{outputs}.
 
 \end{content}
 
+
 \section{Close session}
-
 \begin{content}
-
 After the calculation graph is executed, you need to close \code{tf.Session} to release the backend system resources, including the queue, \ascii{IO}, and so on. The session closure process is simpler, as shown by \refig{py-session-close}. .
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-session-close.png}
-\caption{Close session}
- \label{fig:py-session-close}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-session-close.png}
+  \caption{Close session}
+  \label{fig:py-session-close}
 \end{figure}
 
-\subsection{programming interface}
 
+\subsection{Programming interface}
 When \ascii{Client} calls \code{Session.close}, the function in the \code{pywrap\_tensorflow} module will eventually be called: \code{TF\_CloseDeprecatedSession}.
 
 \begin{leftbar}
@@ -701,6 +692,7 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
+
 \subsubsection{Python wrapper}
 
 \begin{leftbar}
@@ -713,8 +705,8 @@ def TF_CloseDeprecatedSession(sess, status):
 \end{python}
 \end{leftbar}
 
-\subsubsection{C++ wrapper}
 
+\subsubsection{C++ wrapper}
 \code{\_wrap\_TF\_CloseSession/\_wrap\_TF\_CloseDeprecatedSession} will be transferred to the \code{TF\_CloseSession/TF\_CloseDeprecatedSession} interface function corresponding to \ascii{C API}.
 
 \begin{leftbar}
@@ -730,8 +722,8 @@ static PyMethodDef SwigMethods[] = {
 \end{c++}
 \end{leftbar}
 
-\subsection{C API}
 
+\subsection{C API}
 \code{TF\_CloseSession/TF\_CloseDeprecatedSession} directly completes the closing of \code{tensorflow::Session}.
 
 \begin{leftbar}
@@ -746,8 +738,8 @@ void TF_CloseDeprecatedSession(TF_DeprecatedSession* s, TF_Status* status) {
 \end{c++}
 \end{leftbar}
 
-\subsection{backend system}
 
+\subsection{Backend system}
 \code{Session(C++)} At runtime, its dynamic type will polymorphically call the corresponding subclass implementation.
 
 \begin{leftbar}
@@ -761,21 +753,20 @@ public:
 
 \end{content}
 
+
 \section{Destroy session}
-
 \begin{content}
-
 When \code{tf.Session} is not being used, it is released by \ascii{GC} of \ascii{Python}. After \code{Session.\_\_del\_\_} is called, the destructor of the background \code{tensorflow::Session} object will be started. As shown in \refig{py-delete-session}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-delete-session.png}
-\caption{destroy session}
- \label{fig:py-delete-session}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-delete-session.png}
+  \caption{destroy session}
+  \label{fig:py-delete-session}
 \end{figure}
 
-\subsection{programming interface}
 
+\subsection{Programming interface}
 When \ascii{Client} calls \code{Session.\_\_del\_\_}, the call to \code{Session.close} is started, and the function in the \code{pywrap\_tensorflow} module will be called. Code{TF\_DeleteSession/TF\_DeleteDeprecatedSession}.
 
 \begin{leftbar}
@@ -803,6 +794,7 @@ class Session(BaseSession):
 \end{python}
 \end{leftbar}
 
+
 \subsubsection{Python wrapper}
 
 \begin{leftbar}
@@ -815,8 +807,8 @@ def TF_DeleteDeprecatedSession(sess, status):
 \end{python}
 \end{leftbar}
 
-\subsubsection{C++ wrapper}
 
+\subsubsection{C++ wrapper}
 \code{\_wrap\_TF\_DeleteSession/\_wrap\_TF\_DeleteDeprecatedSession} will be transferred to the \code{TF\_DeleteSession/TF\_DeleteDeprecatedSession} interface function corresponding to \ascii{C API}.
 
 \begin{leftbar}
@@ -832,8 +824,8 @@ static PyMethodDef SwigMethods[] = {
 \end{c++}
 \end{leftbar}
 
-\subsection{C API}
 
+\subsection{C API}
 \code{TF\_DeleteDeprecatedSession} directly completes the release of the \code{tensorflow::Session} object. In the new interface \code{TF\_DeleteSession} implementation, when the \code{tensorflow::Session} instance needs to be deleted, the counter of the corresponding graph instance is decremented by \ascii{1}. When the counter is \ascii{0}, the graph instance is deleted; otherwise, the graph instance is not deleted.
 
 \begin{leftbar}
@@ -860,8 +852,8 @@ void TF_DeleteDeprecatedSession(TF_DeprecatedSession* s, TF_Status* status) {
 \end{c++}
 \end{leftbar}
 
-\subsection{backend system}
 
+\subsection{Backend system}
 \code{tensorflow::Session} is a dynamic type at runtime that polymorphically calls the destructor implemented by the corresponding subclass.
 
 \begin{leftbar}
@@ -875,43 +867,42 @@ public:
 
 \end{content}
 
+
 \section{Performance Tuning}
-
 \begin{content}
-
 Compared to the legacy interface implementation, the new interface implementation has several optimization techniques to improve the performance of the system. Although, as of this writing, the new interface has not been fully released, it is expected that in the future, both the obsolete interface will be removed and replaced with the new interface implementation.
 
-\subsection{shared graph instance}
 
+\subsection{Shared graph instance}
 As shown in \refig{tf-graph-session-relation}, a \code{Session} can only run one graph instance. If a \code{Session} is to run another graph instance, you must first close \code{Session}, then register the new graph instance to this \code{Session}, and finally start the execution of the new graph. .
 
 But in turn, a computed graph can run on multiple \code{Session} instances. If you maintain the reference counter for \code{Session} on the \code{Graph} instance, add \ascii{1} to the image instance when \code{Session} is created; when \code{Session} is destroyed (not Close \code{Session}), reduce \ascii{1} on the graph instance; when the counter is \ascii{0}, the graph instance is automatically deleted. In the new interface implementation, the technique of referencing counters is implemented.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/tf-graph-session-relation.png}
-\caption{Calculation: Session Reference Counter Technology}
- \label{fig:tf-graph-session-relation}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/tf-graph-session-relation.png}
+  \caption{Calculation: Session Reference Counter Technology}
+  \label{fig:tf-graph-session-relation}
 \end{figure}
 
-\subsection{elimination of serialization}
 
+\subsection{Elimination of serialization}
 As shown in \refig{tf-old-session-interface}, in the legacy interface implementation, the frontend \ascii{Python} is in the graph construction phase, after the graph is constructed, serialized, and finally passed through \code{ Session::Create} or \code{Session::Extend} is passed to the backend \ascii{C++} system. This is essentially a copy process of a graph instance with a large latency overhead.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/tf-old-session-interface.png}
-\caption{Figure example: Serialization/Deserialization}
- \label{fig:tf-old-session-interface}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/tf-old-session-interface.png}
+  \caption{Figure example: Serialization/Deserialization}
+  \label{fig:tf-old-session-interface}
 \end{figure}
 
 As shown in \refig{tf-new-session-interface}, the semantics of \code{Create/Extend} of \code{Session} can be removed in the new interface implementation. In the constructor of the graph, the frontend \ascii{Python} is added to the backend \ascii{C++} graph instance directly by \ascii{C API} when constructing each \ascii{OP}, thus avoiding The overhead of serialization and deserialization of the graph instance at the front and back ends.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/tf-new-session-interface.png}
-\caption{Figure example: implementation registration ascii{OP}}
- \label{fig:tf-new-session-interface}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/tf-new-session-interface.png}
+  \caption{Figure example: implementation registration ascii{OP}}
+  \label{fig:tf-new-session-interface}
 \end{figure}
 
 \end{content}

@@ -1,87 +1,86 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{local execution} 
+
+\chapter{Local execution} 
 \label{ch:local}
-
 \begin{content}
-
 \tf{} can be run independently in a process to complete the execution of the calculation graph. This chapter will focus on the basic architecture and operational mechanisms of the local runtime; focus on the implementation details of computational graph pruning, splitting, optimization, execution, etc.; and explore in detail the data between \ascii{OP} across devices. The working mechanism of the interaction, and its \ascii{OP} orchestration on the device set (\ascii{placement}) algorithm.
-
 \end{content}
+
 
 \section{Local Mode}
 \label{sec:local-runtime}
-
 \begin{content}
-
 As shown in \refig{local}, in local mode, \ascii{Client, Master, Worker} is deployed in the same process on the same machine, and these three roles are played by \code{DirectSession} at the same time. \code{DirectSession} runs in a separate process, with function call relationships between service entities.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/local.png}
-\caption{local mode}
- \label{fig:local}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/local.png}
+  \caption{local mode}
+  \label{fig:local}
 \end{figure}
 
 \ascii{Client} is responsible for computing the construction of the graph, starting the execution of the graph by calling \code{Session.run}. As shown in \refig{local-runtime}, during the execution of \code{run\_step}, there are three important stages involved in the pruning, splitting, and execution of computational graphs.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/local-runtime.png}
-\caption{Local mode: Figure operation}
- \label{fig:local-runtime}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/local-runtime.png}
+  \caption{Local mode: Figure operation}
+  \label{fig:local-runtime}
 \end{figure}
 
-\subsection{Partial execution}
 
+\subsection{Partial execution}
 \ascii{Master} starts the pruning operation of the calculation graph after receiving the calculation diagram execution command. It reverses the traversal map based on the input and output of the computed graph, looking for a minimally dependent subgraph, often called \code{ClientGraph}.
 
 That is to say, each time you execute \code{run\_step}, the entire calculation graph (\code{FullGraph}) is not executed, but a partial subgraph is executed. The pruning reflects the design concept of the \tf{} part of the implementation.
 
-\subsection{Concurrent execution}
 
+\subsection{Concurrent execution}
 Then, the runtime completes the splitting of the graph according to the current device set, and generates a lot of subgraphs, each of which is called \code{PartitionGraph}; then triggers each \ascii{Worker} to execute each \code{PartitionGraph} concurrently; For each \ascii{PartitionGraph}, the runtime will launch a \ascii{Executor} to complete the execution of \code{PartitionGraph} according to its topology.
 
 In other words, splitting and execution embody the design philosophy of \tf{} concurrent execution.
 
-\section{session control}
+\end{content}
 
+
+\section{Session control}
 In local mode, its runtime is controlled by \code{DirectSession}. In general, when \code{DirectSession} executes a calculation graph, each component is a function call relationship. However, \code{DirectSession} also has a clear lifecycle management mechanism, as shown by \refig{local-direct-session-lifecycle}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/local-direct-session-lifecycle.png}
-\caption{DirectSession lifecycle}
- \label{fig:local-direct-session-lifecycle}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/local-direct-session-lifecycle.png}
+  \caption{DirectSession lifecycle}
+  \label{fig:local-direct-session-lifecycle}
 \end{figure}
 
-\subsection{domain model}
 
+\subsection{Domain model}
 As shown by \refig{local-direct-session-model}, \code{DirectSession} holds the \code{SimpleGraphExecutionState} instance, which is responsible for computing the pruning of the graph and generating the \code{ClientGraph} instance.
 
 \code{DirectSession} holds a set of thread pools at the same time, but when \code{DirectSession.run} is not used, it selects one of the thread pool groups to provide services according to the externally configured index. Because \code{DirectSession} is thread-safe and supports multiple concurrent executions of \code{DirectSession.run}, multiple thread pool instances can be run simultaneously.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/local-direct-session-model.png}
-\caption{DirectSession Domain Model}
- \label{fig:local-direct-session-model}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/local-direct-session-model.png}
+  \caption{DirectSession Domain Model}
+  \label{fig:local-direct-session-model}
 \end{figure}
 
-\subsection{Create session}
 
+\subsection{Create session}
 As shown by \refig{local-direct-session-factory}, \code{DirectSession} is created by \code{DirectSessionFactory} polymorphism. Where \code{DeviceFactory::AddDevices} will create a local device set.
 
 Among them, \code{DirectSession} mainly completes the creation of the thread pool group.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/local-direct-session-factory.png}
-\caption{Polymorphic creation of DirectSession}
- \label{fig:local-direct-session-factory}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/local-direct-session-factory.png}
+  \caption{Polymorphic creation of DirectSession}
+  \label{fig:local-direct-session-factory}
 \end{figure}
 
 \begin{leftbar}
@@ -147,8 +146,8 @@ DirectSession::DirectSession(
 \end{c++}
 \end{leftbar}
 
-\subsection{destroy session}
 
+\subsection{Destroy session}
 \code{DirectSession} from \ascii{SessionFactory}\code{new} is responsible for \code{delete} by \ascii{C API}.
 
 \begin{leftbar}
@@ -190,10 +189,9 @@ DirectSession::~DirectSession() {
 \end{c++}
 \end{leftbar}
 
-\subsection{Create/Extension Map}
 
-The first expansion of the diagram is equivalent to creating a diagram. The expanded graph is based on the original calculation graph, and a new subgraph is added. Of course, the nodes included in the added subgraph should not exist in the original calculation graph.
-
+\subsection{Creating/Extending a graph}
+The first extension of a graph is equivalent to creating a graph. The extended graph is based on the original compute graph, and a new subgraph is added. Of course, the nodes included in the added subgraph should not exist in the original compute graph.
 
 \begin{leftbar}
 \begin{c++}
@@ -215,18 +213,18 @@ Status DirectSession::Extend(const GraphDef& graph) {
 When creating a calculation graph, \code{DirectSession} mainly completes the creation of the \code{SimpleGraphExecutionState} instance. As shown in \refig{local-simple-graph-execution-state-model}, the \code{SimpleGraphExecutionState} instance holds instances of \code{FullGraph}: \code{Graph} and \code{GraphDef}, It is responsible for managing and maintaining the lifecycle of \code{FullGraph}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/local-simple-graph-execution-state-model.png}
-\caption{Create a SimpleGraphExecutionState instance}
- \label{fig:local-simple-graph-execution-state-model}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/local-simple-graph-execution-state-model.png}
+  \caption{Create a SimpleGraphExecutionState instance}
+  \label{fig:local-simple-graph-execution-state-model}
 \end{figure}
 
 Among them, the main responsibilities of \code{SimpleGraphExecutionState} include:
 
 \begin{enum}
-  \eitem{construct \code{FullGraph}}: Occurs in \code{DirectSession.Create};
-  \eitem{Execute simple \ascii{OP} orchestration algorithm}: Occurs in \code{DirectSession.Create};
-  \eitem{Execute pruning operation}: Occurs in \code{DirectSession.Run}.
+  \eitem{construct \code{FullGraph}: Occurs in \code{DirectSession.Create};}
+  \eitem{Execute simple \ascii{OP} orchestration algorithm: Occurs in \code{DirectSession.Create};}
+  \eitem{Execute pruning operation: Occurs in \code{DirectSession.Run}.}
 \end{enum}
 
 When \code{DirectSession::Create} is executed, the \code{SimpleGraphExecutionState} instance is created and the build and initialization of the \code{FullGraph} instance is completed.
@@ -267,8 +265,8 @@ Status SimpleGraphExecutionState::InitBaseGraph() {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Figure construction: GraphDef -> Graph}
 
+\subsubsection{Graph construction: GraphDef -> Graph}
 At the beginning, \code{SimpleGraphExecutionState} got \code{GraphDef}, which is the original primitive structure. It is serialized by \ascii{Client} and passed to the backend \ascii{C++}, which is then deserialized by the backend.
 
 As shown in \refig{local-graph-def-to-graph}, convert the \code{GraphDef} instance to the equivalent \code{Graph} instance by calling \code{ConvertGraphDefToGraph}; similarly, you can call \code {Graph.ToGraphDef} transforms the \code{Graph} instance into an equivalent \code{GraphDef} instance.
@@ -276,40 +274,40 @@ As shown in \refig{local-graph-def-to-graph}, convert the \code{GraphDef} instan
 Where \code{GraphDef} is a graph structure that exists in the \ascii{protobuf} format, which contains all the metadata of the graph; and \code{Graph} is the domain object used to describe the graph structure in the runtime system. Not only holds the metadata of \code{GraphDef}, but also contains other information about other graph structures.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/local-graph-def-to-graph.png}
-Format conversion between \caption{\code{GraphDef} and \code{Graph}}
- \label{fig:local-graph-def-to-graph}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/local-graph-def-to-graph.png}
+  \caption{Format conversion between \code{GraphDef} and \code{Graph}}
+  \label{fig:local-graph-def-to-graph}
 \end{figure}
 
-\subsubsection{OP orchestration: SimplePlacer}
 
+\subsubsection{OP orchestration: SimplePlacer}
 The \ascii{OP} orchestration (\ascii{placement}) refers to the computation of the resources in the most efficient way by placing the \ascii{OP} contained in the calculation graph on the appropriate computing device. Utilization, which can be formally described as \refig{local-cost-model}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/local-cost-model.png}
-\caption{cost model}
- \label{fig:local-cost-model}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/local-cost-model.png}
+  \caption{cost model}
+  \label{fig:local-cost-model}
 \end{figure}
 
 To find the optimal arrangement, I guess this is a \ascii{NP} problem. This problem depends on the characteristics of the computational graph, network topology and bandwidth, the number of samples, and many other complex factors, which is one of the most active issues in the community.
 
-\subsection{iteration execution}
 
-\code{DirectSession.Run} is the key path to the \tf{} runtime and is responsible for completing an iterative calculation. First, \code{DirectSession} prunes the \code{FullGraph} based on the input/output to generate \code{ClientGraph}; then, splits \code{ClientGraph} into multiple \codes based on the set of local devices held. {PartitionGraph}; The runtime starts a \code{Executor} instance for each of its \code{PartitionGraph}, which executes the topological sorting algorithm of \code{PartitionGraph} to complete the execution of the computed graph.
+\subsection{Iteration execution}
+\code{DirectSession.Run} is the key path to the \tf{} runtime and is responsible for completing an iterative calculation. First, \code{DirectSession} prunes the \code{FullGraph} based on the input/output to generate \code{ClientGraph}; then, splits \code{ClientGraph} into multiple \code{PartitionGraph} based on the set of local devices held. The runtime starts a \code{Executor} instance for each of its \code{PartitionGraph}, which executes the topological sorting algorithm of \code{PartitionGraph} to complete the execution of the computed graph.
 
 For specific implementation, please refer to \refsec{graph-operation-prune}, \refsec{graph-operation-split}, \refsec{graph-operation-exec}.
 
-\subsubsection{图操作}
 
+\subsubsection{Graph operation}
 As shown in \refig{local-graph-transformation}, in local mode, the computational graph undergoes three forms of transformation and is ultimately decomposed into computational devices to enable concurrent execution of subgraphs on various computing devices.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/local-graph-transformation.png}
-\caption{图转换}
- \label{fig:local-graph-transformation}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/local-graph-transformation.png}
+  \caption{Graph transformation}
+  \label{fig:local-graph-transformation}
 \end{figure}
 
 \begin{itemize}
@@ -320,12 +318,12 @@ As shown in \refig{local-graph-transformation}, in local mode, the computational
 
 However, the data structures of \code{FullGraph, ClientGraph, PartitionGraph} are the same, they are all three different manifestations of \code{Graph}, only the size and scope are different.
 
-\subsubsection{formalization}
 
+\subsubsection{Formalization}
 In real system implementations, the local mode runtime is implemented using \ascii{C++}. The key path to the \tf{} runtime is \code{run\_step}. Because the real system implementation involves too much detail, it is not easy to find the backbone and logic of the algorithm. To simplify the description of the problem, the implementation of \code{run\_step} will be described formally.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def do_run_partitions(executors_and_partitions):
   barrier = ExecutorBarrier(executors_and_partitions.size())
   for (executor, partition) in executors_and_partitions:
@@ -349,6 +347,7 @@ Among them, on each computing device, start a \code{Executor} to execute the \co
 
 There may be data dependencies between \code{PartitionGraph} across devices, and they interact by inserting \code{Send/Recv} nodes. In fact, in local mode, \code{Send/Recv} does the data exchange via \code{Rendezvous}. \code{Send} puts the data on \code{Rendezvous}, and \code{Recv} takes it from \code{Rendezvous} according to the identifier. Where \code{Send} is not blocked, and \code{Recv} is blocked.
 
+
 \subsection{Close session}
 
 \begin{leftbar}
@@ -368,10 +367,10 @@ Status DirectSession::Close() {
 Register \ascii{Step} to \code{CancellationManager} of \code{DirectSession} as shown in \refig{local-cancellation-manager}. When \code{DirectSession} is closed, the \code{CancellationManager} of \code{DirectSession} will cancel the execution of this \ascii{step}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/local-cancellation-manager.png}
-\caption{How does CancellationManager work}
- \label{fig:local-cancellation-manager}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/local-cancellation-manager.png}
+  \caption{How does CancellationManager work}
+  \label{fig:local-cancellation-manager}
 \end{figure}
 
 \begin{leftbar}
@@ -421,18 +420,17 @@ void FIFOQueue::TryEnqueue(const Tuple& tuple, OpKernelContext* ctx,
 
 \section{Pruning}
 \label{sec:graph-operation-prune}
-
 When \code{DirectSession::Run} is executed, the construct of \code{ClientGraph} is completed first. In fact, the construction process of \code{ClientGraph} mainly completes the pruning algorithm of \code{FullGraph} and generates \code{ClientGraph}.
 
-\subsection{Build ClientGraph}
 
+\subsection{Build ClientGraph}
 As shown in \refig{local-simple-graph-execution-state}, the \code{SimpleGraphExecutionState} instance holds the \code{FullGraph} instance and generates \code{ClientGraph} based on the input/output list.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.55\textwidth]{figures/local-simple-graph-execution-state.png}
-\caption{Generate\code{ClientGraph}}
- \label{fig:local-simple-graph-execution-state}
+  \centering
+  \includegraphics[width=0.55\textwidth]{figures/local-simple-graph-execution-state.png}
+  \caption{Generate\code{ClientGraph}}
+  \label{fig:local-simple-graph-execution-state}
 \end{figure}
 
 Where \code{BuildGraphOptions} contains the input/output list and calls \code{SimpleGraphExecutionState::BuildGraph} to generate the \code{ClientGraph} instance.
@@ -536,8 +534,8 @@ Therefore, the \code{ClientGraph} process is constructed with the key path \code
 In general, for the \code{ClientGraph} input node, the starting node is played; and the output node acts as the terminating node. So, with regard to input and output, there are two more difficult issues:
 
 \begin{enum}
-  \eitem{Input: How to pass \code{Tensor} to the input node} before the start of the \code{ClientGraph} calculation;
-  \eitem{Output: When the \code{ClientGraph} is evaluated, how does the external runtime get \code{Tensor}} from the output node.
+  \eitem{Input: How to pass \code{Tensor} to the input node before the start of the \code{ClientGraph} calculation;}
+  \eitem{Output: When the \code{ClientGraph} is evaluated, how does the external runtime get \code{Tensor} from the output node.}
 \end{enum}
 
 There are two kinds of media: \code{FunctionCallFrame} and \code{Rendezvous}, and the external runtime and the input/output node can exchange data using one of the media.
@@ -546,8 +544,8 @@ There are two kinds of media: \code{FunctionCallFrame} and \code{Rendezvous}, an
 
 \code{Rendezvous} is used for \code{Send/Recv} messaging \ascii{OP}, which is a more general way of communicating for distributed runtime environments.
 
-\subsection{based on Rendezvous}
 
+\subsection{Based on Rendezvous}
 As shown by \refig{client-prune-graph}, according to the \code{fetches} list, the dependent nodes are searched backwards until \code{feeds}, and the sub-graph with the smallest dependency is calculated.
 
 Perform pruning on the edge of \code{Feed}, such as the pruning \code{ina:0}) edge, and insert the node \code{Recv} here, and name the node by the name of the input side, for example \code {\_recv\_ina\_0}.
@@ -557,14 +555,14 @@ Similarly, pruning is also performed on the edges of \code{Fetch}, such as pruni
 Finally, by inserting the \code{Source/Sink} node, the subgraphs of each Unicom are summarized after pruning to form a complete \ascii{DAG} map.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/client-prune-graph.png}
-\caption{Figure pruning: insert Send/Recv node}
- \label{fig:client-prune-graph}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/client-prune-graph.png}
+  \caption{Figure pruning: insert Send/Recv node}
+  \label{fig:client-prune-graph}
 \end{figure}
 
-\subsection{Based on FunctionCallFrame}
 
+\subsection{Based on FunctionCallFrame}
 However, there may be a performance bottleneck in the input/output exchange of data via \code{Rendezvous}. Because the \code{Tensor} to be sent needs to carry the sending device, the receiving device, and \code{TensorId}, together form a unique string identifier, and the data transmission and reception takes a long time to parse the string.
 
 In particular, for local mode, there is an unnecessary performance penalty for exchanging data using \code{Rendezvous} within the same process. It can be replaced with a call based on the \code{FunctionCallFrame} function.
@@ -578,20 +576,20 @@ Similarly, pruning is also performed on the edges of \code{Fetch}, such as pruni
 Finally, by inserting the \code{Source/Sink} node, the subgraphs of each Unicom are summarized after pruning to form a complete \ascii{DAG} map.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/client-prune-graph-function-ops.png}
-\caption{Figure pruning: insert Arg/RetVal node}
- \label{fig:client-prune-graph-function-ops}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/client-prune-graph-function-ops.png}
+  \caption{Figure pruning: insert Arg/RetVal node}
+  \label{fig:client-prune-graph-function-ops}
 \end{figure}
 
-\subsection{Pruning algorithm implementation}
 
+\subsection{Pruning algorithm implementation}
 The pruning algorithm is mainly done by \code{RewriteGraphForExecution}, which mainly includes \ascii{3} sub-processes.
 
 \begin{enum}
   \eitem{Additional input node}
-  \eitem{Additional output node} 
-  \eitem{reverse pruning}
+  \eitem{Additional output node}
+  \eitem{Reverse pruning}
 \end{enum}
 
 \begin{leftbar}
@@ -612,8 +610,8 @@ void RewriteGraphForExecution(Graph* g, bool use_function,
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Add input node}
 
+\subsubsection{Add input node}
 As shown in \refig{local-prune-feed}, when pruning is performed on any input edge, insert the corresponding \code{Arg} or \code{Recv} node, delete the existing edge, and reconnect the corresponding side.
 
 In the calculation graph, an edge is uniquely identified by \code{TensorId}, which consists of a \code{op:src\_output} binary group. The former represents the upstream node of the edge, and the latter represents the edge of the upstream node.
@@ -621,10 +619,10 @@ In the calculation graph, an edge is uniquely identified by \code{TensorId}, whi
 The sample code removes some of the less important logic and relocates some of the functions, and tries partial function extraction locally to better restore the logic of the algorithm. Among them, suppose \code{Graph} can index nodes and edges according to \code{TensorId}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/local-prune-feed.png}
-\caption{Pruning: Input Edge}
- \label{fig:local-prune-feed}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/local-prune-feed.png}
+  \caption{Pruning: Input Edge}
+  \label{fig:local-prune-feed}
 \end{figure}
 
 \begin{leftbar}
@@ -697,17 +695,17 @@ void FeedInputs(Graph& g, bool use_function,
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Add output node}
 
+\subsubsection{Add output node}
 When pruning is performed on any of the output edges, insert the corresponding \code{RetVal} or \code{Send} node and connect it to the \code{Sink} node by controlling the dependent edges.
 
 Perform pruning on the output side as shown in \refig{local-prune-fetch}. The connection relationship between the new node and the upstream node is specified by \code{Input} when constructing the new node. In addition, the function directly returns the new node (\code{RetVal/Send}) as the termination node, so there is no need to delete the original edge, and the algorithm has a subtle difference from the processing of the input edge.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/local-prune-feed.png}
-\caption{Pruning: Output Edge}
- \label{fig:local-prune-fetch}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/local-prune-feed.png}
+  \caption{Pruning: Output Edge}
+  \label{fig:local-prune-fetch}
 \end{figure}
 
 \begin{leftbar}
@@ -771,8 +769,8 @@ void FetchOutputs(Graph& g, bool use_function,
 \end{c++}
 \end{leftbar}
 
-\subsubsection{reverse pruning}
 
+\subsubsection{Reverse pruning}
 The pruning operation is essentially the \ascii{DAG} reverse width-first traversal algorithm. First, a queue is created with a \code{visited} array that records the nodes that have been traversed. At initialization, the queue contains only the output node and the input node (\code{targets}). When the graph is traversed, the node in \code{visited} is no longer present, indicating that the execution is not dependent on it, and the node and its associated edges should be removed from the graph.
 
 After pruning, several \ascii{DAG} subgraphs will be formed. The node with the intrinsic degree of \code{0} is connected to the \code{Source} node by controlling the dependent edge; the node with the degree of \ascii{0} is connected to the \code{Sink} node by controlling the dependent edge. , eventually form a complete \ascii{DAG} map.
@@ -851,16 +849,16 @@ void PruneForTargets(Graph* g,
 \end{c++}
 \end{leftbar}
 
-\section{ split}
-\label{sec:graph-operation-split}
 
+\section{Split}
+\label{sec:graph-operation-split}
 As shown in \refig{local-graph-split-by-device}, if the \code{d} node is placed on \ascii{GPU0}, the other nodes are placed on \ascii{CPU0}. Among them, node \code{a} and \code{b} input data through \code{Arg}; node \code{f} outputs its result to \code{RetVal} node.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/local-graph-split-by-device.png}
-\caption{Execute map split by local device set}
- \label{fig:local-graph-split-by-device}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/local-graph-split-by-device.png}
+  \caption{Execute map split by local device set}
+  \label{fig:local-graph-split-by-device}
 \end{figure}
 
 Therefore, there are several edges across the device in the calculation graph. For the edge across the device, the runtime splits it and inserts it into the \code{Send/Recv} side, which is used to send data on the original device and accept data on the target device to complete data exchange between devices. As shown in \refig{local-graph-split-insert-send-recv}.
@@ -868,36 +866,36 @@ Therefore, there are several edges across the device in the calculation graph. F
 The \code{Arg/RetVal} node exchanges data via the medium \code{FunctionCallFrame}; the \code{Send/Recv} node exchanges data via the medium \code{Rendezvous}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/local-graph-split-insert-send-recv.png}
-\caption{Insert a Send/Recv node between device OPs}
- \label{fig:local-graph-split-insert-send-recv}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/local-graph-split-insert-send-recv.png}
+  \caption{Insert a Send/Recv node between device OPs}
+  \label{fig:local-graph-split-insert-send-recv}
 \end{figure}
 
-\subsection{Case 1}
 
+\subsection{Case 1}
 In the simplest case, \code{src} is in the same \code{Partition} as \code{dst}. Therefore, you can directly assign it to the same \code{Partition}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/split-graph-1.png}
-\caption{Case 1: src and dst are in the same Partition}
- \label{fig:split-graph-1}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/split-graph-1.png}
+  \caption{Case 1: src and dst are in the same Partition}
+  \label{fig:split-graph-1}
 \end{figure}
 
-\subsection{Case 2}
 
+\subsection{Case 2}
 If \code{src} is not in the same \code{Partition} as \code{dst}, but the two are originally connected by ordinary edges. Therefore, you only need to add the \code{Send} and \code{Recv} nodes to them in two different \code{Partition}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/split-graph-2.png}
-\caption{Case 2: src and dst are not in the same Partition, but the normal edge between the two}
- \label{fig:split-graph-2}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/split-graph-2.png}
+  \caption{Case 2: src and dst are not in the same Partition, but the normal edge between the two}
+  \label{fig:split-graph-2}
 \end{figure}
 
-\subsection{Case 3}
 
+\subsection{Case 3}
 If \code{src} is not in the same \code{Partition} as \code{dst}, but the two are originally connected by controlling the dependent edges.
 
 At this point, you need to add a \code{DummyNode} of \code{Const} on the \code{src} side, and connect it as a downstream of \code{src} by controlling the dependency edges; finally, by \code{Send} Its value is sent to the peer.
@@ -907,14 +905,14 @@ On the \code{dst} side, \code{Recv} receives the value and consumes it using \co
 Here, \code{Const} plays the producer and \code{Identity} plays the consumer role. It satisfies the requirements of communication between devices and the control dependency between \code{src} and \code{dst}. However, the downside is that there are subtle performance overheads.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/split-graph-3.png}
-\caption{Case 3: src and dst are not in the same Partition, but between them is the control dependent edge}
- \label{fig:split-graph-3}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/split-graph-3.png}
+  \caption{Case 3: src and dst are not in the same Partition, but between them is the control dependent edge}
+  \label{fig:split-graph-3}
 \end{figure}
 
-\subsection{split algorithm implementation}
 
+\subsection{Split algorithm implementation}
 The splitting algorithm is also an algorithm that reverses the traversal map. For the currently traversed node, mark it as \code{dst}; then look for all input edges of \code{dst}; iterate over all the input edges to find the source node that is connected to the changed edge, marking it as \code {src}.
 
 Therefore, in the three cases discussed above, iteratively implements the \code{Partition} partitioning algorithm before \code{src} and \code{dst}.
@@ -1089,8 +1087,8 @@ Status Partition(const PartitionOptions& opts,
 \end{c++}
 \end{leftbar}
 
-\subsection{callback function}
 
+\subsection{Callback function}
 There are two important callback functions in \code{PartitionOptions}. \code{NodeToLocFunc} is used for graph splitting; \code{NewNameFunc} is used to name newly added nodes, such as \code{Send/Recv}.
 
 \begin{leftbar}
@@ -1127,10 +1125,10 @@ string SplitByWorker(const Node* node) {
 In local mode, \code{NodeToLocFunc} is configured as \code{SplitByDevice}. As shown in \code{intraprocess-splity-by-device}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/intraprocess-splity-by-device.png}
-\caption{Local Mode: SplitByDevice}
- \label{fig:intraprocess-splity-by-device}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/intraprocess-splity-by-device.png}
+  \caption{Local Mode: SplitByDevice}
+  \label{fig:intraprocess-splity-by-device}
 \end{figure}
 
 
@@ -1140,15 +1138,15 @@ In distributed mode, \code{NodeToLocFunc} of \code{Master} is configured as \cod
 Therefore, in distributed mode, the graph split undergoes two levels of separation. The first level is split according to \code{SplitByWorker}, and the picture is divided into various \code{Worker}; the second level is based on \code{SplitByDevice}, and then the picture is divided into various computing devices.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/interprocess-splity-by-worker.png}
-\caption{Distributed mode: two-level split}
- \label{fig:interprocess-splity-by-worker}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/interprocess-splity-by-worker.png}
+  \caption{Distributed mode: two-level split}
+  \label{fig:interprocess-splity-by-worker}
 \end{figure}
 
-\section{execution}
-\label{sec:graph-operation-exec}
 
+\section{Execution}
+\label{sec:graph-operation-exec}
 Next, the runtime will execute each \code{PartitionGraph} concurrently. As shown in \refig{local-graph-execution}, each \code{PartitionGraph} starts a \code{Executor} to implement the calculation of the concurrent execution graph.
 
 Each \code{Executor} will execute the topological sorting algorithm of \code{PartitionGraph}, append \ascii{OP} with degree \ascii{0} to \code{ready\_queue} and associate it with The degree of \ascii{OP} is reduced by \ascii{1}. Scheduler dispatch \code{ready\_queue}\ascii{OP
@@ -1159,22 +1157,22 @@ Before all \code{Partition} starts concurrent execution, you need to pass its in
 If \code{PartitionGraph} needs to exchange data across devices, the producer places it in the \code{Send} node, and the consumer gets the data through the \code{Recv} node. The sender does not block; if the receiver does not arrive, the blocking occurs until timeout. In addition, the data between the \code{Send/Recv} nodes is interactive through \code{Rendezvous}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/local-graph-execution.png}
-\caption{Execution map}
- \label{fig:local-graph-execution}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/local-graph-execution.png}
+  \caption{Execution graph}
+  \label{fig:local-graph-execution}
 \end{figure}
 
 Therefore, the implementation of graph calculation needs to solve the following \ascii{3} core issues:
 
 \begin{enum}
-  \eitem{input/output processing}
+  \eitem{Input/output processing}
   \eitem{Inter-device data exchange} 
-  \eitem{execute\code{PartitionGraph}}
+  \eitem{Execute \code{PartitionGraph}}
 \end{enum}
 
-\subsection{input}
 
+\subsection{Input}
 On a device, the starting node of \code{PartitionGraph} is the \code{Arg} node and the ending node is the \code{RetVal} node. The whole process can be seen as a function call procedure, \code{Arg} is used to pass function arguments, and \code{RetVal} is used to return function values.
 
 More precisely, \code{Arg} completes the input of \code{PartitionGraph}, and \code{RetVal} completes
@@ -1257,8 +1255,8 @@ struct ArgOp : OpKernel {
 \end{c++}
 \end{leftbar}
 
-\subsection{Concurrent execution}
 
+\subsection{Concurrent execution}
 After the graph is split, the run starts a \code{Executor} for each \code{Partition}. In order to monitor whether all \code{Executor} is completed, a \code{ExecutorBarrier} is created. And after starting all \code{Executor}, call \code{executors\_done.Wait()} to block and wait for all \code{Executor} to complete execution.
 
 When done in a \code{Executor}, the \code{ExecutorBarrier} calculator minus \ascii{1} (initial value is \code{num\_executors}) until it is \ascii{0}, it will be called to complete The hook finally triggers \code{executors\_done.Notify()}.
@@ -1345,8 +1343,8 @@ Status DirectSession::Run(
 \end{c++}
 \end{leftbar}
 
-\subsection{output}
 
+\subsection{Output}
 Similarly, for the \code{RetVal} node, the calling sequence is: \code{set\_ret\_val -> get\_ret\_val}. The former is done by \code{RetVal} and the latter by \code{DirectSession}.
 
 \begin{leftbar}
@@ -1473,26 +1471,26 @@ At this point, the entire \code{DirectSession.Run} has been interpreted. However
 Therefore, in the last mile, we must explore three things.
 
 \begin{enum}
-  How \eitem{\code{SendOp} works with \code{RecvOp}}
-  How \eitem{\code{IntraProcessRendezvous} works} 
-  \eitem{\code{Executor} scheduling algorithm}
+  \eitem{How \code{SendOp} works with \code{RecvOp}}
+  \eitem{How \code{IntraProcessRendezvous} works}
+  \eitem{An \code{Executor} scheduling algorithm}
 \end{enum}
 
-\section{Inter-device communication}
 
+\section{Inter-device communication}
 \code{SendOp/RecvOp} exchanges data via \code{Rendezvous}; it implements message delivery/acceptance and decouples from specific messaging. For example, in a single process, \code{SendOp/RecvOp} passes data based on \code{IntraProcessRendezvous}; in a multi-process environment, \code{SendOp/RecvOp} can pass data based on \code{GrpcRendezvous}.
 
 First, explore the workings of these two \ascii{OP}; then, explore the working principle of \code{IntraProcessRendezvous} in local mode.
 
-\subsection{SendOp implementation}
 
+\subsection{SendOp implementation}
 As shown in \refig{local-send-recv-ops}, the in-process \code{Send/Recv} exchanges data with a unique identifier \code{ParsedKey}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/local-send-recv-ops.png}
-\caption{Data exchange between \code{SendOp} and \code{RecvOp}}
- \label{fig:local-send-recv-ops}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/local-send-recv-ops.png}
+  \caption{Data exchange between \code{SendOp} and \code{RecvOp}}
+  \label{fig:local-send-recv-ops}
 \end{figure}
 
 Referring to the \ascii{Kernel} implementation of \code{SendOp}, it looks very complicated, but it actually does one thing. First, it constructs the keyword \code{ParsedKey} for communication between devices, then calls the \code{Rendezvous.Send} operation to send the upstream \ascii{OP} to the \code{Tensor} of \code{SendOp} to \ In the code{Rendezvous} cache, this operation is non-blocking.
@@ -1561,8 +1559,8 @@ struct SendOp : OpKernel {
 \end{c++}
 \end{leftbar}
 
-\subsection{RecvOp implementation}
 
+\subsection{RecvOp implementation}
 Similarly, you can guess the implementation of \ascii{Kernel} for \code{Recv}. It first constructs the \code{ParsedKey} of \code{Rendezvous}, then calls the \code{Rendezvous.RecvAsync} operation and fetches the corresponding \code{Tensor} from \code{Rendezvous}.
 
 This is an asynchronous operation. When the data in \code{Rendezvous} is available, it starts executing the callback function \code{done\_cb}, which outputs the resulting \code{Tensor} to the downstream \ascii{OP}.

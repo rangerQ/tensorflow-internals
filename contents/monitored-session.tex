@@ -1,21 +1,20 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
+
 
 \chapter{MonitoredSession} 
 \label{ch:monitored-session}
-
 \begin{content}
-
 To train a simple model, you can run \code{train\_op} several times until the model converges, and finally implement the training parameters \ascii{Checkpoint} to persist the training model. For small-scale learning models, this process can take up to several hours.
 
 However, it takes several days for a large-scale learning model; and it may be necessary to use multiple copies of \ascii{(replica)}, which requires a more robust training process to support the training of the model. Therefore, there are three basic issues that need to be addressed:
 
 \begin{enum}
   \eitem{When the training process is abnormally closed, or the program crashes, it can handle the exception reasonably;}
-  \eitem{When the exception is closed, or the program crashes, the training process can be resumed;} 
-  \eitem{The ability to monitor the entire training process via \ascii{TensorBoard}. }   
+  \eitem{When the exception is closed, or the program crashes, the training process can be resumed;}
+  \eitem{The ability to monitor the entire training process via \ascii{TensorBoard}. }
 \end{enum}
 
 In order to be able to resume the training process, the training must be implemented periodically (ascii{Checkpoint}) after the training is shut down abnormally or the program crashes. When the training process is restarted, the training process can be resumed by looking for the most recent \ascii{Checkpoint} file.
@@ -24,26 +23,25 @@ In order to be able to monitor the training process using \ascii{TensorBoard}, y
 
 \end{content}
 
+
 \section{Introduction to MonitoredSession}
-
 \begin{content}
-
 \code{tf.train.MonitoredSession}, which can be customized to \code{Hook} for listening to the entire \code{Session} lifecycle; built-in \code{Coordinator} object for coordinating all running threads simultaneously Stop, listen, report, and handle exceptions; when \code{AbortedError} or \code{UnavailableError} exception occurs, you can restart \code{Session}.
 
-\subsection{Usage method}
 
+\subsection{Usage method}
 In general, first create a \code{Session} instance using \code{ChiefSessionCreator} and register the three most basic \code{tf.train.SessionRunHook}:
 
 \begin{enum}
-  \ item {\ code {CheckpointSaverHook}: Periodically \ ascii {Checkpoint};}
-  \eitem{\code{SummarySaverHook}: Run \ascii{Summary} periodically;} 
-  \eitem{\code{StepCounterHook}: Periodically counts the number of \ascii{Step} running per second. }   
+  \eitem{\ code {CheckpointSaverHook}: Periodically \ ascii {Checkpoint};}
+  \eitem{\code{SummarySaverHook}: Run \ascii{Summary} periodically;}
+  \eitem{\code{StepCounterHook}: Periodically counts the number of \ascii{Step} running per second. }
 \end{enum}
 
 In order to be able to handle exceptions safely and to be able to close \code{MonitoredSession}, the context manager of \code{with} is often used.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 session_creator = tf.train.ChiefSessionCreator(
   checkpoint_dir = checkpoint_dir,
   master=master,
@@ -69,19 +67,19 @@ with tf.train.MonitoredSession(
 \end{python}
 \end{leftbar}
 
-\subsection{Use factory}
 
+\subsection{Use factory}
 Using the factory method of \code{MonitoredTrainingSession}, you can simplify the creation of \code{MonitoredSession}.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.4\textwidth]{figures/py-train-monitored-training-session.png}
-\caption{MonitoredTrainingSession:Factory Method}
- \label{fig:py-train-monitored-training-session}
+  \centering
+  \includegraphics[width=0.4\textwidth]{figures/py-train-monitored-training-session.png}
+  \caption{MonitoredTrainingSession:Factory Method}
+  \label{fig:py-train-monitored-training-session}
 \end{figure}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with MonitoredTrainingSession(
   master=master,
   is_chief=is_chief,
@@ -92,27 +90,27 @@ with MonitoredTrainingSession(
 \end{python}
 \end{leftbar}
 
-\subsection{decorator}
 
+\subsection{Decorator}
 In order to get the composite function \code{MonitoredSession}, you can assemble the \code{WrappedSession} that completes the sub-functions.
 
 \begin{enum}
   \eitem{\code{RecoverableSession}: When \code{AbortedError} or \code{UnavailableError} exception occurs, \code{Session} can be restored and rebuilt;}
-  \eitem{\code{CoordinatedSession}: Built-in \code{Coordinator} object to coordinate all running threads while stopping, and listening, reporting, and handling exceptions; 
-  \eitem{\code{HookedSession}: Customize \code{Hook} to listen to the entire \code{Session} lifecycle. }   
+  \eitem{\code{CoordinatedSession}: Built-in \code{Coordinator} object to coordinate all running threads while stopping, and listening, reporting, and handling exceptions; }
+  \eitem{\code{HookedSession}: Customize \code{Hook} to listen to the entire \code{Session} lifecycle. }
 \end{enum}
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-decorator.png}
-\caption{MonitoredSession: Decorator}
- \label{fig:py-train-monitored-session-decorator}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-decorator.png}
+  \caption{MonitoredSession: Decorator}
+  \label{fig:py-train-monitored-session-decorator}
 \end{figure}
 
 In the end, you can combine the characteristics of the three, and build \code{MonitoredSession} (pseudo code implementation, please refer to the specific implementation of \code{MonitoredSession} for details).
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 MonitoredSession(
   RecoverableSession(
     CoordinatedSession(
@@ -123,22 +121,21 @@ MonitoredSession(
 
 \end{content}
 
+
 \section{Lifecycle}
-
 \begin{content}
-
 \code{MonitoredSession} has the lifecycle feature of \code{Session} (but not the \ascii{IS-A} relationship, but the \ascii{Like-A} relationship, which is a typical style of duck programming) .
 
 During the lifecycle, a callback hook for \code{SessionRunHook} is inserted to monitor the lifecycle of \code{MonitoredSession}.
 
-\subsection{initialization}
 
+\subsection{Initialization}
 In the initialization phase, \code{MonitoredSession} mainly completes the following process:
 
 \begin{enum}
   \eitem{Run the \code{begin} method of all callback hooks;}
-  \eitem{Freeze the calculation graph by calling \code{scaffold.finalize()};} 
-  \eitem{Create session: Create \code{Session} using \code{SessionCreator} polymorphism}   
+  \eitem{Freeze the calculation graph by calling \code{scaffold.finalize()};}
+  \eitem{Create session: Create \code{Session} using \code{SessionCreator} polymorphism}
   \eitem{The \code{after\_create\_session} method that runs all callback hooks}
 \end{enum}
 
@@ -150,25 +147,25 @@ Among them, there are two types of procedures for creating \ascii{Session} using
 \end{enum}
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-initialization.png}
-\caption{MonitoredSession: Initialization}
- \label{fig:py-train-monitored-session-initialization}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-initialization.png}
+  \caption{MonitoredSession: Initialization}
+  \label{fig:py-train-monitored-session-initialization}
 \end{figure}
 
-\subsection{execution}
 
+\subsection{Execution}
 In the execution phase, call the \code{before\_run} and \code{after\_run} methods of the hook before and after running \code{Session.run}. If a \code{AbortedError} or \code{UnavailableError} exception occurs during the run, the session service is restarted.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-execution.png}
-\caption{MonitoredSession: Execute}
- \label{fig:py-train-monitored-session-execution}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-execution.png}
+  \caption{MonitoredSession: Execute}
+  \label{fig:py-train-monitored-session-execution}
 \end{figure}
 
-\subsection{close}
 
+\subsection{Close}
 When the training process is finished, close the \code{MonitoredSession} by calling the \code{close} method to release the computing resources of the system.
 
 At this point, the \code{end} method of the hook will be called back and all \code{QueueRunner} instances will be stopped by calling the \code{Coordinator.request\_stop} method. Finally, I heard that the \code{tf.Session.close} method was called to release the system resources.
@@ -176,18 +173,17 @@ At this point, the \code{end} method of the hook will be called back and all \co
 In addition, if a \code{OutOfRangeError} exception occurs, \code{MonitoredSession} considers the training process to terminate normally and ignores the exception.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-close.png}
-\caption{MonitoredSession: Close}
- \label{fig:py-train-monitored-session-close}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-train-monitored-session-close.png}
+  \caption{MonitoredSession: Close}
+  \label{fig:py-train-monitored-session-close}
 \end{figure}
 
 \end{content}
 
+
 \section{Model Initialization}
-
 \begin{content}
-
 \code{MonitoredSession} At initialization, use \code{SessionCreator} to complete session creation and model initialization.
 
 In general, in a distributed environment, there are two types of \ascii{Worker}:
@@ -199,12 +195,12 @@ In general, in a distributed environment, there are two types of \ascii{Worker}:
 
 The initialization of the model is done together through a simple coordination protocol.
 
-\subsection{Coordination Agreement}
 
+\subsection{Coordination Agreement}
 For \ascii{Chief}, it will try to recover the model from the \ascii{Checkpoint} file; if it is not successful, it will initialize the model completely by executing \code{init\_op}; its initialization algorithm can be formalized as :
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def prepare_session(master, init_op, saver, ckp_dir):
   if is_chief():
     sess = tf.Session (master)
@@ -215,7 +211,7 @@ def prepare_session(master, init_op, saver, ckp_dir):
 For \ascii{Non-Chief}, it periodically checks if \ascii{Chief} has completed the initialization of the model by running \ascii{ready\_op}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def wait_for_session(master, ready_op, recovery_wait_secs):
   while True:
     sess = tf.Session (master)
@@ -227,8 +223,8 @@ def wait_for_session(master, ready_op, recovery_wait_secs):
 \end{python}
 \end{leftbar}
 
-\subsection{SessionManager}
 
+\subsection{SessionManager}
 In fact, the above algorithm is mainly implemented by \code{SessionManager}, which is mainly responsible for the recovery of the model from the \ascii{Checkpoint} file, or the initialization of the model is completed directly by running \code{init\_op}, and finally the creation can work. The \code{Session} instance.
 
 \begin{enum}
@@ -238,19 +234,19 @@ In fact, the above algorithm is mainly implemented by \code{SessionManager}, whi
 
 For details, please refer to the specific implementation of \code{SessionManager}.
 
-\subsection{Introduction factory}
 
+\subsection{Introduction factory}
 Using the factory method, use \code{ChiefSessionCreator} and \code{WorkerSessionCreator} respectively to complete the above algorithm.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-train-session-creator.png}
-\caption{SessionManager}
- \label{fig:py-train-session-creator}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-train-session-creator.png}
+  \caption{SessionManager}
+  \label{fig:py-train-session-creator}
 \end{figure}
 
-\subsection{Scaffold}
 
+\subsection{Scaffold}
 To build a model training, you need \code{init\_op} to initialize the variables; you need \code{Saver} to periodically implement \ascii{Checkpoint}; you need \code{ready\_op} to see if a model has been initialized; \code{summary\_op} collects all \ascii{Summary} for visualization of the training process.
 
 In general, these special OPs or objects are identified by \code{GraphKey} in the calculation graph so that these special \ascii{OP} or objects can be retrieved from the calculation graph.
@@ -260,12 +256,12 @@ In the special area of ​​the training model, a basic tool library is provide
 You can create an instance of this type by default by calling the \code{Scaffold.finalize} method. If the corresponding \ascii{OP} or object is \code{None}. Finally, the calculation graph is frozen, and then it is forbidden to add nodes to the graph.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Scaffold(object):
   def finalize(self):
     """Creates operations if needed and finalizes the graph."""
     
-    # create init \ _on
+    # create init\_on
     if self._init_op is None:
       def default_init_op():
         return control_flow_ops.group(
@@ -331,20 +327,20 @@ As can be seen from the implementation of \code{finalize}, the following \ascii{
 
 \begin{enum}
   \eitem{\code{init\_op}: Complete initialization of all global variables and global resources;}
-  \eitem{\code{local\_init\_op}: Complete initialization of all local variables and tables;} 
-  \eitem{\code{ready\_op}: See if all global variables and global resources have been initialized; otherwise report a list of uninitialized global variables and global resources;}   
-  \eitem{\code{ready\_for\_local\_init\_op}: See if all local variables and tables have been initialized; otherwise report a list of uninitialized local variables and tables;}   
-  \eitem{\code{summary\_op}: summarizes the output of all \ascii{Summary};}       
+  \eitem{\code{local\_init\_op}: Complete initialization of all local variables and tables;}
+  \eitem{\code{ready\_op}: See if all global variables and global resources have been initialized; otherwise report a list of uninitialized global variables and global resources;}
+  \eitem{\code{ready\_for\_local\_init\_op}: See if all local variables and tables have been initialized; otherwise report a list of uninitialized local variables and tables;}
+  \eitem{\code{summary\_op}: summarizes the output of all \ascii{Summary};}
 \end{enum}
 
 Among them, local variables can not be persisted to the \ascii{Checkpoint} file; of course, the value of the local variable cannot be restored from the \ascii{Checkpoint} file.
 
-\subsection{initialization algorithm}
 
+\subsection{Initialization algorithm}
 Understanding the complete semantics of the \code{prepare\_session} model initialization is not that difficult by observing the definition of \ascii{OP} above.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class SessionManager(object):
   def prepare_session(self,
                       master,
@@ -381,20 +377,20 @@ class SessionManager(object):
 Its initialization algorithm is very simple. First, try to recover from the \ascii{Checkpoint} file (some implementations are omitted here to simplify the problem); if it fails, call \code{init\_op} and \code{init\_fn} to complete global variables and resources. Initialization; then, to initialize local variables and tables; finally, verify that all global variables and resources have been initialized.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-train-session-initialization-algo.png}
-\caption{model initialization algorithm}
- \label{fig:py-train-session-initialization-algo}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-train-session-initialization-algo.png}
+  \caption{model initialization algorithm}
+  \label{fig:py-train-session-initialization-algo}
 \end{figure}
 
-\subsection{local variable initialization}
 
+\subsection{Local variable initialization}
 For non-empty \code{local\_init\_op}, you must wait until all global variables have been initialized before initializing (by calling \code{\_ready\_for\_local\_init\_op}); otherwise, the report is not initialized List of global variables into the \code{msg} field.
 
 That is, local variables are initialized after the global variable is initialized, and local variables are not persisted into the \ascii{Checkpoint} file.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class SessionManager(object):
   def _ready_for_local_init(self, sess):
     """Checks if the model is ready to run local_init_op.
@@ -418,12 +414,12 @@ class SessionManager(object):
 \end{python}
 \end{leftbar}
 
-\subsection{Verify model}
 
+\subsection{Verify model}
 Finally, by executing \code{\_ready\_op}, see if all global variables and global resources have been initialized; otherwise, report the list of uninitialized variables to the \code{msg} field.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class SessionManager(object):
   def _model_ready(self, sess):
     """Checks if the model is ready or not.
@@ -435,7 +431,7 @@ class SessionManager(object):
 Among them, \code{\_ready} uses a function to run the corresponding \code{ready\_op} to see if the corresponding variable or resource is initialized.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def _ready(op, sess, msg):
   """Checks if the model is ready or not, as determined by op.
   """
@@ -454,18 +450,17 @@ def _ready(op, sess, msg):
 
 \end{content}
 
+
 \section{Exception safe}
-
 \begin{content}
-
 In general, the \code{with} context manager is often used to implement the exception security and resource security release of \code{MonitoredSession}.
 
-\subsection{Context Manager}
 
+\subsection{Context Manager}
 When the \code{with} statement is exited, all \code{QueueRunner} instances will be stopped and a secure shutdown of \code{tf.Session} will be implemented.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class _MonitoredSession(object):
   def __exit__(self, exception_type, exception_value, traceback):
     if exception_type in [errors.OutOfRangeError, StopIteration]:
@@ -490,12 +485,12 @@ class _MonitoredSession(object):
 
 In particular, when \code{OutOfRangeError} or \code{StopIteration} occurs, it is considered to terminate normally, ignoring the exception. If other types of exceptions are thrown, the callback hook for \code{end} will not be called.
 
-\subsection{Stop QueueRunner}
 
+\subsection{Stop QueueRunner}
 In addition, when \code{self.\_sess.close()} is executed, the \code{close} method of \code{\_CoordinatedSession} will eventually be called. Notify all \code{QueueRunner} instances to stop running by calling \code{coord.request\_stop} and wait for all \code{QueueRunner} instances to run by calling the \code{coord.join} method.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class _CoordinatedSession(_WrappedSession):
   def close(self):
     self._coord.request_stop()
@@ -511,14 +506,13 @@ class _CoordinatedSession(_WrappedSession):
 
 \end{content}
 
-\section{callback hook}
 
+\section{Callback hook}
 \begin{content}
-
 You can monitor and manage the \code{MonitorSession} lifecycle process by customizing \code{SessionRunHook}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class SessionRunHook(object):
   def begin(self):
     pass
@@ -540,21 +534,16 @@ class SessionRunHook(object):
 Among them, the most common \code{Hook} includes:
 
 \begin{enum}
-  \ item {\ code {CheckpointSaverHook}: 周期性 地 \ ascii {Checkpoint};}
-  \eitem{\code{SummarySaverHook}: Run \ascii{Summary} periodically;} 
-  \eitem{\code{StepCounterHook}: Periodically counts the number of \ascii{Step} running per second. }   
+  \eitem{\code{CheckpointSaverHook}: 周期性 地 \ ascii {Checkpoint};}
+  \eitem{\code{SummarySaverHook}: Run \ascii{Summary} periodically;}
+  \eitem{\code{StepCounterHook}: Periodically counts the number of \ascii{Step} running per second. }
 \end{enum}
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-train-session-run-hook.png}
-\caption{SessionRunHook}
- \label{fig:py-train-session-run-hook}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-train-session-run-hook.png}
+  \caption{SessionRunHook}
+  \label{fig:py-train-session-run-hook}
 \end{figure}
 
 \end{content}
-
-
-
-
-

@@ -1,163 +1,153 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
 \chapter{Icebreaking Tour} 
 \label{ch:ice-breaker}
-
 \begin{content}
 
-Before starting to explore the \tf{} kernel, hands-on training of the model, familiar with the basic methods of training and tuning techniques, will be of great benefit to understanding the content of the subsequent chapters. Through this study and practice, you will learn how to build and train a neural network \footnote{ that recognizes handwritten numbers. This chapter is an excerpt from \ascii{Martin G\"{o}rner} published on \ascii{Codelabs}: \href{https://codelabs.developers.google.com/codelabs/cloud-tensorflow-mnist}{Tensorflow and deep learning, without a PhD}, with the consent of \ascii{Martin G\"{o}rner}, authorization This article is published in this book. }.
-
-This chapter will use the single-layer perceptron model, the multi-layer perceptron model, and finally try to use convolutional neural networks. In the training process, some common techniques of algorithm tuning are introduced, including selecting a better activation function, applying learning rate attenuation techniques, and implementing \ascii{Dropout} technology. In the end, the accuracy of the model is increased to above \ascii{99%}.
-
+Before starting to explore the \tf{} internals, hands-on training of the model, familiar with the basic methods of training and tuning techniques, will be of great benefit to understanding the content of the subsequent chapters. Through this study and practice, you will learn how to build and train a neural network \footnote{that recognizes handwritten numbers. This chapter is an excerpt from \ascii{Martin G\"{o}rner} published on \ascii{Codelabs}: \href{https://codelabs.developers.google.com/codelabs/cloud-tensorflow-mnist}{Tensorflow and deep learning, without a PhD}, with the consent of \ascii{Martin G\"{o}rner}, authorization This article is published in this book}.
+This chapter will use the single-layer perceptron model, the multi-layer perceptron model, and finally try to use convolutional neural networks. In the training process, some common techniques of algorithm tuning are introduced, including selecting a better activation function, applying learning rate attenuation techniques, and implementing \ascii{Dropout} technology. In the end, the accuracy of the model is increased to above \ascii{99\%}.
 Before introducing each network model, the algorithm theory knowledge of the model will be given simply to help you better understand the content of the program. However, this book is not a professional book on machine learning algorithms. For more information on related algorithms, please refer to related literature and papers.
-
 \end{content}
 
-\section{problem raised}
 
+\section{Problem statement}
 \begin{content}
-
-This chapter uses the \ascii{MNIST} dataset to complete the network model training of handwritten digits, which contains \ascii{60000} training sample data; including \ascii{10000} test sample data. As shown in \refig{mnist-x}, for any sample data $x$, use a $28 \times 28$ pixel numeric matrix representation. For simplicity, the matrix implementation of $28 \times 28$ is flattened to obtain a one-dimensional vector of length \ascii{784}.
+This chapter uses the \ascii{MNIST} dataset to complete the network model training of handwritten digits, which contains \ascii{60000} training instances; including \ascii{10000} test instances. As shown in \refig{mnist-x}, for any sample data $x$, use a $28 \times 28$ pixel numeric matrix representation. For simplicity, the matrix implementation of $28 \times 28$ is flattened to obtain a one-dimensional vector of length \ascii{784}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-x.png}
-\caption{MNIST sample data representation}
- \label{fig:mnist-x}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-x.png}
+  \caption{MNIST sample data representation}
+  \label{fig:mnist-x}
 \end{figure}
 
-\subsection{sample data set}
 
+\subsection{Data set}
 Therefore, in the \ascii{MNIST} training dataset, \code{mnist.train.images} is a two-dimensional matrix of \code{[60000, 784]}. Where each element in the matrix represents the intensity value of a pixel in the image, and its value is between \ascii{0} and \ascii{1}. As shown in \refig{mnist-train-xs}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-train-xs.png}
-\caption{MNIST training data set: input data set}
- \label{fig:mnist-train-xs}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-train-xs.png}
+  \caption{MNIST training data set: input data set}
+  \label{fig:mnist-train-xs}
 \end{figure}
 
 Correspondingly, the label of the \ascii{MNIST} dataset is a number between \ascii{0} and \ascii{9}, and \code{mnist.train.labels} is a \code{[60000, 10]} The two-dimensional matrix, where each line is a \ascii{\quo{one-hot}} vector. As shown in \refig{mnist-train-ys}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-train-ys.png}
-\caption{MNIST training data set: tag data set}
- \label{fig:mnist-train-ys}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-train-ys.png}
+  \caption{MNIST training data set: tag data set}
+  \label{fig:mnist-train-ys}
 \end{figure}
 
-\subsection{Illustration}
 
+\subsection{Visualization}
 \begin{content}
 
-To better visualize the entire training process, draw \ascii{5} types of artboards using the \ascii{matplotlib} toolkit. As shown by \refig{mnist-training-digits}, it represents a training sample data set of \ascii{mini-batch}. Where \code{batch\_size = 100}, a white background indicates that the number is correctly recognized; a red background indicates that the number is misclassified, the left side of the handwritten number identifies the correct tag value, and the right side identifies the wrong predicted value .
-
-\ascii{MNIST} has \ascii{50000} training samples. If \code{batch\_size} is \ascii{100}, it needs to iterate \ascii{500} times to completely traverse a training sample data set. Called a \ascii{epoch} cycle.
+To better visualize the entire training process, draw \ascii{5} types of artboards using the \ascii{matplotlib} toolkit. As shown by \refig{mnist-training-digits}, it represents a training sample data set of \ascii{mini-batch}. Where \code{batch\_size = 100}, a white background indicates that the number is correctly recognized; a red background indicates that the number is misclassified, the left side of the handwritten number identifies the correct tag value, and the right side identifies the wrong predicted value.
+\ascii{MNIST} has \ascii{50000} training samples. If \code{batch\_size} is \ascii{100}, it needs to iterate \ascii{500} times to completely traverse a training sample data set. Called an \ascii{epoch} cycle.
 
 \begin{remark}
 The sample code in this chapter does not use \ascii{TensorBoard}, but uses \ascii{matplotlib} to observe the curve of error and precision in real time during training.
 \end{remark}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/mnist-training-digits.jpeg}
-\caption{A training sample data set for mini-batch, where \code{batch\_size=100}}
- \label{fig:mnist-training-digits}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/mnist-training-digits.jpeg}
+  \caption{A training sample data set for mini-batch, where \code{batch\_size=100}}
+  \label{fig:mnist-training-digits}
 \end{figure}
 
 As shown by \refig{mnist-test-digits}, \ascii{MNIST} uses the test sample dataset of size \ascii{10000} to test the current accuracy of the model. Wherein, the left side indicates the approximate accuracy of the current model; likewise, the white background indicates that the numbers are correctly identified; the red background indicates that the numbers are misclassified, the left side of the handwritten digits identifies the correct label value, and the right side identifies the wrong label. Predictive value.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/mnist-test-digits.jpeg}
-\caption{Current model accuracy: based on test sample dataset}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/mnist-test-digits.jpeg}
+  \caption{Current model accuracy: based on test sample dataset}
  \label{fig:mnist-test-digits}
 \end{figure}
 
 As shown by \refig{mnist-cross-entropy-loss-fig}, the cross-entropy function is used to quantize the error before the predicted value and the tag value. The \ascii{x} axis represents the number of iterations, and the \ascii{y} axis represents the loss value. In addition, based on the training sample data set, the curve of the loss value has a large jitter; and based on the test sample data set, the curve jitter of the loss value is small.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/mnist-cross-entropy-loss-fig.jpeg}
-\caption{cross entropy loss for training and testing}
- \label{fig:mnist-cross-entropy-loss-fig}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/mnist-cross-entropy-loss-fig.jpeg}
+  \caption{cross entropy loss for training and testing}
+  \label{fig:mnist-cross-entropy-loss-fig}
 \end{figure}
 
 As shown by \refig{mnist-accuracy-fig}, the accuracy of the model on the current training dataset and testset can be calculated in real time. The \ascii{x} axis represents the number of iterations, and the \ascii{y} axis represents the precision value. Similarly, based on the training sample data set, the accuracy curve jitter is large; and based on the test sample data set, the precision curve jitter is small.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/mnist-accuracy-fig.jpeg}
-\caption{The precision of training and testing}
- \label{fig:mnist-accuracy-fig}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/mnist-accuracy-fig.jpeg}
+  \caption{The precision of training and testing}
+  \label{fig:mnist-accuracy-fig}
 \end{figure}
 
 As shown in \refig{mnist-weight-fig}, for each training parameter (including offset) of the model, its corresponding numerical distribution map can be statistically obtained. When the model cannot converge, the numerical distribution of the parameters can give helpful hints.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/mnist-weight-fig.png}
-\caption{weight distribution map}
- \label{fig:mnist-weight-fig}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/mnist-weight-fig.png}
+  \caption{weight distribution map}
+  \label{fig:mnist-weight-fig}
 \end{figure}
 
 \end{content}
 
+
 \section{Single layer perceptron}
-
 \begin{content}
-
 First, try to build a single layer perceptron for \ascii{10} neurons. As shown by \refig{mnist-slp}, for multi-classification problems such as handwritten digit recognition, the activation function of \ascii{softmax} is often used in theory.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-slp.png}
-\caption{Single layer perceptron}
- \label{fig:mnist-slp}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-slp.png}
+  \caption{Single layer perceptron}
+  \label{fig:mnist-slp}
 \end{figure}
 
-\subsection{theory basis}
 
-In theory, the \ascii{softmax} regression is a generalized extension of the \ascii{logistic} regression. Among them, \ascii{logistic} regression is to solve the two classification problem, namely $y \in \{ 0,1\}$; and \ascii{softmax} regression is to solve the $k $ classification problem, namely $y \in \{ 1,2,...,k\}$.
+\subsection{Theory basis}
+In theory, the \ascii{softmax} regression is a generalized extension of the \ascii{logistic} regression. Among them, \ascii{logistic} regression is to solve the two classification problem, namely $y \in \{0,1\}$; and \ascii{softmax} regression is to solve the $k$ classification problem, namely $y \in \{1,2,...,k\}$.
 
-\subsubsection{symbol definition}
 
+\subsubsection{Symbol definition}
 To formalize the \ascii{softmax} regression problem, some common symbols are defined here.
+\begin{itemize}
+  \item \ascii{Training sample set}: $ S = \{ ({x^{(i)}},{y^{(i)}});i = 1,2,...,m\} $
+  \item \ascii{An $i$ training sample}: $ ({x^{(i)}},{y^{(i)}}) $
+  \item \ascii{Sample input}: $ x = ({x_1},{x_2},...,{x_n})^{T}  \in {\mathbb{R}^n} $
+  \item \ascii{Sample tag (one-hot)}: $ y = ({y_1},{y_2},...,{y_k})^{T} \in {\mathbb{R}^k} $
+  \item \ascii{Weight}: $ W \in {\mathbb{R}^{n \times k}} $ 
+  \item \ascii{Bias}: $ b \in {\mathbb{R}^k} $ 
+  \item \ascii{Softmax function}: $softmax {(z_i)} = \tfrac{{{e^{{z_i}}}}}{{\sum\limits_{j = 1}^k {{e^{{z_j}}}}}} \quad i = 1,2,...,k$
+\end{itemize}
 
- \begin{itemize}
-   \item \ascii{training sample set}: $ S = \{ ({x^{(i)}}, {y^{(i)}});i = 1,2,...,m\} $
-   \item \ascii{第$i$ training sample}: $ ({x^{(i)}}, {y^{(i)}}) $
-   \item \ascii{sample input}: $ x = ({x_1},{x_2},...,{x_n})^{T} \in {\mathbb{R}^n} $
-   \item \ascii{sample tag (one-hot)}: $ y = ({y_1},{y_2},...,{y_k})^{T} \in {\mathbb{R}^k} $
-   \item \ascii{weight}: $ W \in {\mathbb{R}^{n \times k}} $   
-   \item \ascii{offset}: $ b \in {\mathbb{R}^k} $   
-   \item \ascii{softmax function}: $ 
-Softmax {(z_i)} = \tfrac{{{e^{{z_i}}}}}{{\sum\limits_{j = 1}^k {{e^{{z_j}}}} }} \quad i = 1,2,...,k
-$
- \end{itemize}
 
-\subsubsection{softmax function}
-
+\subsubsection{Softmax function}
 As shown by \refig{softmax}, the model first obtains the linear weighted sum $z$, then evaluates to $e^z$, and finally implements the normalization operation.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/softmax.png}
-\caption{softmax function}
- \label{fig:softmax}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/softmax.png}
+  \caption{softmax function}
+  \label{fig:softmax}
 \end{figure}
 
-\subsubsection{weights and offsets}
 
+\subsubsection{Weights and biases}
 The weight $W$ is a two-dimensional matrix of $n \times k$.
 
 \[
 W = \left( {{W_1},{W_2},...,{W_k}} \right) = \left( {\begin{array}{*{20}{c}}
   {{w_{11}}}& \ldots &{{w_{1k}}} \\ 
-   \vdots & \ddots & \vdots \\ 
+   \vdots & \ddots & \vdots  \\ 
   {{w_{n1}}}& \cdots &{{w_{nk}}} 
 \end{array}} \right) \in {\mathbb{R}^{n \times k}}
 \]
@@ -165,72 +155,70 @@ W = \left( {{W_1},{W_2},...,{W_k}} \right) = \left( {\begin{array}{*{20}{c}}
 Where $W_j$ is a vector of length $n$.
 
 \[
-{W_j} = {\left( {{w_{1j}},{w_{2j}},...,{w_{nj}}} \right)^T} \in {\mathbb{R}^n }, j = 1,2,...,k \\
+{W_j} = {\left( {{w_{1j}},{w_{2j}},...,{w_{nj}}} \right)^T} \in {\mathbb{R}^n}, j = 1,2,...,k \\
 \]
 
-The offset $b$ is a \ascii{\quo{one-hot}} vector of length $k$.
+The bias $b$ is a \ascii{\quo{one-hot}} vector of length $k$.
 
 \[
 b = {({b_1},{b_2},...,{b_k})^T} \in {\mathbb{R}^k}
 \]
 
-\subsubsection{model definition}
 
+\subsubsection{Model definition}
 The single-layer perceptron model for multi-classification problems, using the \ascii{softmax} activation function, can be defined as such.
 
 \[\begin{aligned}
-  y = & {h_{W,b}}(x) = softmax (z) = softmax ({W^T}x + b) \\ 
-   = & {\left( {{y_1},{y_2},...,{y_k}} \right)^T} \\ 
-   = & \frac{1}{{\sum\limits_{j = 1}^k {{e^{{z_j}}}} }}{\left( {{e^{{z_1}}},{e ^{{z_2}}},...,{e^{{z_k}}}} \right)^T} \\ 
-   = & \frac{1}{{\sum\limits_{j = 1}^k {{e^{W_j^Tx + {b_j}}}} }}{\left( {{e^{W_1^Tx + {b_1}}},{e^{W_2^Tx + {b_2}}},...,{e^{W_k^Tx + {b_k}}}} \right)^T} \ 
+  y =  & {h_{W,b}}(x) = softmax (z) = softmax ({W^T}x + b) \\ 
+   =  & {\left( {{y_1},{y_2},...,{y_k}} \right)^T} \\ 
+   =  & \frac{1}{{\sum\limits_{j = 1}^k {{e^{{z_j}}}} }}{\left( {{e^{{z_1}}},{e^{{z_2}}},...,{e^{{z_k}}}} \right)^T} \\ 
+   =  & \frac{1}{{\sum\limits_{j = 1}^k {{e^{W_j^Tx + {b_j}}}} }}{\left( {{e^{W_1^Tx + {b_1}}},{e^{W_2^Tx + {b_2}}},...,{e^{W_k^Tx + {b_k}}}} \right)^T} \ 
 \end{aligned} \]
 
 Where, for any given sample $ (x, y) \in S $, $ z_i $ represents the linear weighted sum of $W_i^Tx+b_i$, and $y_i(i=1,2,...,k )$ indicates the probability of classifying it as class $i$.
 
 \[\begin{gathered}
-  P\left( {y = i|x;W,b} \right) = \frac{{{e^{W_i^Tx + b_i}}}}{{\sum\limits_{j = 1}^k { {e^{W_j^Tx + b_j}}} }} \hfill \\
+  P\left( {y = i|x;W,b} \right) = \frac{{{e^{W_i^Tx + b_i}}}}{{\sum\limits_{j = 1}^k {{e^{W_j^Tx + b_j}}} }} \hfill \\
   i = 1,2,...,k \hfill \\ 
 \end{gathered} \]
 
 
-\subsubsection{cross entropy function}
-
-Based on the sample data set $ S = \{ ({x^{(i)}}, {y^{(i)}});i = 1,2,...,m\} $, cross entropy loss function Can be defined as such.
+\subsubsection{Cross entropy function}
+Based on the sample data set $ S = \{ ({x^{(i)}}, {y^{(i)}});i = 1,2,...,m\} $, cross entropy loss function can be defined as such.
 
 \[\begin{aligned}
-  J(W,b) = & - \frac{1}{m}\sum\limits_{i = 1}^m {{y^{(i)}}\log \left( {{{\widehat y} ^{(i)}}} \right)} \\ 
-   = & - \frac{1}{m}\sum\limits_{i = 1}^m {\sum\limits_{j = 1}^k {y_j^{(i)}\log \left( {\widehat Y_j^{(i)}} \right)} } \\
+  J(W,b) =  &  - \frac{1}{m}\sum\limits_{i = 1}^m {{y^{(i)}}\log \left( {{{\widehat y}^{(i)}}} \right)}  \\ 
+   =  &  - \frac{1}{m}\sum\limits_{i = 1}^m {\sum\limits_{j = 1}^k {y_j^{(i)}\log \left( {\widehat y_j^{(i)}} \right)} }  \\
 \end{aligned} \]
 
 The \ascii{softmax} multi-classification problem is to find the optimal solution $(W^*,b^*)$, so that
 
 \[W^*,b^* = \mathop {\arg \min }\limits_{W,b} J(W,b)\]
 
-\subsubsection{calculation gradient}
 
+\subsubsection{Calculating gradient}
 For any sample $(x,y) \in S $, you can derive a gradient formula for $ J(W,b) $ relative to $ W $ and $ b $.
 
 \[\begin{aligned}
-  {\nabla _W}J\left( {W,b;x,y} \right) = & \left( {\widehat y - y} \right)x \\ 
-  {\nabla _b}J\left( {W,b;{x^{(i)}},{y^{(i)}}} \right) = & \left( {\widehat y - y} \ Right) \\ 
+  {\nabla _W}J\left( {W,b;x,y} \right) =  & \left( {\widehat y - y} \right)x \\ 
+  {\nabla _b}J\left( {W,b;{x^{(i)}},{y^{(i)}}} \right) =  & \left( {\widehat y - y} \right) \\ 
 \end{aligned} \]
 
 
-\subsubsection{parameter update}
-
+\subsubsection{Parameters update}
 For the training sample data $S$, according to the gradient formula of $W, b$, the parameter update of this iteration is completed.
 
 \[\begin{aligned}
-  W \leftarrow & W - \alpha \frac{{\sum\limits_{i = 1}^m {{\nabla _W}J\left( {W,b;{x^{(i)}},{y ^{(i)}}} \right)} }}{m} \\ 
-  b \leftarrow & b - \alpha \frac{{\sum\limits_{i = 1}^m {{\nabla _b}J\left( {W,b;{x^{(i)}},{y ^{(i)}}} \right)} }}{m} \\ 
+  W \leftarrow  & W - \alpha \frac{{\sum\limits_{i = 1}^m {{\nabla _W}J\left( {W,b;{x^{(i)}},{y^{(i)}}} \right)} }}{m} \\ 
+  b \leftarrow  & b - \alpha \frac{{\sum\limits_{i = 1}^m {{\nabla _b}J\left( {W,b;{x^{(i)}},{y^{(i)}}} \right)} }}{m} \\ 
 \end{aligned} \]
 
-\subsection{define model}
 
+\subsection{Define a model}
 Next, use \tf{} to complete the construction and training of the model. It should be noted that there are subtle differences between the theoretical formula and the concrete implementation of \tf{}. In theory, $x$ in a formula often represents a sample, but \code{x} in \tf{} often represents a sample dataset of \ascii{mini-batch}. Therefore, when using \tf{} to design a network model, you need to pay special attention to whether the changes in the individual tensors are in line with expectations.
 
-\subsubsection{input and tag}
 
+\subsubsection{Inputs and labels}
 First, use \code{tf.placeholder} to define the input and label of the training sample separately.
 
 \begin{leftbar}
@@ -250,8 +238,8 @@ x = tf.reshape(x, [-1, 784])
 \end{python}
 \end{leftbar}
 
-\subsubsection{define variable}
 
+\subsubsection{Define variables}
 Then, define the model parameters using \code{tf.Variable}. When defining the training parameters, you must specify the initialization value of the parameters; the training parameters will automatically derive the type of the data and its size based on the initial values.
 
 \begin{leftbar}
@@ -265,12 +253,12 @@ In addition, the variables must be initialized before they are used. Here, \code
 
 \begin{leftbar}
 \begin{python}
-Init_op = tf.global_variables_initializer()
+init_op = tf.global_variables_initializer()
 \end{python}
 \end{leftbar}
 
-\subsubsection{model definition}
 
+\subsubsection{Model definition}
 Next, the single-layer perceptron model for multi-classification problems can be easily obtained.
 
 \begin{leftbar}
@@ -282,28 +270,28 @@ y = tf.nn.softmax(tf.matmul(x, w) + b)
 As shown in \refig{mnist-linear-sum}, first calculate the matrix multiplication of \code{x} and \code{w}, then let \code{b} broadcast (\ascii{broadcast}) to each of the matrices. Add a line and finally get a linear weighted sum of the training parameters.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-linear-sum.png}
-\caption{linear weighted sum}
- \label{fig:mnist-linear-sum}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-linear-sum.png}
+  \caption{linear weighted sum}
+  \label{fig:mnist-linear-sum}
 \end{figure}
 
 As shown by \refig{mnist-softmax}, \ascii{softmax} will implement the operation line by line. Finally, the size of \code{y} is \code{[100, 10]}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-softmax.png}
-\caption{Activation function: softmax}
- \label{fig:mnist-softmax}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-softmax.png}
+  \caption{Activation function: softmax}
+  \label{fig:mnist-softmax}
 \end{figure}
 
-\subsubsection{loss function}
 
+\subsubsection{Loss function}
 For multi-classification problems, the loss function of cross entropy can be used.
 
 \begin{leftbar}
 \begin{python}
-Cross_entropy = -tf.reduce_sum(t * tf.log(y))
+cross_entropy = -tf.reduce_sum(t * tf.log(y))
 \end{python}
 \end{leftbar}
 
@@ -312,27 +300,27 @@ As shown by \refig{mnist-cross-entropy}, \code{t} and \code{y} are both \code{[1
 Implementing the \code{tf.log} operation on \code{y} will also result in a matrix of size \code{[100, 10]}. Then, \code{t} is multiplied bit by bit with \code{tf.log(y)} (not multiplied by the matrix), and a matrix of size \code{[100, 10]} will also be obtained. Finally, \code{tf.reduce\_sum} adds all the elements in the matrix to get a scalar (\ascii{scalar}) value.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-cross-entropy.png}
-\caption{cross entropy loss function}
- \label{fig:mnist-cross-entropy}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-cross-entropy.png}
+  \caption{cross entropy loss function}
+  \label{fig:mnist-cross-entropy}
 \end{figure}
 
-\subsubsection{accuracy}
 
+\subsubsection{Accuracy}
 \code{tf.argmax(y,1)} will calculate the index of the maximum value by the \ascii{1} dimension. The index value of the maximum value in each row is calculated for each row of $ y_{100 \times 10} $ . Therefore, \code{tf.argmax(y,1)} will get a matrix of size \code{[100, 1]}, or a vector of size \ascii{100}. Similarly, \code{tf.argmax(t,1)} is also a vector of size \ascii{100}.
 
 Then, use \code{tf.equal} to compare them by element (\ascii{element-wise}) for equality, and get a Boolean vector of size \ascii{100}. In order to calculate the precision, the Boolean vector is first converted to a numerical vector, and finally the mean of the numerical vector is obtained.
 
 \begin{leftbar}
 \begin{python}
-Is_correct = tf.equal(tf.argmax(y,1), tf.argmax(t,1))
-Accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
+is_correct = tf.equal(tf.argmax(y,1), tf.argmax(t,1))
+accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
 \end{python}
 \end{leftbar}
 
-\subsection{Optimization Algorithm}
 
+\subsection{Optimization Algorithm}
 Next, a gradient descent algorithm is used to minimize the cross entropy loss function. Among them, \code{learning\_rate} indicates the learning rate, describes the speed of the parameter update and the size of the step, which is a typical super parameter.
 
 \begin{leftbar}
@@ -347,22 +335,21 @@ As shown by \refig{mnist-gd}, the loss function can be likened to a mountain, an
 When the gradient descent update algorithm is implemented, the initial points are different, and the minimum values ​​obtained are also different, so the gradient descent is only a local minimum. In addition, the closer to the minimum value, the slower the falling speed. The size of the descending step is also very important. If it is too small, the speed of finding the minimum value of the function is very slow; if it is too large, it may exceed the extreme point.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-gd.jpeg}
-\caption{gradient descent algorithm}
- \label{fig:mnist-gd}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-gd.jpeg}
+  \caption{gradient descent algorithm}
+  \label{fig:mnist-gd}
 \end{figure}
 
-\subsection{training model}
 
+\subsection{Training a model}
 Prior to this, \tf{} only constructed the calculation graph and did not initiate the execution of the calculation graph. Next, the client creates a session, establishes a channel with the local or remote computing device set, and initiates the execution of the computation map.
-
 First, the initialization of the training parameters is completed. The initial value is modified in situ to the corresponding training parameter by running the initialization subgraph of the model parameters and executing the initializer of each training parameter concurrently.
 
 \begin{leftbar}
 \begin{python}
 With tf.Session() as sess:
-  Sess.run(init_op)
+  sess.run(init_op)
 \end{python}
 \end{leftbar}
 
@@ -370,47 +357,46 @@ Then, iteratively executes \code{train\_step} to complete an iterative training 
 
 \begin{leftbar}
 \begin{python}
-With tf.Session() as sess:
-  For step in range(1000):
-    Batch_xs, batch_ys = mnist.train.next_batch(100)        
-    Sess.run(train_step, feed_dict={x: batch_xs, t: batch_ys})
+with tf.Session() as sess:
+  for step in range(1000):
+    batch_xs, batch_ys = mnist.train.next_batch(100)        
+    sess.run(train_step, feed_dict={x: batch_xs, t: batch_ys})
     
-    If step % 100 == 0:
-      Acc, loss = sess.run([accuracy, cross_entropy], 
-        Feed_dict={x: batch_xs, t: batch_ys})
-      Acc, loss = sess.run([accuracy, cross_entropy], 
-        Feed_dict={x: mnist.test.images, t: mnist.test.labels}) 
+    if step % 100 == 0:
+      acc, loss = sess.run([accuracy, cross_entropy], 
+        feed_dict={x: batch_xs, t: batch_ys})
+      acc, loss = sess.run([accuracy, cross_entropy], 
+        feed_dict={x: mnist.test.images, t: mnist.test.labels}) 
 \end{python}
 \end{leftbar}
 
 According to statistics, after \ascii{1000} iterations, you get an accuracy of about \percent{92}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-slp-accuracy.png}
-\caption{Visualization: Single layer perceptron, running 1000 times step}
- \label{fig:mnist-slp-accuracy}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-slp-accuracy.png}
+  \caption{Visualization: Single layer perceptron, running 1000 times step}
+  \label{fig:mnist-slp-accuracy}
 \end{figure}
 
 \end{content}
 
+
 \section{Multilayer Perceptron}
-
 \begin{content}
-
 To further improve the accuracy, next try to build a multi-layer perceptron model of the \ascii{5} layer.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-5-layer.png}
-\caption{5 layer perceptron}
- \label{fig:mnist-5-layer}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-5-layer.png}
+  \caption{5 layer perceptron}
+  \label{fig:mnist-5-layer}
 \end{figure}
 
-\subsection{theory basis}
 
-\subsubsection{symbol definition}
+\subsection{Theory basis}
 
+\subsubsection{Symbol definition}
 To formally describe the multilayer perceptron model, some common symbols are defined here.
 
 \begin{itemize}
@@ -424,59 +410,57 @@ To formally describe the multilayer perceptron model, some common symbols are de
    \item \alert{$ S = \{ ({x^{(t)}},{y^{(t)}});t = 1,2,...,m\} $}: sample space
  \end{itemize}
 
-\subsubsection{forward propagation}
 
+\subsubsection{Forward propagation}
 $z^{(\ell )}$ represents the linear weighted sum of the $\ell$ layer, which is output by $\ell - 1$ layer $a^{(\ell - 1)}$ and $\ell The weight matrix of the $ layer is multiplied by $w^{(\ell )}$, plus the offset vector of the $\ell$ layer.
-
-By extension, the output of the $\ell$ layer is derived from the activation function $f({z^{(\ell )}})$. Where $a^{(0)}} = x, y = {a^{({n_\ell })}}$.
+By extension, the output of the $\ell$ layer is derived from the activation function $f({z^{(\ell )}})$. Where ${a^{(0)}} = x, y = {a^{({n_\ell })}}$.
 
 \[\begin{gathered}
-  {z^{(\ell )}} = {w^{(\ell )}}{a^{(\ell - 1)}} + {b^{(\ell )}} \hfill \\
+  {z^{(\ell )}} = {w^{(\ell )}}{a^{(\ell  - 1)}} + {b^{(\ell )}} \hfill \\
   {a^{(\ell )}} = f({z^{(\ell )}}) \hfill \\
   {a^{(0)}} = x \hfill \\
   y = {a^{({n_\ell })}} \hfill \\ 
 \end{gathered} \]
 
-\subsubsection{backward propagation}
-
+\subsubsection{Backward propagation}
 Then, the error of each layer is calculated in the reverse direction. The error of the $\ell$ layer is calculated from the error of the $\ell + 1$ layer. Specifically, at the output layer, the error between the predicted value $a^{({n_\ell })}$ and $y$ can be directly calculated.
 
 \[{\delta ^{(\ell)}} = \left\{ \begin{gathered}
-  {({w^{(\ell + 1)}})^T}{\delta ^{(\ell + 1)}} \circ f\,'({z^{(\ell)}}); {\text{ }}\ell \ne {n_\ell} \hfill \\
-  ({a^{(\ell)}} - y) \circ f\,'({z^{(\ell)}}); {\text{ }}\ell = {n_\ell} \hfill \ \ 
-\end{gathered} \right.\]
+  {({w^{(\ell + 1)}})^T}{\delta ^{(\ell + 1)}} \circ f\,'({z^{(\ell)}});{\text{  }}\ell \ne {n_\ell} \hfill \\
+  ({a^{(\ell)}} - y) \circ f\,'({z^{(\ell)}}); {\text{  }}\ell = {n_\ell} \hfill \\ 
+\end{gathered}  \right.\]
 
 The loss function $J(w,b)$ can be calculated relative to the gradient matrix of the layers and the gradient of the offset vector.
 
 \[\begin{gathered}
-  {\nabla _{{w^{(\ell )}}}}J(w,b;x,y) = {\delta ^{(\ell )}}{\left( {{a^{(\ Ell - 1)}}} \right)^T} \hfill \\
+  {\nabla _{{w^{(\ell )}}}}J(w,b;x,y) = {\delta ^{(\ell )}}{\left( {{a^{(\ell  - 1)}}} \right)^T} \hfill \\
   {\nabla _{{b^{(\ell )}}}}J(w,b;x,y) = {\delta ^{(\ell )}} \hfill \\
-  \ell = 1,2,...,{n_\ell } \hfill \\ 
+  \ell  = 1,2,...,{n_\ell } \hfill \\ 
 \end{gathered} \]
 
 Generally, in the actual system implementation, the downstream layer transfers the gradient to the upper layer, and the upper layer directly completes the calculation of the gradient.
 
-\subsubsection{parameter update}
 
+\subsubsection{Parameters update}
 For a given sample dataset $ S = \{ ({x^{(t)}}, {y^{(t)}});t = 1,2,...,m\} $, according to the gradient The back-propagation formula can calculate the amount of change in the parameter update.
 
 \[\begin{aligned}
-  \Delta {w^{(\ell )}} \leftarrow \Delta {w^{(\ell )}} + {\nabla _{{w^{(\ell )}}}}J\left( {w ,b;{x^{(t)}},{y^{(t)}}} \right) \\ 
-  \Delta {b^{(\ell )}} \leftarrow \Delta {b^{(\ell )}} + {\nabla _{{b^{(\ell )}}}}J\left( {w ,b;{x^{(t)}},{y^{(t)}}} \right) \\ 
-  t = 1,2,...,m;\ell = 1,2,...,{n_\ell } \\ 
+  \Delta {w^{(\ell )}} \leftarrow \Delta {w^{(\ell )}} + {\nabla _{{w^{(\ell )}}}}J\left( {w,b;{x^{(t)}},{y^{(t)}}} \right) \\ 
+  \Delta {b^{(\ell )}} \leftarrow \Delta {b^{(\ell )}} + {\nabla _{{b^{(\ell )}}}}J\left( {w,b;{x^{(t)}},{y^{(t)}}} \right) \\ 
+  t = 1,2,...,m;\ell  = 1,2,...,{n_\ell } \\ 
 \end{aligned} \]
 
 Finally, the gradient descent algorithm is executed to complete an iterative update of the training parameters.
 
 \[\begin{aligned}
-  {w^{(\ell )}} \leftarrow & {w^{(\ell )}} - \alpha \left( {\frac{{\Delta {w^{(\ell )}}}}{m }} \right) \\ 
-  {b^{(\ell )}} \leftarrow & {b^{(\ell )}} - \alpha \frac{{\Delta {b^{(\ell )}}}}{m} \\ 
-  \ell = & 1,2,...,{n_\ell } \\
+  {w^{(\ell )}} \leftarrow  & {w^{(\ell )}} - \alpha \left( {\frac{{\Delta {w^{(\ell )}}}}{m}} \right) \\ 
+  {b^{(\ell )}} \leftarrow  & {b^{(\ell )}} - \alpha \frac{{\Delta {b^{(\ell )}}}}{m} \\ 
+  \ell  = & 1,2,...,{n_\ell }  \\
 \end{aligned} \]
 
-\subsection{define model}
 
-Compared to the single-layer perceptron tried in the previous section, when defining the weight of each implicit layer, the constant value of the variable is not used to define the initial value of the variable, but a random value that satisfies a certain data distribution feature is used.
+\subsection{Define a model}
+Compared to a single-layer perceptron described in the previous section, when defining the weight of each implicit layer, the constant value of the variable is not used to define the initial value of the variable, but a random value that satisfies a certain data distribution feature is used.
 
 \begin{leftbar}
 \begin{python}
@@ -485,20 +469,20 @@ L = 100
 M = 60
 N = 30
 
-W1 = tf.Variable(tf.truncated_normal([28*28, K] , stddev=0.1)) 
-B1 = tf.Variable(tf.zeros([K]))
+w1 = tf.Variable(tf.truncated_normal([28*28, K] ,stddev=0.1)) 
+b1 = tf.Variable(tf.zeros([K]))
 
-W2 = tf.Variable(tf.truncated_normal([K, L], stddev=0.1))
-B2 = tf.Variable(tf.zeros([L]))
+w2 = tf.Variable(tf.truncated_normal([K, L], stddev=0.1))
+b2 = tf.Variable(tf.zeros([L]))
 
-W3 = tf.Variable(tf.truncated_normal([L, M], stddev=0.1)) 
-B3 = tf.Variable(tf.zeros([M]))
+w3 = tf.Variable(tf.truncated_normal([L, M], stddev=0.1)) 
+b3 = tf.Variable(tf.zeros([M]))
 
-W4 = tf.Variable(tf.truncated_normal([M, N], stddev=0.1)) 
-B4 = tf.Variable(tf.zeros([N]))
+w4 = tf.Variable(tf.truncated_normal([M, N], stddev=0.1)) 
+b4 = tf.Variable(tf.zeros([N]))
 
-W5 = tf.Variable(tf.truncated_normal([N, 10], stddev=0.1)) 
-B5 = tf.Variable(tf.zeros([10]))
+w5 = tf.Variable(tf.truncated_normal([N, 10], stddev=0.1)) 
+b5 = tf.Variable(tf.zeros([10]))
 \end{python}
 \end{leftbar}
 
@@ -506,42 +490,42 @@ The activation function of \ascii{sigmoid} is used when defining each implicit l
 
 \begin{leftbar}
 \begin{python}
-Y1 = tf.nn.sigmoid(tf.matmul(x, w1) + b1)
-Y2 = tf.nn.sigmoid(tf.matmul(y1, w2) + b2)
-Y3 = tf.nn.sigmoid(tf.matmul(y2, w3) + b3)
-Y4 = tf.nn.sigmoid(tf.matmul(y3, w4) + b4)
-y = tf.nn.softmax(tf.matmul(y4, w5) + b5)
+y1 = tf.nn.sigmoid(tf.matmul(x,  w1) + b1)
+y2 = tf.nn.sigmoid(tf.matmul(y1, w2) + b2)
+y3 = tf.nn.sigmoid(tf.matmul(y2, w3) + b3)
+y4 = tf.nn.sigmoid(tf.matmul(y3, w4) + b4)
+y  = tf.nn.softmax(tf.matmul(y4, w5) + b5)
 \end{python}
 \end{leftbar}
 
 After iterative model training, you can get an accuracy of about \percent{97}. However, as the level of the network increases, the model becomes more and more difficult to converge. Next, try some common tuning techniques to improve the performance of your network.
 
+
 \subsection{Optimization Technology}
 
 \subsubsection{Activation function: ReLU}
-
 In the depth model, it is not appropriate to use the \ascii{sigmoid} activation function. It will squeeze all the values ​​between \ascii{0} and \ascii{1}; as the network level increases, the gradient disappears.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-relu.png}
-\caption{ReLU activation function}
- \label{fig:mnist-relu}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-relu.png}
+  \caption{ReLU activation function}
+  \label{fig:mnist-relu}
 \end{figure}
 
 You can use \ascii{ReLU(Rectified Linear Unit)} instead of \ascii{sigmoid}, which not only avoids some problems caused by \ascii{sigmoid}, but also speeds up the initial convergence.
 
 \begin{leftbar}
 \begin{python}
-Y1 = tf.nn.relu(tf.matmul(x, w1) + b1)
-Y2 = tf.nn.relu(tf.matmul(y1, w2) + b2)
-Y3 = tf.nn.relu(tf.matmul(y2, w3) + b3)
-Y4 = tf.nn.relu(tf.matmul(y3, w4) + b4)
-y = tf.nn.softmax(tf.matmul(y4, w5) + b5)
+y1 = tf.nn.relu(tf.matmul(x,  w1) + b1)
+y2 = tf.nn.relu(tf.matmul(y1, w2) + b2)
+y3 = tf.nn.relu(tf.matmul(y2, w3) + b3)
+y4 = tf.nn.relu(tf.matmul(y3, w4) + b4)
+y  = tf.nn.softmax(tf.matmul(y4, w5) + b5)
 \end{python}
 \end{leftbar}
 
-In addition, if the \ascii{ReLU} activation function is used, the offset vector is often initialized to a small positive value so that the neuron will work in the non-zero region of \ascii{ReLU} at the beginning.
+In addition, if the \ascii{ReLU} activation function is used, a bias vector is often initialized to a small positive value so that the neuron will work in the non-zero region of \ascii{ReLU} at the beginning.
 
 \begin{leftbar}
 \begin{python}
@@ -550,63 +534,61 @@ L = 100
 M = 60
 N = 30
 
-W1 = tf.Variable(tf.truncated_normal([28*28, K] , stddev=0.1)) 
-B1 = tf.Variable(tf.ones([L])/10)
+w1 = tf.Variable(tf.truncated_normal([28*28, K] ,stddev=0.1)) 
+b1 = tf.Variable(tf.ones([L])/10)
 
-W2 = tf.Variable(tf.truncated_normal([K, L], stddev=0.1))
-B2 = tf.Variable(tf.ones([L])/10)
+w2 = tf.Variable(tf.truncated_normal([K, L], stddev=0.1))
+b2 = tf.Variable(tf.ones([L])/10)
 
-W3 = tf.Variable(tf.truncated_normal([L, M], stddev=0.1)) 
-B3 = tf.Variable(tf.ones([L])/10)
+w3 = tf.Variable(tf.truncated_normal([L, M], stddev=0.1)) 
+b3 = tf.Variable(tf.ones([L])/10)
 
-W4 = tf.Variable(tf.truncated_normal([M, N], stddev=0.1)) 
-B4 = tf.Variable(tf.ones([L])/10)
+w4 = tf.Variable(tf.truncated_normal([M, N], stddev=0.1)) 
+b4 = tf.Variable(tf.ones([L])/10)
 
-W5 = tf.Variable(tf.truncated_normal([N, 10], stddev=0.1)) 
-B5 = tf.Variable(tf.ones([L])/10)
+w5 = tf.Variable(tf.truncated_normal([N, 10], stddev=0.1)) 
+b5 = tf.Variable(tf.ones([L])/10)
 \end{python}
 \end{leftbar}
 
 As shown by \refig{mnist-sigmoid-to-relu}, the previous \ascii{300} iterations, using \ascii{ReLU} relative to the use of \ascii{sigmoid}, the initial convergence speed is significantly improved.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-sigmoid-to-relu.png}
-\caption{Apply ReLU activation function: initial convergence speed is significantly improved}
- \label{fig:mnist-sigmoid-to-relu}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-sigmoid-to-relu.png}
+  \caption{Apply ReLU activation function: initial convergence speed is significantly improved}
+  \label{fig:mnist-sigmoid-to-relu}
 \end{figure}
 
-\subsubsection{不定值}
 
+\subsubsection{Undefined values (NaNs)}
 In order to obtain a stable numerical calculation result, it is avoided that the accuracy dip is \ascii{0}. Tracing the implementation code, it is possible to introduce \code{log(0)} to calculate the \code{NaN} indefinite value. You can use \code{softmax\_cross\_entropy\_with\_logits} to calculate the cross entropy loss and use the linear weighted sum as its input (often called \ascii{logits}).
 
 \begin{leftbar}
 \begin{python}
-Logits = tf.matmul(y4, w5) + b5
+logits = tf.matmul(y4, w5) + b5
 y = tf.nn.softmax(logits)
-
-Cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
-  Logits=logits, labels=t)
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=t)
 \end{python}
 \end{leftbar}
 
-\subsubsection{learning rate decay}
 
+\subsubsection{Learning rate decay}
 With the increase of the network level and the application of relevant optimization techniques, the accuracy of the model can be obtained by \percent{98}, but it is difficult to obtain a stable accuracy. As shown by \refig{mnist-lr-too-larger}, the accuracy and loss jitter are quite obvious.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-lr-too-larger.png}
-\caption{noise jitter: learning rate is too large}
- \label{fig:mnist-lr-too-larger}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-lr-too-larger.png}
+  \caption{noise jitter: learning rate is too large}
+  \label{fig:mnist-lr-too-larger}
 \end{figure}
 
 Better optimization algorithms can be used, such as \code{AdamOptimizer}. With the number of iterations, the learning rate is exponentially attenuated, and a more stable accuracy and loss curve can be obtained later in the model training.
 
 \begin{leftbar}
 \begin{python}
-Lr = tf.placeholder(tf.float32)
-Train_step = tf.train.AdamOptimizer(lr).minimize(cross_entropy)
+lr = tf.placeholder(tf.float32)
+train_step = tf.train.AdamOptimizer(lr).minimize(cross_entropy)
 \end{python}
 \end{leftbar}
 
@@ -614,67 +596,67 @@ In each iterative training process, the learning rate of the current iteration \
 
 \begin{leftbar}
 \begin{python}
-Def lr(step):
-  Max_lr, min_lr, decay_speed = 0.003, 0.0001, 2000.0
-  Return min_lr + (max_lr - min_lr) * math.exp(-step/decay_speed)
+def lr(step):
+  max_lr, min_lr, decay_speed = 0.003, 0.0001, 2000.0
+  return min_lr + (max_lr - min_lr) * math.exp(-step/decay_speed)
 
-With tf.Session() as sess:
-  For step in range(10000):
-    Batch_xs, batch_ys = mnist.train.next_batch(100)
-    Sess.run(train_step, 
-      Feed_dict={x: batch_xs, t: batch_ys, pkeep: 0.75, lr: lr(step)})
+with tf.Session() as sess:
+  for step in range(10000):
+    batch_xs, batch_ys = mnist.train.next_batch(100)
+    sess.run(train_step, 
+      feed_dict={x: batch_xs, t: batch_ys, pkeep: 0.75, lr: lr(step)})
 \end{python}
 \end{leftbar}
 
 As shown in \refig{mnist-apply-learning-rate-decay}, after applying the learning rate fading method, a more stable accuracy and loss curve can be obtained.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-apply-learning-rate-decay.png}
-\caption{After applying the Adam optimization algorithm, the accuracy and loss tend to be stable}
- \label{fig:mnist-apply-learning-rate-decay}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-apply-learning-rate-decay.png}
+  \caption{After applying the Adam optimization algorithm, the accuracy and loss tend to be stable}
+  \label{fig:mnist-apply-learning-rate-decay}
 \end{figure}
 
-\subsubsection{Apply Dropout}
 
+\subsubsection{Apply Dropout}
 However, the loss curve is separated from the training set and the test set, and there is a significant over-fitting phenomenon. That is, the model performs well on the training dataset, but there is a rebound in the test dataset, and the model lacks sufficient generalization ability.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-overfitting.png}
-\caption{over-fitting}
- \label{fig:mnist-overfitting}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-overfitting.png}
+  \caption{over-fitting}
+  \label{fig:mnist-overfitting}
 \end{figure}
 
 As shown in \refig{mnist-dropout}, the \ascii{dropout} operation is performed on the output of the hidden layer during training, and the output of the neuron is randomly discarded with the probability of \code{1 - pkeep}, and the gradient is propagated in the reverse direction. The corresponding weights are no longer updated. Restoring the output of all neurons during reasoning indirectly improves the generalization ability of the network.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-dropout.png}
-\caption{Dropout method}
- \label{fig:mnist-dropout}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-dropout.png}
+  \caption{Dropout method}
+  \label{fig:mnist-dropout}
 \end{figure}
 
 When using \tf{} to implement \ascii{dropout} operation, first define a super parameter \code{pkeep}, indicating that the hidden layer neurons are randomly reserved with probability \code{pkeep}, with probability \code{1 - pkeep} Discard randomly.
 
 \begin{leftbar}
 \begin{python}
-Pkeep = tf.placeholder(tf.float32)
+pkeep = tf.placeholder(tf.float32)
 
-Y1 = tf.nn.relu(tf.matmul(x, w1) + b1)
-Y1d = tf.nn.dropout(y1, pkeep)
+y1 = tf.nn.relu(tf.matmul(x,  w1) + b1)
+y1d = tf.nn.dropout(y1, pkeep)
 
-Y2 = tf.nn.relu(tf.matmul(y1d, w2) + b2)
-Y2d = tf.nn.dropout(y2, pkeep)
+y2 = tf.nn.relu(tf.matmul(y1d, w2) + b2)
+y2d = tf.nn.dropout(y2, pkeep)
 
-Y3 = tf.nn.relu(tf.matmul(y2d, w3) + b3)
-Y3d = tf.nn.dropout(y3, pkeep)
+y3 = tf.nn.relu(tf.matmul(y2d, w3) + b3)
+y3d = tf.nn.dropout(y3, pkeep)
 
-Y4 = tf.nn.relu(tf.matmul(y3d, w4) + b4)
-Y4d = tf.nn.dropout(y4, pkeep)
+y4 = tf.nn.relu(tf.matmul(y3d, w4) + b4)
+y4d = tf.nn.dropout(y4, pkeep)
 
-Logits = tf.matmul(y4d, w5) + b5
-y = tf.nn.softmax(Ylogits)
+logits = tf.matmul(y4d, w5) + b5
+y = tf.nn.softmax(logits)
 \end{python}
 \end{leftbar}
 
@@ -682,17 +664,17 @@ In training, the value of the super parameter \code{pkeep} is less than \ascii{1
 
 \begin{leftbar}
 \begin{python}
-With tf.Session() as sess:
-  For step in range(10000):
-    Batch_xs, batch_ys = mnist.train.next_batch(100)
-    Sess.run(train_step, 
-      Feed_dict={x: batch_xs, t: batch_ys, pkeep: 0.75, lr: lr(step)})
+with tf.Session() as sess:
+  for step in range(10000):
+    batch_xs, batch_ys = mnist.train.next_batch(100)
+    sess.run(train_step, 
+      feed_dict={x: batch_xs, t: batch_ys, pkeep: 0.75, lr: lr(step)})
 
-    If step % 100 == 0:
-      Acc, loss = sess.run([accuracy, cross_entropy], 
-        Feed_dict={x: batch_xs, t: batch_ys, pkeep: 1})
-      Acc, loss = sess.run([accuracy, cross_entropy], 
-        Feed_dict={x: mnist.test.images, t: mnist.test.labels, pkeep: 1})
+    if step % 100 == 0:
+      acc, loss = sess.run([accuracy, cross_entropy], 
+        feed_dict={x: batch_xs, t: batch_ys, pkeep: 1})
+      acc, loss = sess.run([accuracy, cross_entropy], 
+        feed_dict={x: mnist.test.images, t: mnist.test.labels, pkeep: 1})
 \end{python}
 \end{leftbar}
 
@@ -703,131 +685,133 @@ That is to say, there are other more profound reasons for the overfitting proble
 Next, by attempting to construct a convolutional neural network, features are extracted from the original image, thereby preserving the spatial arrangement information of the pixels, thereby improving the performance of the network.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-apply-dropout-result.png}
-\caption{After implementing Dropout, the loss curve of the training set and the test set coincide again}
- \label{fig:mnist-apply-dropout-result}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-apply-dropout-result.png}
+  \caption{After implementing Dropout, the loss curve of the training set and the test set coincide again}
+  \label{fig:mnist-apply-dropout-result}
 \end{figure}
 
 \end{content}
 
-\section{convolution network}
 
+\section{Convolution network}
 \begin{content}
+
 
 \subsection{Features and Advantages}
 
 As the network level increases, the problem of the gradient of the fully connected network disappears, and the convergence speed becomes slower and slower. Compared with fully connected networks, convolutional networks have \ascii{3} main features, which reduce the number of network parameters and improve the generalization ability of the network.
 
-\subsubsection{local connection}
 
+\subsubsection{Local connectivity}
 The convolutional network implements a local connection relative to a fully connected network, ie each neuron does not have a connection to the neurons of the previous layer. As shown on the left side of \refig{mnist-conv-local-conn}, if there is a $1000\times 1000 $pixel image, and its $10^6$ hidden layer of neurons. In a fully connected network, you will have $10^3\times 10^3 \times 10^6 = 10^{12} $ training parameters.
 
 In fact, it is not necessary for each neuron to be connected to the upper layer of neurons. As shown on the right side of \refig{mnist-conv-local-conn}, if each hidden layer of neurons is only connected to the local image of the previous $10\times 10 $, $10^6 $ hidden layer The neurons need $10^6\times 10^2 = 10^8$ network connections, compared to the reduced \ascii{4} orders of magnitude.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-conv-local-conn.png}
-\caption{local connection}
- \label{fig:mnist-conv-local-conn}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-conv-local-conn.png}
+  \caption{local connection}
+  \label{fig:mnist-conv-local-conn}
 \end{figure}
 
-\subsubsection{rights sharing}
 
+\subsubsection{Weight sharing}
 To further reduce network connectivity, the convolutional network also implements weight sharing; that is, each group of connections shares the same weight, rather than having different weights for each connection. As shown on the right side of \refig{mnist-conv-local-conn-2}, each hidden layer of neurons is only connected to a partial image of $10\times 10 $ and shares the weight of $ 10 \times 10 $ Matrix, independent of the number of neurons in the hidden layer. Relative to the local connection network on the left side of \refig{mnist-conv-local-conn-2}, $10^8$ parameters are required, and the convolution layer only needs $10^2$ parameters.
 
 As shown on the right side of \refig{mnist-conv-local-conn-2}, multiple filters can be used in order to extract different features, such as image features of different edges. For example, if there are \ascii{100} filters, you need $10^4$ parameters.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-conv-local-conn-2.png}
-\caption{weight sharing, multiple filters}
- \label{fig:mnist-conv-local-conn-2}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-conv-local-conn-2.png}
+  \caption{weight sharing, multiple filters}
+  \label{fig:mnist-conv-local-conn-2}
 \end{figure}
 
-\subsubsection{downsampling}
 
+\subsubsection{Downsampling}
 As shown in \refig{mnist-subsample}, downsampling is optionally implemented to further reduce network parameters and improve the robustness of the model.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-subsample.png}
-\caption{downsampling}
- \label{fig:mnist-subsample}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-subsample.png}
+  \caption{downsampling}
+  \label{fig:mnist-subsample}
 \end{figure}
 
-\subsection{convolution operation}
+
+\subsection{Convolution operation}
 
 The convolution operation is a computationally intensive \ascii{OP}. As shown in \refig{mnist-conv2d-gif}, there is a weight vector \code{w[3,3,3,2]}, where the number of input channels is \ascii{3} and the number of output channels is \ascii{ 2}, the convolution kernel size is $3 \times 3$.
 
 Obviously, the number of channels of the input image is equivalent to the depth of the convolution kernel; the number of convolution kernels is equal to the number of output channels of \ascii{Feature Map}. In addition, in order to capture the edge features of the image, a circle of zero values ​​(\ascii{padding}) is added to the periphery of the original image. For each convolution calculation, the step size of the move (\ascii{stride}) is \ascii{2}. Therefore, the final output of the \ascii{Feature Map} is $3 \times 3$.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/mnist-conv2d-gif.png}
-\caption{convolution operation}
- \label{fig:mnist-conv2d-gif}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/mnist-conv2d-gif.png}
+  \caption{convolution operation}
+  \label{fig:mnist-conv2d-gif}
 \end{figure}
 
-\subsubsection{example}
 
+\subsubsection{Example}
 If there is a $32 \times 32 \times 3$ image, the convolution kernel size is $5 \times 5 \times 3$. The depth of the convolution kernel is equal to the number of input channels of the picture. As shown in \refig{mnist-conv-1dot}, the convolution kernel performs a dot product with a block of size $5 \times 5 \times 3$ in the image to get a value.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/convolutional-layer-2.png}
-\caption{Convolution operation: dot product operation of convolution kernel and picture block}
- \label{fig:mnist-conv-1dot}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/convolutional-layer-2.png}
+  \caption{Convolution operation: dot product operation of convolution kernel and picture block}
+  \label{fig:mnist-conv-1dot}
 \end{figure}
 
 As shown in \refig{mnist-conv-ndot}, the convolution kernel traverses the entire image space, resulting in a \ascii{Feature Map} with a size of $28 \times 28 \times 1$.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/convolutional-layer-3.png}
-\caption{Convolution operation: Convolution kernel traverses the picture in steps of 1}
- \label{fig:mnist-conv-ndot}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/convolutional-layer-3.png}
+  \caption{Convolution operation: Convolution kernel traverses the picture in steps of 1}
+  \label{fig:mnist-conv-ndot}
 \end{figure}
 
 As shown in \refig{mnist-conv-multi-filters}, if there are multiple convolution kernels, get multiple \ascii{Feature Map}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/convolutional-layer-4.png}
-\caption{Convolution operation: multiple convolution kernels}
- \label{fig:mnist-conv-multi-filters}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/convolutional-layer-4.png}
+  \caption{Convolution operation: multiple convolution kernels}
+  \label{fig:mnist-conv-multi-filters}
 \end{figure}
+
 
 \subsection{Formula derivation}
 
-\subsubsection{forward propagation}
-
+\subsubsection{Forward propagation}
 $Z^{(\ell )}$ represents the linear weighted sum of the $\ell$ layer, which is output by $\ell - 1$ layer $A^{(\ell - 1)}$ and $\ell The weight matrix of the $ layer is $W^{(\ell )}$ convolution, plus the offset vector of the $\ell$ layer.
 
-By extension, the output of the $\ell$ layer is derived from the activation function $f({Z^{(\ell )}})$. Where $A^{(0)}} = x, y = {A^{({n_\ell })}}$.
+By extension, the output of the $\ell$ layer is derived from the activation function $f({Z^{(\ell )}})$. Where ${A^{(0)}} = x, y = {A^{({n_\ell })}}$.
 
 \[\begin{gathered}
-  {Z^{(\ell )}} = {A^{(\ell - 1)}} * {W^{(\ell )}} + {b^{(\ell )}} \hfill \\
+  {Z^{(\ell )}} = {A^{(\ell  - 1)}} * {W^{(\ell )}} + {b^{(\ell )}} \hfill \\
   {A^{(\ell )}} = f\left( {{Z^{(\ell )}}} \right) \hfill \\ 
 \end{gathered} \]
 
-\subsubsection{backward propagation}
 
+\subsubsection{Backward propagation}
 Then, the error of each layer is calculated in the reverse direction. The error of the $\ell$ layer is calculated from the error of the $\ell + 1$ layer. Compared to a fully connected network, here is a convolution operation, not a matrix multiplication operation.
 
 \[
-{\delta ^{(\ell )}} = {\delta ^{(\ell + 1)}} * {W^{(\ell + 1)}} \circ f\,'\left( {{z ^{(\ell )}}} \right)
+{\delta ^{(\ell )}} = {\delta ^{(\ell  + 1)}} * {W^{(\ell  + 1)}} \circ f\,'\left( {{z^{(\ell )}}} \right)
 \]
 
 The loss function $J(w,b)$ can be calculated relative to the gradient matrix of the layers and the gradient of the offset vector.
 
 \[\begin{aligned}
-  {\nabla _{{W^{(\ell )}}}}J(W,b) = & {A^{(\ell - 1)}} * {\delta ^{(\ell )}} \ \ 
-  {\nabla _{{b^{(\ell )}}}}J(W,b) = & {\delta ^{(\ell )}} \\ 
+  {\nabla _{{W^{(\ell )}}}}J(W,b) =  & {A^{(\ell  - 1)}} * {\delta ^{(\ell )}} \\ 
+  {\nabla _{{b^{(\ell )}}}}J(W,b) =  & {\delta ^{(\ell )}} \\ 
 \end{aligned} \]
 
-\subsection{implement convolutional network}
 
+\subsection{Implement convolutional network}
 To implement a convolutional network, you first need to define a weight matrix for each layer of filters to extract features of the image. The weight matrix appears in the image as a filter that extracts specific information from the original image matrix. A weight matrix may be used to extract image edge information, one weight matrix may be used to extract a particular color, and another weight matrix may be used to blur unwanted noise.
 
 When there are multiple convolutional layers, the initial layer tends to extract more general features; as the network structure becomes deeper, the features extracted by the weight matrix become more and more complex, and are more and more applicable to the specific problems at hand.
@@ -835,19 +819,19 @@ When there are multiple convolutional layers, the initial layer tends to extract
 In general, filters often use a tensor representation of the \ascii{4} dimension. The first two dimensions represent the size of the filter, the third dimension represents the number of channels input, and the fourth dimension represents the number of channels output. As shown in \refig{mnist-filter}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.4\textwidth]{figures/mnist-filter.png}
-\caption{Convolutional layer filter}
- \label{fig:mnist-filter}
+  \centering
+  \includegraphics[width=0.4\textwidth]{figures/mnist-filter.png}
+  \caption{Convolutional layer filter}
+  \label{fig:mnist-filter}
 \end{figure}
 
 As shown in \refig{mnist-conv2d-1}, \ascii{3} convolutional layers and \ascii{2} fully connected layers are constructed. Among them, the middle hidden layer uses the activation function of \ascii{ReLU}, and the last output layer uses the activation function of \ascii{softmax}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-1.png}
-\caption{implementation of convolutional neural networks}
- \label{fig:mnist-conv2d-1}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-1.png}
+  \caption{implementation of convolutional neural networks}
+  \label{fig:mnist-conv2d-1}
 \end{figure}
 
 Use \tf{} to implement a convolutional network, as shown in the following code.
@@ -859,32 +843,32 @@ L = 8
 M = 12
 N = 200
 
-W1 = tf.Variable(tf.truncated_normal([5, 5, 1, K], stddev=0.1))
-B1 = tf.Variable(tf.ones([K])/10)
+w1 = tf.Variable(tf.truncated_normal([5, 5, 1, K], stddev=0.1))
+b1 = tf.Variable(tf.ones([K])/10)
 
-W2 = tf.Variable(tf.truncated_normal([5, 5, K, L], stddev=0.1))
-B2 = tf.Variable(tf.ones([L])/10)
+w2 = tf.Variable(tf.truncated_normal([5, 5, K, L], stddev=0.1))
+b2 = tf.Variable(tf.ones([L])/10)
 
-W3 = tf.Variable(tf.truncated_normal([4, 4, L, M], stddev=0.1))
-B3 = tf.Variable(tf.ones([M])/10)
+w3 = tf.Variable(tf.truncated_normal([4, 4, L, M], stddev=0.1))
+b3 = tf.Variable(tf.ones([M])/10)
 
-W4 = tf.Variable(tf.truncated_normal([7 * 7 * M, N], stddev=0.1))
-B4 = tf.Variable(tf.ones([N])/10)
+w4 = tf.Variable(tf.truncated_normal([7 * 7 * M, N], stddev=0.1))
+b4 = tf.Variable(tf.ones([N])/10)
 
-W5 = tf.Variable(tf.truncated_normal([N, 10], stddev=0.1))
-B5 = tf.Variable(tf.ones([10])/10)
+w5 = tf.Variable(tf.truncated_normal([N, 10], stddev=0.1))
+b5 = tf.Variable(tf.ones([10])/10)
 
-Y1 = tf.nn.relu(tf.nn.conv2d(
-       x, w1, strides=[1, 1, 1, 1], padding='SAME') + b1)
-Y2 = tf.nn.relu(tf.nn.conv2d(
-       Y1, w2, strides=[1, 2, 2, 1], padding='SAME') + b2)
-Y3 = tf.nn.relu(tf.nn.conv2d(
-       Y2, w3, strides=[1, 2, 2, 1], padding='SAME') + b3)
+y1 = tf.nn.relu(tf.nn.conv2d(
+       x,  w1, strides=[1, 1, 1, 1], padding='SAME') + b1)
+y2 = tf.nn.relu(tf.nn.conv2d(
+       y1, w2, strides=[1, 2, 2, 1], padding='SAME') + b2)
+y3 = tf.nn.relu(tf.nn.conv2d(
+       y2, w3, strides=[1, 2, 2, 1], padding='SAME') + b3)
 
-Yy = tf.reshape(Y3, shape=[-1, 7 * 7 * M])
-Y4 = tf.nn.relu(tf.matmul(yy, w4) + b4)
+yy = tf.reshape(Y3, shape=[-1, 7 * 7 * M])
+y4 = tf.nn.relu(tf.matmul(yy, w4) + b4)
 
-Logits = tf.matmul(y4, w5) + b5
+logits = tf.matmul(y4, w5) + b5
 y = tf.nn.softmax(logits)
 \end{python}
 \end{leftbar}
@@ -892,23 +876,23 @@ y = tf.nn.softmax(logits)
 As shown in \refig{mnist-conv2d-1-result}, after $10^4$ training, you can get an accuracy of about \percent{98.9}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-1-result.png}
-\caption{Implementation of Convolutional Network: Can get the accuracy of \percent{98.9}}
- \label{fig:mnist-conv2d-1-result}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-1-result.png}
+  \caption{Implementation of Convolutional Network: Can get the accuracy of \percent{98.9}}
+  \label{fig:mnist-conv2d-1-result}
 \end{figure}
 
-\subsection{Enhanced Convolution Network}
 
+\subsection{Enhanced Convolution Network}
 As shown in \refig{mnist-conv2d-2}, the previous network hierarchy is preserved, and \ascii{3} convolutional layers and \ascii{2} fully connected layers are constructed. Among them, the middle hidden layer uses the activation function of \ascii{ReLU}, and the last output layer uses the activation function of \ascii{softmax}.
 
 However, more channels are used to extract more features than previous convolutional networks. At the same time, the \ascii{dropout} operation is implemented in the hidden layer of the full connection to enhance the generalization ability of the network.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-2.png}
-\caption{Improve Convolutional Neural Networks}
- \label{fig:mnist-conv2d-2}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-2.png}
+  \caption{Improve Convolutional Neural Networks}
+  \label{fig:mnist-conv2d-2}
 \end{figure}
 
 Use \tf{} to implement a larger convolutional network, as shown in the following code.
@@ -920,33 +904,33 @@ L = 12
 M = 24
 N = 200
 
-W1 = tf.Variable(tf.truncated_normal([6, 6, 1, K], stddev=0.1))
-B1 = tf.Variable(tf.ones([K])/10)
+w1 = tf.Variable(tf.truncated_normal([6, 6, 1, K], stddev=0.1))
+b1 = tf.Variable(tf.ones([K])/10)
 
-W2 = tf.Variable(tf.truncated_normal([5, 5, K, L], stddev=0.1))
-B2 = tf.Variable(tf.ones([L])/10)
+w2 = tf.Variable(tf.truncated_normal([5, 5, K, L], stddev=0.1))
+b2 = tf.Variable(tf.ones([L])/10)
 
-W3 = tf.Variable(tf.truncated_normal([4, 4, L, M], stddev=0.1))
-B3 = tf.Variable(tf.ones([M])/10)
+w3 = tf.Variable(tf.truncated_normal([4, 4, L, M], stddev=0.1))
+b3 = tf.Variable(tf.ones([M])/10)
 
-W4 = tf.Variable(tf.truncated_normal([7 * 7 * M, N], stddev=0.1))
-B4 = tf.Variable(tf.ones([N])/10)
+w4 = tf.Variable(tf.truncated_normal([7 * 7 * M, N], stddev=0.1))
+b4 = tf.Variable(tf.ones([N])/10)
 
-W5 = tf.Variable(tf.truncated_normal([N, 10], stddev=0.1))
-B5 = tf.Variable(tf.ones([10])/10)
+w5 = tf.Variable(tf.truncated_normal([N, 10], stddev=0.1))
+b5 = tf.Variable(tf.ones([10])/10)
 
-Y1 = tf.nn.relu(tf.nn.conv2d(
-       x, w1, strides=[1, 1, 1, 1], padding='SAME') + b1)
-Y2 = tf.nn.relu(tf.nn.conv2d(
-       Y1, w2, strides=[1, 2, 2, 1], padding='SAME') + b2)
-Y3 = tf.nn.relu(tf.nn.conv2d(
-       Y2, w3, strides=[1, 2, 2, 1], padding='SAME') + b3)
+y1 = tf.nn.relu(tf.nn.conv2d(
+       x,  w1, strides=[1, 1, 1, 1], padding='SAME') + b1)
+y2 = tf.nn.relu(tf.nn.conv2d(
+       y1, w2, strides=[1, 2, 2, 1], padding='SAME') + b2)
+y3 = tf.nn.relu(tf.nn.conv2d(
+       y2, w3, strides=[1, 2, 2, 1], padding='SAME') + b3)
 
-Yy = tf.reshape(Y3, shape=[-1, 7 * 7 * M])
-Y4 = tf.nn.relu(tf.matmul(yy, w4) + b4)
-Y4d = tf.nn.dropout(y4, pkeep)
+yy = tf.reshape(Y3, shape=[-1, 7 * 7 * M])
+y4 = tf.nn.relu(tf.matmul(yy, w4) + b4)
+y4d = tf.nn.dropout(y4, pkeep)
 
-Logits = tf.matmul(y4d, w5) + b5
+logits = tf.matmul(y4d, w5) + b5
 y = tf.nn.softmax(logits)
 \end{python}
 \end{leftbar}
@@ -954,19 +938,19 @@ y = tf.nn.softmax(logits)
 As shown in \refig{mnist-conv2d-2-result}, after $10^4$ training, you can get an accuracy of about \percent{99.3}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-2-result.png}
-\caption{Enhanced convolutional network: Get the accuracy of \percent{99.3}}
- \label{fig:mnist-conv2d-2-result}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-2-result.png}
+  \caption{Enhanced convolutional network: Get the accuracy of \percent{99.3}}
+  \label{fig:mnist-conv2d-2-result}
 \end{figure}
 
 At the same time, the over-fitting problem has been significantly improved over previously implemented convolutional networks, as shown by \refig{mnist-conv2d-3-result}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-3-result.png}
-\caption{Enhanced convolutional network: Over-fitting problems are significantly improved}
- \label{fig:mnist-conv2d-3-result}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/mnist-conv2d-3-result.png}
+  \caption{Enhanced convolutional network: Over-fitting problems are significantly improved}
+  \label{fig:mnist-conv2d-3-result}
 \end{figure}
 
 \end{content}

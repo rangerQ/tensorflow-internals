@@ -1,57 +1,44 @@
 \chapter{Preface} 
 \label{ch:preface}
 
+\section*{Important notice}
+\begin{content}
+Original version of this book (\script{\url{https://github.com/horance-liu/tensorflow-internals}}) was translated semi-automatically with Google translate. It may and will contain typos in text, code and comments. It needs carefull proof-reading. The source code of this English version is hosted here - \script{\url{https://github.com/sergey-serebryakov/tensorflow-internals}}.
+\end{content}
+
 \section*{Book positioning}
-
 \begin{content}
-
-This is a book that analyzes how the \ascii{TensorFlow} kernel works. It doesn't tell you how to build a machine learning model using \ascii{TensorFlow} or the best practices for applying \ascii{TensorFlow}. This book will reveal the \ascii{TensorFlow} system architecture, domain model, working principle, and its implementation mode by analyzing the \ascii{TensorFlow} source code to reveal the inner knowledge.
-
+This is a book that analyzes how the \ascii{TensorFlow} kernel works. It doesn't tell you how to build a machine learning model using \ascii{TensorFlow} or the best practices for applying \ascii{TensorFlow}. This book will reveal the \ascii{TensorFlow} system architecture, domain model, working principle, and its implementation details by analyzing the \ascii{TensorFlow} source code to reveal the inner knowledge.
 \end{content}
 
 
-\section*{for readers}
-
+\section*{For readers}
 \begin{content}
-
-This book assumes that the reader already understands the basic concepts and theories related to machine learning, and understands the basic methodology related to machine learning. At the same time, the reader is assumed to be familiar with programming languages ​​such as \ascii{Python, C++}.
-
+This book assumes that the reader already understands the basic concepts and theories related to machine learning, and understands the basic methodology related to machine learning. At the same time, a reader is assumed to be familiar with programming languages ​​such as \ascii{Python} and \ascii{C++}.
 This book is suitable for system architects who are keen to learn more about \ascii{TensorFlow} kernel design, expect to improve \ascii{TensorFlow} system design and performance optimization, and explore the design and implementation of \ascii{TensorFlow} key technologies, \ascii{ AI} algorithm engineer, and \ascii{AI} software engineer.
-
 \end{content}
+
 
 \section*{Reading}
-
 \begin{content}
-
 For the first time reading this book, we recommend a step-by-step reading method; for advanced users, you can choose the chapter you are interested in reading. When using \ascii{TensorFlow} for the first time, it is recommended to build \ascii{TensorFlow} completely from the source code to understand how the system is built and to rationalize the basic component libraries it depends on.
-
 In addition, it is recommended to use \ascii{TensorFlow} to personally practice some specific applications in order to deepen the understanding and understanding of \ascii{TensorFlow} system behavior, familiar with the common \ascii{API} usage and working principle. It is highly recommended to read the \ascii{TensorFlow} key code while reading this book; for the best practices for reading code, check out the appendix \ascii{A}.
-
 \end{content}
 
-\section*{Release Notes}
 
+\section*{Release notes}
 \begin{content}
-
 At the time of this writing, the stable release of \ascii{TensorFlow} is \ascii{1.2}. It is not excluded that the part \ascii{API} that this book explains will be discarded in the future, and there is no guarantee that some system implementations will change or even be deleted in future versions.
-
 At the same time, in order to explain the nature of the problem more directly, some of the code in the book has been partially reconstructed; some exception handling branches have been deleted, or log printing, or even some optional parameter lists. However, such local reconstruction does not affect the reader's understanding of the main behavioral characteristics of the system, and is more conducive to the reader's mastery of the working principle of the system.
-
 At the same time, in order to simplify the expression of the calculation graph, the calculation graph in this book is not from \ascii{TensorBoard}, but a simplified, equivalent graph structure. Similarly, the simplified diagram structure does not reduce the reader's understanding and understanding of the real graph structure.
-
 \end{content}
+
 
 % \section*{English terminology}
-
 % \begin{content}
-
 % Because the articles I have written are for reading by relevant professionals, not for popular science books, so I keep the catchy English terminology in the professional field and deliberately do not translate. For example, the term \ascii{OP} is used directly in the book instead of being translated as "operation."
-
 % However, this will result in a large area of ​​Chinese-English mixed expression. Fortunately, the English terms used in the absolute part are nouns, and there are very few verbs or adjectives. However, the original subject semantics and logic will not be lost anyway.
-
 % Everything has exceptions. For unambiguous, short-form, semantically explicit terms are expressed in Chinese terms. In particular, when there is ambiguity in the expression of Chinese terms, both Chinese terms and English terms are marked. For example, checkpoint (\ascii{Checkpoint}), coordinator (\ascii{Coordinator}).
-
 % Generally, an unambiguous Chinese glossary is defined in \reftbl{glossary}.
 
 % \begin{table}[!htb]
@@ -178,25 +165,20 @@ At the same time, in order to simplify the expression of the calculation graph, 
 
 % \end{content}
 
-\section*{online help}
 
+\section*{Online help}
 \begin{content}
-
 In order to better communicate with readers, an errata has been created on \ascii{Github} with additional explanations. Due to limited personal experience and ability, it is inevitable to make mistakes in a limited time. If the reader is in the process of reading, if you find any errors, please help submit \ascii{Pull Request}, to prevent others from falling into the same trap, and to make knowledge sharing more smooth and easier, I will not be grateful.
-
 At the same time, welcome to follow my brief book. I will continue to update related articles and learn and progress with more friends.
-
 \begin{enum}
   \eitem{\ascii{Github: \script{\url{https://github.com/horance-liu/tensorflow-internals-errors}}}}
-  \eitem{\ascii{简书:\script{\url{http://www.jianshu.com/u/49d1f3b7049e}}}}
+  \eitem{\ascii{Shorter version:\script{\url{http://www.jianshu.com/u/49d1f3b7049e}}}}
+  \eitem{\ascii{Sources of this English version on Github: \script{\url{https://github.com/sergey-serebryakov/tensorflow-internals}}}}
 \end{enum}
-
 \end{content}
 
+
 \section*{Thank you}
-
 \begin{content}
-
 I am grateful to my wife, Liu Meihong, for completing the review of the book after work and for making many revisions.
-
 \end{content}

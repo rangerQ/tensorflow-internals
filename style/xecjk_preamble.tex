@@ -29,47 +29,47 @@
 %% set default Chinese font
 \setCJKmainfont[BoldFont={Adobe Heiti Std}, ItalicFont={Adobe Kaiti Std}]{Adobe Song Std}   %  FZBaoSongZ04
 %% set Chinese sans serif font
-\ setCJKsubscribe [BoldFont = {Adobe Head Std}, ItalicFont = {Adobe Cash Std}] {Adobe Cash Std}  
+\setCJKsansfont[BoldFont={Adobe Heiti Std}, ItalicFont={Adobe Kaiti Std}]{Adobe Kaiti Std} 
 %% set the monospaced font
-\ setCJKmonofont {Adobe Name Std}                            
-% \ SetCJKmonofont Monaco {}                            
+\setCJKmonofont{Adobe Heiti Std}                           
+%\setCJKmonofont{Monaco}                           
 
 %% English serif font
-\ setmainfont {Lucida Bright}                                  
+\setmainfont{Lucida Bright}                                 
 %% English monospaced font
 %\setmonofont{Courier}
-\ Setmonofont Monaco {}                             
-% \ setmonofont {Consoles}                              
+\setmonofont{Monaco}                             
+%\setmonofont{Consolas}                             
 %% English sans serif font
-\setsansfont{Optima}                                   
+\setsansfont{Optima}                                  
 
 %% defines new font
 \setCJKfamilyfont{song}{Adobe Song Std}                     
-\ setCJKfamilyfont {kai} {Adobe Kaiti Std}
-\ setCJKfamilyfont {hey} {Adobe Name Std}
+\setCJKfamilyfont{kai}{Adobe Kaiti Std}
+\setCJKfamilyfont{hei}{Adobe Heiti Std}
 \setCJKfamilyfont{fangsong}{Adobe Song Std}
 \setCJKfamilyfont{lisu}{LiShu}
 \setCJKfamilyfont{youyuan}{Adobe Kaiti Std}
 
 %% custom English font
-\ newfontfamily \ couriernew {Lucida Grande}
-\ Newfontfamily \ optimal} {Optima
-\ newfontfamily \ shine {Lucida Bright}
+\newfontfamily\couriernew{Lucida Grande}
+\newfontfamily\optima{Optima}
+\newfontfamily\lucida{Lucida Bright}
 
 \newcommand{\ascii}[1]{{\sffamily #1}}
-\ newcommand {\ speak} [1] {{\ \ n \ n \ n \ n}}}
-\ Renewcommand {\ emph} [1] {{\ hex # 1}}
+\newcommand{\speak}[1]{{\itshape #1}}
+\renewcommand{\emph}[1]{{\hei #1}}
 
 %% custom Song
 \newcommand{\song}{\CJKfamily{song}}                       
 %% custom body
-\ newcommand {\ kai} {\ CJKfamily {kai}}                         
+\newcommand{\kai}{\CJKfamily{kai}}                         
 %% custom blackbody
-\ Newcommand {\ hi} {\ CJKfamily {hi}}                         
+\newcommand{\hei}{\CJKfamily{hei}}                        
 %% custom imitation
-\newcommand{\fangsong}{\CJKfamily{fangsong}}               
+\newcommand{\fangsong}{\CJKfamily{fangsong}}              
 %% custom librarian
-\ newcommand {\ lisu} {\ CJKfamily {press}}                       
+\newcommand{\lisu}{\CJKfamily{lisu}}                       
 %% custom young round
 \newcommand{\youyuan}{\CJKfamily{youyuan}}                 
 
@@ -79,9 +79,9 @@
 %%%%%%%% ------------------------------------------ ------------------------------
 %%%% Some redefinitions about Chinese documents
 
-Redefinition of the %% mathematical formula theorem
+%% Redefinition of the %% mathematical formula theorem
 
-\newtheorem{example}{例}[section]                                   
+\newtheorem{example}{example}[section]                                   
 \newtheorem{algorithm}{algorithm}
 %% by section number
 \newtheorem{theorem}{Theorem}[section]                         
@@ -103,7 +103,7 @@ Redefinition of the %% mathematical formula theorem
 \usepackage{titlesec}
 
 \renewcommand{\partname}{}
-\renewcommand{\thepart}{第\Roman{part} section}
+\renewcommand{\thepart}{Section \Roman{part}}
 
 %% chapter and other name redefinition
 \renewcommand{\contentsname}{catalog}
@@ -111,21 +111,21 @@ Redefinition of the %% mathematical formula theorem
 \renewcommand{\indexname}{index}
 \renewcommand{\listfigurename}{Illustration directory}
 \renewcommand{\listtablename}{table directory}
-\renewcommand{\figurename}{图}
-\renewcommand{\tablename}{表}
+\renewcommand{\figurename}{fig.~}
+\renewcommand{\tablename}{table~}
 \renewcommand{\appendixname}{Appendix}
 \renewcommand{\appendixpagename}{Appendix}
 \renewcommand{\appendixtocname}{Appendix}
 %\renewcommand\refname{References} 
 
 %% set content environment
-\newenvironment{content}{%
-  \ setlength {\ parskip} {0.5 \ baselineskip}
+\newenvironment{content}{
+  \setlength{\parskip}{0.5\baselineskip}
   \begin{spacing}{1.5}
-} {%
+}{
   \end{spacing}
-  \ setlength {\ parskip} {- 0.5 \ baselineskip}
-  \ vskip -0.5 \ baselineskip
+  \setlength{\parskip}{-0.5\baselineskip}
+  \vskip -0.5\baselineskip
 }
 
 % The syntax for inserting a short story:
@@ -136,42 +136,42 @@ Redefinition of the %% mathematical formula theorem
 % \end{story}
 \newenvironment{story}
 {
-  \ setlength {\ parskip} {0.5 \ baselineskip}
+  \setlength{\parskip}{0.5\baselineskip}
   \hbox to \textwidth{\hfil\rule{\linewidth}{0.5mm}\hfil}
   \begin{spacing}{1.5}
-} {%
+}{%
   \end{spacing}
   \hbox to \textwidth{\hfil\rule{\linewidth}{0.5mm}\hfil}
-  \ setlength {\ parskip} {- 0.5 \ baselineskip}
-  \ vskip -0.5 \ baselineskip
+  \setlength{\parskip}{-0.5\baselineskip}
+  \vskip -0.5\baselineskip
 }
 
 %% sets the format of chapter, section and subsection
-% \ Titleformat {\ Chapter} [display] {\ flushright \ Yihao} {\ thechapter} {} {1em} {\ textbf}
+%\titleformat{\chapter}[display]{\flushright\yihao}{\thechapter{}}{1em}{\textbf}
 \titleformat{\section}[block]{\flushleft\sanhao}{\optima{\thesection}}{1em}{\textbf}
 \titleformat{\subsection}{\sihao}{\optima{\thesubsection}}{0.5em}{\textbf}
 \titleformat{\subsubsection}{\xiaosi}{\thesubsubsection}{0.5em}{\textbf}
 
 %\titlespacing{\chapter}{0pt}{0pt}{-\baselineskip}
-\titlespacing{\section}{0pt}{0pt}{0\baselineskip}
-\ titlespacing {\ subsection} {0pt} {0.5 \ baselineskip} {0 \ baselineskip}
+%\titlespacing{\section}{0pt}{0pt}{0\baselineskip}
+%\titlespacing{\subsection}{0pt}{0.5\baselineskip}{0\baselineskip}
 
 %% set chapter format
 \usepackage{quotchap}
 
 \renewcommand\chapterheadstartvskip{
-   \ vspace * {- 5 \ baselineskip}
+   \vspace*{-5\baselineskip}
 }
 
 \renewcommand\chapterheadendvskip{
-   \ vspace * {0.5 \ baselineskip}
+   \vspace*{0.5\baselineskip}
 }
 
 \usepackage{helvet}
 \renewcommand\sectfont{\rmfamily\bfseries}
 
-\newcommand\refig[1]{{\itshape \figurename\ascii{\ref{fig:#1}（第\pageref{fig:#1}页）}}}
-\newcommand\reftbl[1]{{\itshape \tablename\ascii{\ref{tbl:#1}(page\pageref{tbl:#1}page}}}}
+\newcommand\refig[1] {{\itshape\figurename\ascii{\ref{fig:#1}(page \pageref{fig:#1})}}}
+\newcommand\reftbl[1]{{\itshape\tablename\ascii {\ref{tbl:#1}(page \pageref{tbl:#1})}}}
 
 \renewcommand{\footnoterule}{\vspace*{3pt}%
   \hrule width 0.382\textwidth height 0.4pt \vspace*{2.6pt}}

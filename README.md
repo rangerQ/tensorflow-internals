@@ -1,3 +1,8 @@
+# Read this first.
+Original version of this [book](https://github.com/horance-liu/tensorflow-internals) was translated semi-automatically with Google translate. 
+`It may and will contain typos in text, code and comments`. It needs carefull proof-reading. The source code of this English version is hosted 
+[here](https://github.com/sergey-serebryakov/tensorflow-internals).
+
 # TensorFlow Internals.
 
 It is open source ebook about TensorFlow kernel and implementation mechanism, including programming model, computation graph, distributed training for machine learning.

@@ -1,25 +1,22 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{variable} 
+
+\chapter{Variable}
 \label{ch:variable}
-
 \begin{content}
-
 \ascii{Variable} is a special \ascii{OP} that has the state \ascii{(Stateful)}. From the implementation of technical exploration, \ascii{Kernel} implementation of \ascii{Variable} directly holds an instance of \ascii{Tensor} whose life cycle is consistent with the variable. Compared to the normal \ascii{Tensor} instance, its life cycle is only valid for this iteration \ascii{(Step)}; and \ascii{Variable} is valid for multiple iterations, even to the file system, or from Recovery in the file system.
-
 \end{content}
 
+
 \section{Combat: Linear Model}
-
 \begin{content}
-
 Take a simple linear model as an example (to simplify the problem, the training subgraph is omitted here). First, define the model's input using \code{tf.placeholder}, then define two global variables, and they are all training parameters, and finally define a simple linear model.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 x  = tf.placeholder(tf.float32, [None, 784])
 W = tf.Variable(tf.zeros([784,10]), name='W')
 b = tf.Variable(tf.zeros([10]), name='b') 
@@ -31,7 +28,7 @@ The variables must be initialized before they can be used. According to customar
 \code{\_initializer()} summarizes and initializes all global variable initializers.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 init = tf.global_variables_initializer()
 
 with tf.Session() as sess:
@@ -42,37 +39,36 @@ with tf.Session() as sess:
 According to the existing experience, the calculation diagram is roughly as shown in \refig{tf-linear-model}.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/tf-linear-model.png}
-\caption{calculation graph: linear weighted sum}
- \label{fig:tf-linear-model}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/tf-linear-model.png}
+  \caption{calculation graph: linear weighted sum}
+  \label{fig:tf-linear-model}
 \end{figure}
 
 In fact, as shown in \refig{tf-real-linear-model}, the actual calculation graph is much more complicated, let's start from the beginning.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/tf-real-linear-model.png}
-\caption{calculation graph: linear weighted sum}
- \label{fig:tf-real-linear-model}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/tf-real-linear-model.png}
+  \caption{calculation graph: linear weighted sum}
+  \label{fig:tf-real-linear-model}
 \end{figure}
 
 \end{content}
 
+
 \section{Initialization model}
-
 \begin{content}
-
 \ascii{Variable} is a special OP that has the state \ascii{(Stateful)}. If you implement the technical exploration, the K\ascii{ernel} implementation of \ascii{Variable} directly holds an instance of \ascii{Tensor}, and its life cycle is consistent with \ascii{Variable}. Compared to the normal \ascii{Tensor} instance, its life cycle is only valid for this iteration \ascii{(Step)}; and \ascii{Variable} is valid for multiple iterations\ascii{(Step)}, even Persist to the file system or recover from the file system.
 
-\subsection{operation variable}
 
+\subsection{Operation variable}
 There are several special OPs that operate \ascii{Variable} to modify the value of a variable, such as \ascii{Assign, AssignAdd}. \ascii{Tensor} held by \ascii{Variable} is entered into \ascii{Assign} by reference, \ascii{Assign} is modified locally according to the initial value \ascii{(Initial Value)} or new value The value inside \ascii{Tensor}, and finally output the \ascii{Tensor} as a reference.
 
 From a design perspective, \ascii{Variable} can be seen as a wrapper for \ascii{Tensor}, and all operations supported by \ascii{Tensor} are overloaded with \ascii{Variable}. In other words, \ascii{Variable} can appear everywhere in \ascii{Tensor}. E.g,
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 # Create a variable
 W = tf.Variable(tf.zeros([784,10]), name='W')
 
@@ -88,14 +84,14 @@ w.assign_add(1.0)
 \end{python}
 \end{leftbar}
 
-\subsection{initial value}
 
+\subsection{Initial value}
 In general, variables must be initialized before they can be used. In fact, \ascii{TensorFlow} designed a sophisticated variable initialization model. \ascii{Variable} Derives the data type of \ascii{Variable} according to the initial value \ascii{(Initial Value)} and determines the shape \ascii{(Shape)} of \ascii{Tensor}.
 
 For example, \code{tf.zeros} is called the initial value of \ascii{Variable}, which determines that \ascii{Variable} is of type \code{int32} and \ascii{Shape} is \code{[784, 10]}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 # Create a variable.
 W = tf.Variable(tf.zeros([784,10]), name='W')
 \end{python}
@@ -103,8 +99,8 @@ W = tf.Variable(tf.zeros([784,10]), name='W')
 
 As shown in the following table, the common \ascii{OP} for constructing initial values ​​of variables includes:
 
-\subsection{initializer}
 
+\subsection{Initializer}
 In addition, the variable is given to \ascii{Tensor} held inside \ascii{Variable} by the initializer \ascii{(Initializer)} during initialization, and the local modification of \ascii{Variable} is completed.
 
 Before the variable is used, it must be guaranteed that the variable has been initialized by the initializer. In fact, the variable initialization process, which is the initializer of the running variable.
@@ -112,7 +108,7 @@ Before the variable is used, it must be guaranteed that the variable has been in
 Proof of the definition of \code{W} as above, the initialization of \code{W} can be done as follows. Here, \code{W.initializer} is actually \ascii{OP} of \ascii{Assign}, which is the default initializer for \ascii{Variable}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 # Run the variable initializer.
 with tf.Session() as sess:
   sess.run(W.initializer)
@@ -123,8 +119,8 @@ Once the initialization of \ascii{Variable} is completed, its type is worthy of 
 
 Note that the input to \ascii{Assign} is shown in \ascii{TensorBoard} with a special \ascii{ref} tag. The flow of data is just the opposite. Otherwise, the calculation diagram must have a ring, which obviously violates the basic needs of \ascii{DAG} (directed acyclic graph).
 
-\subsection{Snapshot}
 
+\subsection{Snapshot}
 If the value of the variable is to be read, the \ascii{Tensor} held by the variable is directly output by the constant change of \ascii{Identity}. \ascii{Identity} removes the reference identifier of \ascii{Variable} and also avoids memory copying.
 
 The \ascii{Identity} action \ascii{Variable} is often referred to as a snapshot \ascii{(Snapshot)}, which represents the current value of \ascii{Variable}.
@@ -132,12 +128,11 @@ The \ascii{Identity} action \ascii{Variable} is often referred to as a snapshot 
 In fact, turning \ascii{Variable} into normal \ascii{Tensor} via \ascii{Identity} makes it compatible with all \ascii{Tensor} operations.
 
 
-\subsection{variable submap}
-
+\subsection{Sub-graph of a Variable}
 For example, the definition of the variable \ascii{W} is as follows.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 W = tf.Variable(tf.zeros([784,10]), name='W')
 \end{python}
 \end{leftbar}
@@ -145,19 +140,18 @@ W = tf.Variable(tf.zeros([784,10]), name='W')
 \code{tf.zeros([784,10])} is often called the initial value. It uses the initializer \ascii{Assign} to reference \ascii{Tensor} inside \code{W} as a reference. The ground is modified to the initial value; at the same time, \ascii{Identity} removes the reference identifier of \ascii{Variable} and implements the reading of \ascii{Variable}.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/variable-initialization-model.png}
-\caption{variable submap}
- \label{fig:variable-initialization-model}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/variable-initialization-model.png}
+  \caption{variable submap}
+  \label{fig:variable-initialization-model}
 \end{figure}
 
 
 \subsection{Initialization process}
-
 More commonly, the initializers of all variables are summarized by calling \code{tf.global\_variables\_initializer()}, then launch \ascii{Session} to run the \ascii{OP}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 init = tf.global_variables_initializer()
 \end{python}
 \end{leftbar}
@@ -165,14 +159,14 @@ init = tf.global_variables_initializer()
 In fact, the \ascii{OP} of the initializer that collects all global variables is an \ascii{NoOp}, ie there is no input and no output. The initializer for all variables is connected to the \ascii{NoOp} by controlling the dependent edges to ensure that all global variables are initialized.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/variable-initialization-no-op.png}
-\caption{Initialize OP}
- \label{fig:variable-initialization-no-op}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/variable-initialization-no-op.png}
+  \caption{Initialize OP}
+  \label{fig:variable-initialization-no-op}
 \end{figure}
 
-\subsection{equivalent relationship}
 
+\subsection{Equivalent relationship}
 The parity relationship is a special device constraint relationship. Obviously, the \ascii{Assign, Identity} \ascii{OP} and \ascii{Variable} are extremely closely related, and the variables are modified and read separately. Therefore, they must be executed on the same device as \ascii{Variable}; such a relationship is often referred to as the co-location \ascii{(Colocation)}.
 
 The \code{\_class} attribute value can be specified on the \ascii{Assign/Identity} node: \code{[s: "loc:@W"]}, which represents the two \ascii{OP} and \code{ W} is run on the same device.
@@ -180,7 +174,7 @@ The \code{\_class} attribute value can be specified on the \ascii{Assign/Identit
 For example, taking the \code{W/read} node as an example, the node adds the \code{\_class} attribute to indicate the parity relationship with \code{W}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 node {
   name: "W/read"
   op: "Identity"
@@ -203,12 +197,12 @@ node {
 \end{python}
 \end{leftbar}
 
-\subsection{initialization dependency}
 
+\subsection{Initialization dependency}
 If a variable initialization needs to depend on the initial value of another variable, it needs to be handled specially. For example, the initial value of the variable \code{V} depends on the initial value of \code{W}, which can be specified by \code{W.initialized\_value()}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 W = tf.Variable(tf.zeros([784,10]), name='W')
 V = tf.Variable(W.initialized_value(), name='V')
 \end{python}
@@ -218,16 +212,16 @@ In fact, the two are joined by \ascii{Identity} and explicitly add dependency co
 
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/variable-initialization-dependency-1.png}
-\caption{initialization dependency}
- \label{fig:variable-initialization-dependency-1}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/variable-initialization-dependency-1.png}
+  \caption{initialization dependency}
+  \label{fig:variable-initialization-dependency-1}
 \end{figure}
 
 Similarly, you can summarize all the initializers of a variable by calling \code{tf.global\_variables\_initializer()} and then start \ascii{Session} to initialize all variables.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 init = tf.global_variables_initializer()
 \end{python}
 \end{leftbar}
@@ -235,18 +229,18 @@ init = tf.global_variables_initializer()
 According to the dependency, because the control dependency edge between \code{W/Assign} and \code{Identity} is added, it is cleverly implemented that \code{W} is initialized before \code{V} and passed \ The current initialization value of code{W} finally completes the initialization of \code{V}.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/variable-initialization-dependency-2.png}
-\caption{Initialize OP}
- \label{fig:variable-initialization-dependency-2}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/variable-initialization-dependency-2.png}
+  \caption{Initialize OP}
+  \label{fig:variable-initialization-dependency-2}
 \end{figure}
 
-\subsection{Initializer List}
 
+\subsection{Initializer List}
 You can use \code{variables\_initializer} to build a list of initializers for variable lists. Among them, \code{group} will construct a control only \ascii{NoOP} that depends on \code{\_initialier\_list()}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def variables_initializer(var_list, name="init"):
   def _initialier_list():
     return *[v.initializer for v in var_list]
@@ -257,7 +251,7 @@ def variables_initializer(var_list, name="init"):
 For example, the initializer list of the global variable list can be constructed as follows.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def global_variables_initializer():
   return variables_initializer(global_variables())
 \end{python}
@@ -265,29 +259,28 @@ def global_variables_initializer():
 
 \end{content}
 
-\section{variable grouping}
 
+\section{Variable grouping}
 \begin{content}
-
 By default, \ascii{Variable} is divided into a collection of global variables and training variables. As in the previous example, \code{W, V} is automatically divided into a collection of global variables and training variables.
 
-\subsection{global variable}
 
+\subsection{Global variables}
 A collection of global variables can be easily retrieved via \code{tf.global\_variables()}. In a distributed environment, global variables enable parameter sharing between different processes.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def global_variables():
   return ops.get_collection(ops.GraphKeys.GLOBAL_VARIABLES)
 \end{python}
 \end{leftbar}
 
-\subsection{local variable}
 
+\subsection{Local variables}
 A collection of local variables can be easily retrieved via \code{tf.local\_variables()}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def local_variables():
   return ops.get_collection(ops.GraphKeys.LOCAL_VARIABLES)
 \end{python}
@@ -296,7 +289,7 @@ def local_variables():
 You can build a local variable using the syntactic sugar of \code{local\_variable}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def local_variable(initial_value, validate_shape=True, name=None):
   return variables.Variable(
       initial_value, trainable=False,
@@ -307,25 +300,25 @@ def local_variable(initial_value, validate_shape=True, name=None):
 
 Local variables represent shared variables within a process, and it usually does not need to be a breakpoint recovery \ascii{(Checkpoint)}, only for the purpose of temporary counters. For example, in a distributed environment, use local variables to record the number of \ascii{Epoch} of the process's read data.
 
-\subsection{training variable}
 
+\subsection{Training variables}
 A collection of training variables can be retrieved via \code{tf.trainable\_variables()}. In machine learning, training variables represent model parameters.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def trainable_variables():
   return ops.get_collection(ops.GraphKeys.TRAINABLE_VARIABLES)
 \end{python}
 \end{leftbar}
 
-\subsection{global\_step}
 
+\subsection{A global\_step variable}
 \code{global\_step} is a special \ascii{Variable}, which is not a training variable, but it is a global variable. In a distributed environment, \code{global\_step} is often used to track the number of times \ascii{step} has been run and to synchronize data between processes.
 
 To create a \code{global\_step} you can use the following function:
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def create_global_step(graph=None):
   graph = ops.get_default_graph() if graph is None else graph
   with graph.as_default() as g, g.name_scope(None):
@@ -342,14 +335,13 @@ def create_global_step(graph=None):
 
 \end{content}
 
+
 \section{Source code analysis: constructor variables}
-
 \begin{content}
-
 To simplify the code implementation, a simple refactoring of \ascii{Variable} is done here.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Variable(object):
   def __init__(self, initial_value=None, trainable=True,
     collections=None, name=None, dtype=None):
@@ -364,22 +356,23 @@ class Variable(object):
 
 Constructing an instance of \ascii{Variable} basically consists of the following steps:
 
-\subsection{construct initial value}
+
+\subsection{Construct initial value}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
   def _cons_initial_value(self, initial_value, dtype):
     self._initial_value = ops.convert_to_tensor(
         initial_value, name="initial_value", dtype=dtype)
 \end{python}
 \end{leftbar}
 
-\subsection{construction variable OP}
 
+\subsection{Construction variable OP}
 \ascii{Variable} Completes the automatic derivation based on the type and size of the initial value.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
   def _cons_variable(self, name):
     self._variable = state_ops.variable_op_v2(
       self._initial_value.get_shape(),
@@ -388,12 +381,12 @@ Constructing an instance of \ascii{Variable} basically consists of the following
 \end{python}
 \end{leftbar}
 
-\subsection{construct initializer}
 
+\subsection{Construct initializer}
 The initializer for \ascii{Variable} is essentially a \ascii{Assign} that holds a reference to \ascii{Variable} and modifies the variable itself in place using the initial value.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
   def _cons_initializer(self):
     self._initializer_op = state_ops.assign(
       self._variable,
@@ -401,12 +394,12 @@ The initializer for \ascii{Variable} is essentially a \ascii{Assign} that holds 
 \end{python}
 \end{leftbar}
 
-\subsection{structuring snapshot}
 
+\subsection{Structuring snapshot}
 The snapshot of \ascii{Variable} is essentially a \ascii{Identity} representing the current value of \ascii{Variable}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
   def _cons_snapshot(self):
     with ops.colocate_with(self._variable.op):
       self._snapshot = array_ops.identity(
@@ -414,12 +407,12 @@ The snapshot of \ascii{Variable} is essentially a \ascii{Identity} representing 
 \end{python}
 \end{leftbar}
 
-\subsection{variable grouping}
 
+\subsection{Variable grouping}
 By default, \ascii{Variable} is divided into a collection of global variables; if \code{trainable} is true, it indicates that the variable is a training parameter and is divided into a collection of training variables.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
   def _cons_collections(self, trainable, collections)
     if collections is None:
       collections = [GLOBAL_VARIABLES]

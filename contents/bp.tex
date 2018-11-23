@@ -1,19 +1,17 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
+
 
 \chapter{BP algorithm} 
 \label{ch:bp}
-
 \begin{content}
-
 \end{content}
 
+
 \section{TensorFlow implementation}
-
 \begin{content}
-
 \tf{} is a software system that implements automatic differentiation. First, it constructs a forward computational graph that implements the forward computation of the computational graph. When calling the \code{Optimizer.minimize} method, use the \code{compute\_gradients} method to implement the construction of the inverse calculation graph; use the \code{apply\_gradients} method to implement the submap construction of the parameter update.
 
 \begin{leftbar}
@@ -30,8 +28,8 @@ Class Optimizer(object):
 \end{python}
 \end{leftbar}
 
-\subsection{calculation gradient}
 
+\subsection{Computing gradients}
 \code{compute\_gradients} will solve the gradient of \code{var\_list=[v1, v2, ..., vn]} according to the value of \code{loss}, and the final result will be: \code{[ (grad\_v1, v1), (grad\_v2, v2), ..., (grad\_vn, vn)]}. Among them, \code{compute\_gradients} will call the \code{gradients} method to construct a submap of backpropagation.
 
 Explain the construction process of the reverse subgraph with a simple example. First, construct a forward calculation graph.
@@ -56,8 +54,8 @@ Grads_and_vars = sgd.compute_gradients(loss)
 \end{python}
 \end{leftbar}
 
-\subsubsection{structuring algorithm}
 
+\subsubsection{Structuring algorithm}
 The construction algorithm of the reverse subgraph can be formally described as:
 
 \begin{leftbar}
@@ -75,10 +73,10 @@ First, construct a virtual reverse subgraph based on the topological map of the 
 At the same time, the output of the last node of the forward subgraph has an output gradient of \code{Tensor} of \ascii{1} as the initial gradient value of the reverse subgraph, often denoted as \code{I}.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/bp-back-graph-construction.png}
-\caption{Construct backpropagation subgraph}
- \label{fig:bp-back-graph-construction}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/bp-back-graph-construction.png}
+  \caption{Construct backpropagation subgraph}
+  \label{fig:bp-back-graph-construction}
 \end{figure}
 
 Next, construct a real reverse subgraph based on the virtual reverse subgraph. First, performing a topological sorting algorithm according to the reverse virtual subgraph, and obtaining a topological sorting of the virtual reverse subgraph; and then, according to the topological sorting, searching for \ascii{OP} in each forward subgraph Its "gradient function"; finally, the gradient function is called, which will construct the inverse partial subgraph corresponding to \ascii{OP}.
@@ -87,8 +85,8 @@ In summary, a positive \ascii{OP} corresponds to a reverse partial local subgrap
 
 For example, in the above example, the last \ascii{OP} in the forward graph: the function of finding the square is used as an example to describe how the gradient function works.
 
-\subsubsection{gradient function prototype}
 
+\subsubsection{Gradient function prototype}
 In general, the gradient function satisfies the following prototype:
 
 \begin{leftbar}
@@ -102,24 +100,24 @@ Among them, the gradient function is registered by \code{ops.RegisterGradient} a
 
 For a gradient function, the first parameter \code{op} represents the forward calculation of \ascii{OP}, according to which it can get the input and output of \ascii{OP} in the forward calculation; the second parameter \code{ Grad} is the gradient passed by the upstream node in the reverse subgraph. It is a calculated gradient value (the initial gradient value is all 1).
 
-\subsubsection{actual combat: square function}
 
+\subsubsection{Actual combat: square function}
 As a simple example, use only the input to calculate the gradient. \code{y=square(x)}, used to find the square of \code{x}. First, construct a forward calculation graph:
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/bp-square-forward-graph.png}
-\caption{Square function: forward propagation subgraph}
- \label{fig:bp-square-forward-graph}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/bp-square-forward-graph.png}
+  \caption{Square function: forward propagation subgraph}
+  \label{fig:bp-square-forward-graph}
 \end{figure}
 
 Then, construct a virtual reverse subgraph in reverse. Construct a true inverse computation subgraph based on the topological ordering of the virtual inverse subgraph. If the current node is \code{Square}, find the corresponding gradient function \code{SquareGrad} from the repository based on its OP name.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/bp-square-backward-graph.png}
-\caption{Square function: backpropagation subgraph}
- \label{fig:bp-square-backward-graph}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/bp-square-backward-graph.png}
+  \caption{Square function: backpropagation subgraph}
+  \label{fig:bp-square-backward-graph}
 \end{figure}
 
 Because the derivative of \code{y=Square(x)} is \code{y'=2*x}. Therefore, the implementation of its gradient function \code{SquareGrad} is:
@@ -138,16 +136,16 @@ Def SquareGrad(op, grad):
 After calling the gradient function, you will get \ascii{OP} of the forward \code{Square}, corresponding to the reverse subgraph \code{SquareGrad}. It needs to use the input of \code{Square} to complete the corresponding gradient calculation.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/bp-square-backward-graph-2.png}
-\caption{Square function: backpropagation subgraph}
- \label{fig:bp-square-backward-graph-2}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/bp-square-backward-graph-2.png}
+  \caption{Square function: backpropagation subgraph}
+  \label{fig:bp-square-backward-graph-2}
 \end{figure}
 
 In general, a \ascii{OP} in the forward subgraph corresponds to a local subgraph in the reverse subgraph. Because, for the gradient function implementation of \ascii{OP}, multiple \ascii{OP} may be required to complete the corresponding gradient calculation. For example, \ascii{OP} of \code{Square}, corresponding to the gradient function constructed with two \ascii{2} multiplications \ascii{OP}.
 
-\subsubsection{actual warfare: exponential function}
 
+\subsubsection{Actual warfare: exponential function}
 To give a simple example, use only the output to calculate the gradient. \code{y=exp(x)}, exponential function; its derivative is \code{y'=exp(x)}, which is \code{y'=y}. Therefore, its gradient function is implemented as:
 
 \begin{leftbar}
@@ -165,18 +163,18 @@ Def _ExpGrad(op, grad):
 As shown in the figure below, the output of the \ascii{OP} in the forward subgraph is used for the gradient operation of the corresponding inverse local subgraph. Moreover, the local subgraph contains one node.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/bp-exp-backward-graph.png}
-\caption{Exp function: backpropagation subgraph}
- \label{fig:bp-exp-backward-graph}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/bp-exp-backward-graph.png}
+  \caption{Exp function: backpropagation subgraph}
+  \label{fig:bp-exp-backward-graph}
 \end{figure}
 
-\subsection{Apply gradient}
 
+\subsection{Apply gradients}
 To make a simple summary, when calling the \code{Optimizer.minimize} method, use the \code{compute\_gradients} method to implement the construction of the inverse computation graph; use the \code{apply\_gradients} method to implement parameter updates. Subgraph construction.
 
-\subsubsection{structuring algorithm}
 
+\subsubsection{Structuring algorithm}
 First, \code{compute\_gradients} will solve the gradient of \code{var\_list=[v1, v2, ..., vn]} at runtime based on the value of \code{loss}, and the final result will be :\code{vars\_and\_grads = [(grad\_v1, v1), (grad\_v2, v2), ..., (grad\_vn, vn)]}.
 
 Then, \code{apply\_gradients} iteration \code{grads\_and\_vars}, for each \code{(grad\_vi, vi)}, construct a submap that updates \code{vi}. Among them, the algorithm can be formally described as:
@@ -194,36 +192,36 @@ Among them, \code{apply\_gradient\_descent} will construct a computational subgr
 \code{ApplyGradientDescent} will apply the \code{var <- var - learning*grad} algorithm to implement an in-place update of \code{var}.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/bp-update-w.png}
-\caption{Parameter update submap}
- \label{fig:bp-update-w}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/bp-update-w.png}
+  \caption{Parameter update submap}
+  \label{fig:bp-update-w}
 \end{figure}
 
-\subsubsection{Parameter Update Summary}
 
+\subsubsection{Parameter Update Summary}
 If there are multiple trained Variables, a partial subgraph of multiple update parameters is finally generated. They are aggregated together using a control dependency edge via a \code{NoOp} named \code{update}. Because each \code{Variable} is independent of each other, maximum concurrency can be achieved.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/bp-update-all-params.png}
-\caption{Parameter update summary}
- \label{fig:bp-update-all-params}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/bp-update-all-params.png}
+  \caption{Parameter update summary}
+  \label{fig:bp-update-all-params}
 \end{figure}
 
-\subsubsection{Exploring train\_op}
 
+\subsubsection{Exploring train\_op}
 After a round of \ascii{Step} operation, the parameters are updated according to the gradient, and finally \code{global\_step} is added. The \ascii{OP} that implements \code{global\_step} plus \ascii{1} is \code{AssignAdd} and is marked as \code{train\_op}; it holds the \code{global\_step} variable The reference, then complete the in-place modification and add its value to \ascii{1}.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/bp-train-op.png}
-\caption{train\_op}
- \label{fig:bp-train-op}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/bp-train-op.png}
+  \caption{train\_op}
+  \label{fig:bp-train-op}
 \end{figure}
 
-\subsubsection{workflow}
 
+\subsubsection{Workflow}
 As shown in \refig{bp-train-pipeline}, the entire training process, a \ascii{Step} training process is calculated by forward calculation, reverse gradient calculation, parameter update, and its \code{global\_step} The four basic processes are composed.
 
 Among them, each round \ascii{Step} starts from the start of \code{Session.run}. The output of each \ascii{OP} is obtained by the calculation of the forward subgraph and is used as the input of the downstream \ascii{OP}.
@@ -233,10 +231,10 @@ After the calculation is completed on the subgraph, the gradient of each trainin
 Subsequently, the parameter update subgraph takes \code{grads\_and\_vars} as input and performs the gradient descent update algorithm; finally, the \code{global\_step} value is added by \code{train\_op} plus \ascii{1 }, the round of \ascii{Step} is completed.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/bp-train-pipeline.png}
-\caption{Model training workflow}
- \label{fig:bp-train-pipeline}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/bp-train-pipeline.png}
+  \caption{Model training workflow}
+  \label{fig:bp-train-pipeline}
 \end{figure}
 
 \end{content}

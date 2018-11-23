@@ -1,15 +1,15 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
+
 
 \chapter{Saver} 
 \label{ch:saver}
 
+
 \section{Saver}
-
 \begin{content}
-
 In the long-term training task, \tf{} periodically performs a breakpoint check (\ascii{Checkpoint}) in order to achieve high availability of tasks.
 
 \code{Saver} is the infrastructure for implementing breakpoint checking. It will persist all training parameters in the file system; when recovery training is required, it can recover the calculation graph from the file system and its training parameters. value. In other words, \code{Saver} assumes the following two responsibilities:
@@ -19,21 +19,21 @@ In the long-term training task, \tf{} periodically performs a breakpoint check (
   \eitem{\code{restore}: Restores the value of the training parameter from the breakpoint file. }
 \end{enum}
 
-\subsection{Usage method}
 
+\subsection{Usage method}
 For example, there is a simple calculation graph with two training parameters. First, after the initialization is performed, the results are persisted to the file system.
 
 \begin{leftbar}
 \begin{python}
-# Construct graph
-V1 = tf.Variable([0], name='v1')
-V2 = tf.Variable([0], name='v2')
+# construct graph
+v1 = tf.Variable([0], name='v1')
+v2 = tf.Variable([0], name='v2')
 
 # run graph
-With tf.Session() as sess:
-  Sess.run(tf.global_variables_initializer())
-  Saver = tf.train.Saver()
-  Saver.save(sess, 'ckp')
+with tf.Session() as sess:
+  sess.run(tf.global_variables_initializer())
+  saver = tf.train.Saver()
+  saver.save(sess, 'ckp')
 \end{python}
 \end{leftbar}
 
@@ -41,14 +41,14 @@ The model can then be restored based on where the breakpoint file is stored.
 
 \begin{leftbar}
 \begin{python}
-With tf.Session() as sess:
-  Saver = tf.import_meta_graph('ckp.meta')
-  Saver.restore(sess, 'ckp')
+with tf.Session() as sess:
+  saver = tf.import_meta_graph('ckp.meta')
+  saver.restore(sess, 'ckp')
 \end{python}
 \end{leftbar}
 
-\subsection{file function}
 
+\subsection{File function}
 After executing the \code{Saver.save} operation, the following files are generated in the file system:
 
 \begin{leftbar}
@@ -60,26 +60,25 @@ After executing the \code{Saver.save} operation, the following files are generat
 \end{python}
 \end{leftbar}
 
-\subsubsection{index file}
 
+\subsubsection{Index file}
 The index (\ascii{index}) file holds data for an immutable table (\code{tensorflow::table::Table}); where the keyword is the name of \ascii{Tensor} and its value describes the \ascii Metadata information of {Tensor}, including which data (\ascii{data}) the \ascii{Tensor} is stored in, its offset in the data file, and its checksum.
 
-\subsubsection{data file}
 
+\subsubsection{Data file}
 The data (\ascii{data}) file records the value of all variables \ascii{(Variable)}. When \code{restore} a variable, first find out which data file the corresponding variable is in the index file, and then directly obtain the value of the variable according to the index, thereby realizing the recovery of the variable data.
 
-\subsubsection{meta file}
 
+\subsubsection{Meta file}
 The metafile (\ascii{meta}) holds the persistence data of \code{MetaGraphDef}, which includes metadata such as \code{GraphDef, SaverDef}.
 
 Separating the metadata describing the calculation graph from the data file storing the variable values, the separation of the static graph structure from the dynamic data representation is achieved. Therefore, when restoring \ascii{(Restore)}, first call \code{tf.import\_meta\_graph} to restore \code{GraphDef} first, then restore \code{SaverDef}, thus restoring the description static The \code{Graph} object of the graph structure, and its \code{Saver} object used to restore the value of the variable, and finally restore the values ​​of all variables using \code{Saver.restore}.
 
 This is also the real reason why \code{tf.import\_meta\_graph} must be called before calling \code{Saver.restore} in the above example; otherwise, if you delete the instance of the calculation graph, you cannot talk about restoring the data. Go to the figure example.
 
-\subsubsection{status file}
 
+\subsubsection{Status file}
 The \ascii{Checkpoint} file records the prefix of the most recent breakpoint file (\ascii{Checkpoint File}), and the corresponding index and data file can be found according to the prefix. When you call \code{tf.train.latest\_checkpoint}, you can quickly find the most recent breakpoint file.
-
 
 In addition, the \ascii{Checkpoint} file also records a list of all breakpoint files, and the file list is sorted by the oldest to newest time. When the training task time period is very long, the breakpoint check will continue, which will result in the disk space being exhausted. To avoid this problem, there are two basic methods:
 
@@ -90,30 +89,31 @@ In addition, the \ascii{Checkpoint} file also records a list of all breakpoint f
 
 Since the \ascii{Checkpoint} file also records a list of breakpoint files, and the file list is sorted by the oldest to newest time. Deleting stale breakpoint files according to the above strategy will be extremely simple and effective.
 
-\subsection{model}
 
-\subsubsection{persistent model}
+\subsection{Model}
 
+
+\subsubsection{Persistent model}
 To implement the persistence feature, \code{Saver} inserts \code{SaveV2} and its associated \ascii{OP} in the calculation graph at construction time. Where \code{file\_name} is a \ascii{OP} of \ascii{Const}, specifying the name of the breakpoint file; \code{tensor\_names} is also a \ascii{OP} of \ascii{Const} , a list of \ascii{Tensor} names that specify training parameters.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/py-saver-save-model.png}
-\caption{Saver: Persistence Model}
- \label{fig:py-saver-save-model}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/py-saver-save-model.png}
+  \caption{Saver: Persistence Model}
+  \label{fig:py-saver-save-model}
 \end{figure}
 
-\subsubsection{Recovery Model}
 
+\subsubsection{Recovery Model}
 Similarly, in order to implement the recovery function, \code{Saver} inserts a \code{RestoreV2} and its associated \ascii{OP} for each training parameter during the construction period. Among them, the initializer \ascii{(Initializer)}, which restores the default value of the parameter from the breakpoint file, is essentially a \code{Assign}\ascii{OP}.
 
 In addition, \code{file\_name} is a \ascii{OP} of \ascii{Const}, specifying the name of the breakpoint file; \code{tensor\_names} is also a \ascii{OP} of \ascii{Const} , a list of \ascii{Tensor} names specifying training parameters, the length of which is \ascii{1}.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-saver-restore-model.png}
-\caption{Saver: Recovery Model}
- \label{fig:py-saver-restore-model}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-saver-restore-model.png}
+  \caption{Saver: Recovery Model}
+  \label{fig:py-saver-restore-model}
 \end{figure}
 
 \end{content}

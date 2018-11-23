@@ -1,21 +1,18 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{Distributed TensorFlow} 
+
+\chapter{Distributed TensorFlow}
 \label{ch:distributed}
-
 \begin{content}
-
 \tf{} can be run in a distributed environment to complete the execution of the calculation graph. This chapter will focus on the basic architecture and operation mechanism of distributed runtime; focus on the interaction between various service processes; and deeply analyze the key operations in graph operations in distributed environments and their session lifecycle control;
-
 \end{content}
 
+
 \section{Distributed mode}
-
 \begin{content}
-
 In distributed mode, \ascii{Client} is responsible for computing the construction of the graph, and then starts the execution of the graph by calling \code{Session.run}.
 
 After the \ascii{Master} process receives the message of the calculation graph execution, it starts the pruning, splitting, optimization, etc. of the calculation graph; finally, the subgraph distribution is registered to each \ascii{Worker} process, and then each \ascii{ The Worker} process executes the subgraph concurrently.
@@ -23,43 +20,43 @@ After the \ascii{Master} process receives the message of the calculation graph e
 After the \ascii{Worker} process receives the message of the sub-picture registration, according to the local computing device resources, the calculation sub-picture is subjected to secondary splitting, the sub-picture is allocated to each computing device, and finally each computing device is started concurrently. Figure; if there is data exchange between \ascii{Worker}, the interaction can be done through interprocess communication.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/distributed.png}
-\caption{distributed mode}
- \label{fig:distributed}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/distributed.png}
+  \caption{distributed mode}
+  \label{fig:distributed}
 \end{figure}
 
-\subsection{Figure operation}
 
+\subsection{Graph operation}
 As shown in \refig{dist-runtime}, in the execution of \code{run\_step}, it involves the pruning, splitting, and execution of three important graph operations. Among them, in the distributed operation, the graph split undergoes a two-stage splitting process.
 
 \begin{enum}
-  \eitem{level split: done by \code{MasterSession}, complete the graph split process according to \code{SplitByWorker} or \code{SplitByTask};
+  \eitem{level split: done by \code{MasterSession}, complete the graph split process according to \code{SplitByWorker} or \code{SplitByTask};}
   \eitem{Secondary split: completed by \code{WorkerSession}, complete the graph splitting process according to \code{SplitByDevice}. }
 \end{enum}
 
 In the distributed mode, the graph pruning also reflects the design concept of the \tf{} part of the implementation; and the splitting and execution of the graph also reflects the design concept of \tf{} concurrent execution. Among them, the graph pruning only occurs on \ascii{Master}, does not occur on \ascii{Worker}; and the graph split occurs on \ascii{Master} and \ascii{Worker}; graph execution only occurs in \ascii On {Worker}, it does not happen on \ascii{Master}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/dist-runtime.png}
-\caption{Distributed: Figure Operation}
- \label{fig:dist-runtime}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/dist-runtime.png}
+  \caption{Distributed: Figure Operation}
+  \label{fig:dist-runtime}
 \end{figure}
 
-\subsubsection{Figure split}
 
+\subsubsection{Graph split}
 To better understand how the distributed runtime works, a simple example illustrates the specific process of the graph operation. As shown in \refig{dist-exp-1}, if there is a simple calculation graph, and \code{f, c, a} is deployed on \code{/job:ps/task:0}, and Arranged on \code{CPU0, CPU1, CPU2}; \code{g, h} is deployed on \code{/job:worker/task:0} and is also arranged on \code{GPU0}; \code {b, d, e} is deployed on \code{/job:worker/task:1}, and \code{d, e} is arranged on \code{GPU0}, and \code{b} is arranged to On \code{GPU1}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/dist-exp-1.png}
-\caption{distributed: split graph}
- \label{fig:dist-exp-1}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/dist-exp-1.png}
+  \caption{distributed: split graph}
+  \label{fig:dist-exp-1}
 \end{figure}
 
-\subsubsection{Data Exchange}
 
+\subsubsection{Data Exchange}
 As shown in \refig{dist-exp-2}, for the edge across devices, the runtime automatically splits the edges, inserting two end nodes, \code{Send} and \code{Recv}, on the sender and receiver respectively. .
 
 The \code{Send} and \code{Recv} nodes between processes exchange data through \code{GrpcRemoteRendezvous}. For example, \code{/job:ps/task:0} and \code{/job:worker/task:0},\code{/job:ps/task:0} and \code{/job:worker/task :1}, or \code{/job:worker/task:0} and \code{/job:worker/task:1} are exchanged via \code{GrpcRemoteRendezvous}.
@@ -67,22 +64,22 @@ The \code{Send} and \code{Recv} nodes between processes exchange data through \c
 The \code{Send} and \code{Recv} nodes in the process exchange data through \code{IntraProcessRendezvous}. For example, there are two \code{GPU}s in \code{/job:worker/task:1}, which use \code{IntraProcessRendezvous} for data exchange. The specific implementation process of \code{Rendezvous} will be highlighted below.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/dist-exp-2.png}
-\caption{Distributed: Data Exchange}
- \label{fig:dist-exp-2}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/dist-exp-2.png}
+  \caption{Distributed: Data Exchange}
+  \label{fig:dist-exp-2}
 \end{figure}
 
-\subsection{formalization}
 
+\subsection{Formalization}
 In real system implementations, the distributed runtime is implemented using \ascii{C++}. The key path to the \tf{} runtime is \code{run\_step}. Because the real system implementation involves too much detail, it is not easy to find the backbone and logic of the algorithm. To simplify the description of the problem, the implementation of \code{run\_step} will be described formally.
 
-\ Subsubsection {Master :: RunStep}
 
+\subsubsection{Master::RunStep}
 On \ascii{Master}, the pruning operation of \code{FullGraph} is mainly completed, and \code{ClientGraph} is generated; then, \code{ClientGraph} is split into multiple \code{PartitionGraph} according to \ascii{Worker} Finally, register the \code{PartitionGraph} list with each \ascii{Worker} and launch each \ascii{Worker} concurrently to execute the \code{PartitionGraph} list.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def run_step(workers, full_graph, inputs, outputs):
   client_graph = prune(full_graph, inputs, outputs)
   partition_graphs = split(client_graph, workers)
@@ -91,8 +88,8 @@ def run_step(workers, full_graph, inputs, outputs):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Worker::RunStep}
 
+\subsubsection{Worker::RunStep}
 On a particular \ascii{Worker} node, when the \code{RegisterGraphRequest} message is received, the computed graph is split into multiple \code{PartitionGraph}s according to the local device set. Then, start a \code{Executor} on each computing device to execute the \code{PartitionGraph} assigned to it.
 
 After a certain computing device executes the allocated \code{PartitionGraph}, the counter of \code{ExecutorBarrier} is added to \ascii{1} until all devices complete the execution of the \code{PartitionGraph} list, \code{barrier.wait ()} Blocking operation exits.
@@ -107,7 +104,7 @@ The %\code{Send} node will call \code{RpcRemoteRendezvous::Send}, which delegate
 % \end{enum}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def send_inputs(remote_rendezvous, inputs):
   for (key, tensor) in inputs:
     remote_rendezvous.send(key, tensor)
@@ -134,25 +131,25 @@ def run_step(devices, full_graph, inputs, outputs):
 \end{python}
 \end{leftbar}
 
-\subsection{domain model}
 
+\subsection{Domain model}
 As shown in \refig{cc-dist-model}, there is a sophisticated domain model in the \tf{} distributed runtime.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/cc-dist-model.png}
-\caption{Distributed: Domain Model}
- \label{fig:cc-dist-model}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/cc-dist-model.png}
+  \caption{Distributed: Domain Model}
+  \label{fig:cc-dist-model}
 \end{figure}
 
-\subsubsection{Cluster}
 
+\subsubsection{Cluster}
 \ascii{Cluster} is described using \ascii{ClusterSpec}, which can be divided into one or more \ascii{Job}, one \ascii{Job} contains one or more \ascii{Task}. That is, the \ascii{TensorFlow} cluster is composed of the task set \ascii{(Task Set)} that executes the calculation graph.
 
 Each \ascii{Task} can be run on a separate machine, or multiple \ascii{Task} can be run on a single machine (for example, stand-alone multi-ascii{CPU}, or stand-alone multi-ascii{GPU} ).
 
-\subsubsection{Job}
 
+\subsubsection{Job}
 Assign the same \ascii{Task} to the same \ascii{Job}. Each \ascii{Job} uses a unique identifier of \code{job\_id}.
 
 In general, there are two basic \ascii{Job} types in the model training process of distributed deep learning:
@@ -163,37 +160,37 @@ In general, there are two basic \ascii{Job} types in the model training process 
 \end{enum}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/py-dist-ps-worker.png}
-\caption{Distributed Model Training: Interaction between PS and Worker}
- \label{fig:py-dist-ps-worker}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/py-dist-ps-worker.png}
+  \caption{Distributed Model Training: Interaction between PS and Worker}
+  \label{fig:py-dist-ps-worker}
 \end{figure}
 
-\subsubsection{Task}
 
+\subsubsection{Task}
 In general, in a distributed runtime, \ascii{Task} runs in a separate process and runs a \code{tf.train.Server} instance on it. Where \ascii{Task} uses the binary unique identifier of \code{job\_id:task\_index}.
 
-\subsubsection{Server}
 
+\subsubsection{Server}
 \ascii{Server} represents the \ascii{Task} service process, which provides \code{MasterService} and \code{WorkerService} services. In other words, \ascii{Server} can play both \ascii{Master} and \ascii{Worker} roles.
 
-\subsection{Building a cluster}
 
+\subsection{Building a cluster}
 In the distributed \tf{} runtime, each \ascii{Task} launches a \ascii{Server} and provides the \code{MasterService} service and the \code{WorkerService} service. Among them, the formation of \ascii{TensorFlow} cluster consists of two basic steps:
 
 \begin{enum}
-  \eitem{Create\code{tf.train.ClusterSpec}, which describes the deployment information of \ascii{Task} in the cluster and is organized as \ascii{Job};
+  \eitem{Create\code{tf.train.ClusterSpec}, which describes the deployment information of \ascii{Task} in the cluster and is organized as \ascii{Job};}
   \eitem{For each \ascii{Task}, start a \code{tf.train.Server} instance. }
 \end{enum}
 
-\subsubsection{cluster configuration}
 
+\subsubsection{Cluster configuration}
 \code{ClusterSpec} describes the deployment information for \ascii{Task} in the cluster and is organized as \ascii{Job}. In general, in a distributed execution mode, a process is started for each \ascii{Task}. Therefore, \code{ClusterSpec} also describes the process distribution of the \ascii{TensorFlow} distributed runtime.
 
 For example, there is a \ascii{TensorFlow} cluster consisting of \code{ps} and \code{worker}\ascii{Job}. Where \code{ps} is deployed on \code{ps0:2222, ps1:2222}; \code{worker} is deployed on \code{worker0:2222, worker1:2222, worker2:2222}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 tf.train.ClusterSpec({
   "worker": [
     "worker0:2222",   # /job:worker/task:0
@@ -209,10 +206,11 @@ tf.train.ClusterSpec({
 
 In this case, the index of \ascii{Task} is not explicitly specified. By default, in the \ascii{Task} collection of \ascii{Job}, the \ascii{Task} index is incremented sequentially from \ascii{0}.
 
-\subsubsection{ProtobufDescription}
+
+\subsubsection{Protobuf description}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 message JobDef {
   string name = 1;
   map<int32, string> tasks = 2;
@@ -228,16 +226,16 @@ The \code{tasks} keyword represents \code{task\_index} and the value represents 
 
 \end{content}
 
-\section{Master service}
 
+\section{Master service}
 \begin{content}
 
 \code{MasterService} is a \ascii{RPC} service. When \ascii{Client} accesses the \ascii{Server} instance according to \code{target}, \ascii{Server} plays the role of \ascii{Master} and provides the \code{MasterService} service.
 
 The interaction between \ascii{Client} and \ascii{Master} follows the interface specification defined by \code{MasterService}. In other words, \code{MasterService} defines the public contract for \ascii{Client} access\ascii{Master}, which is responsible for coordinating and controlling the execution of multiple \code{WorkerService}.
 
-\subsection{interface definition}
 
+\subsection{Interface definition}
 In the \code{master\_service.proto} file, all interfaces of \code{MasterService} are defined; in the \code{master.proto} file, the body of each interface is defined.
 
 \begin{leftbar}
@@ -267,8 +265,8 @@ service MasterService {
 \end{c++}
 \end{leftbar}
 
-\subsection{Access Service}
 
+\subsection{Access Service}
 In general, \ascii{Client} uses the interface \code{MasterInterface} to get the remote \code{MasterService} service. In particular, all interfaces of \code{MasterInterface} are synchronous interfaces, making \ascii{Client} access to the remote \code{MasterService} service as if it were a local function.
 
 Note that the \code{RunStepRequest/RunStepResponse} message may contain a large \code{Tensor} instance. In order to avoid unnecessary copying of objects, specialization implements a message wrapper.
@@ -355,15 +353,15 @@ struct MasterInterface {
 As shown by \refig{dist-master-interface}, there are two basic implementations of \code{MasterInterface}.
 
 \begin{enum}
-  \eitem{distributed: \code{GrpcRemoteMaster} based on \ascii{gRPC}, \ascii{Client} and \ascii{Master} are deployed in two different processes;
+  \eitem{distributed: \code{GrpcRemoteMaster} based on \ascii{gRPC}, \ascii{Client} and \ascii{Master} are deployed in two different processes;}
   \eitem{Local mode: Based on the \code{LocalMaster} implementation of the function call, \ascii{Client} is in the same process as \ascii{Master}. }
 \end{enum}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-master-interface.png}
-\caption{\code{MasterInterface}}
- \label{fig:dist-master-interface}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-master-interface.png}
+  \caption{\code{MasterInterface}}
+  \label{fig:dist-master-interface}
 \end{figure}
 
 In distributed mode, \code{GrpcRemoteMaster} uses pseudo-code similar to the following and gets the remote \code{MasterService} service via \ascii{gRPC}.
@@ -379,15 +377,15 @@ stub->CloseSession({handle})
 \end{c++}
 \end{leftbar}
 
-\subsection{RPC procedure}
 
+\subsection{RPC procedure}
 As shown by \refig{dist-client-master-interaction}, \ascii{Client} gets the service of remote\ascii{MasterService} via \code{MasterInterface}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/dist-client-master-interaction.png}
-\caption{Client to get the principle of MasterService}
- \label{fig:dist-client-master-interaction}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/dist-client-master-interaction.png}
+  \caption{Client to get the principle of MasterService}
+  \label{fig:dist-client-master-interaction}
 \end{figure}
 
 Among them, \code{GrpcRemoteMaster} is an implementation of the \ascii{gRPC} client, which finally obtains the \code{GrpcMasterService} service on the remote \ascii{Master} via \code{Stub}, making its behavior behave as if Local function calls are generic. Among them, \code{GrpcMasterService} implements all the service interfaces defined by \code{MasterService}, which is the real service entity of \code{MasterService}.
@@ -396,12 +394,12 @@ Among them, \code{GrpcRemoteMaster} is an implementation of the \ascii{gRPC} cli
 Strictly speaking, \script{GrpcSession, ClientMaster, GrpcRemoteMaster} are all part of the \ascii{Client} implementation. Rather than commonly understood, the \ascii{Python} front-end system is a full \ascii{Client} implementation, and the backend \ascii{C++} backend system does not include any implementation of \ascii{Client}.
 \end{remark}
 
-\subsection{message definition}
 
+\subsection{Message definition}
 Next, we'll take a closer look at the message definitions for each interface. Among them, the most important thing is to identify the identity of each service. For example, \ascii{Master} can be accessed by multiple \ascii{Client} and generate a corresponding \code{MasterSession} instance for each \ascii{Client}. So \code{GrpcSession} holds the \code{MasterSession} handle and implements \ascii{Client} to get the \ascii{Master} service.
 
-\subsubsection{CreateSession}
 
+\subsubsection{CreateSession}
 As shown in \refig{dist-ms-create-sess-req}, the \code{CreateSessionRequest} message carries the initial calculation graph and establishes a connection with \ascii{Master} specified by \code{target}. When \ascii{Master} receives the request message, it creates a corresponding \code{MasterSession} instance and uniquely identifies the \code{MasterSession} instance using \code{session\_handle}.
 
 After the \ascii{Master} logic is processed, return the message \code{CreateSessionResponse} to \ascii{Client}. The \code{CreateSessionResponse} message carries \code{session\_handle}, and the \code{GrpcSession} on the \ascii{Client} side is associated with \code{MasterSession} on the \ascii{Master} side. Subsequently, in all interactions between \ascii{Client} and \ascii{Master}, the \ascii{MasterSession} corresponding to it is indexed in the request message by carrying \code{session\_handle}, \ascii{Master} Example.
@@ -409,10 +407,10 @@ After the \ascii{Master} logic is processed, return the message \code{CreateSess
 In addition, \code{CreateSessionResponse} also carries the initial \code{graph\_version} for subsequent initiating \code{ExtendSession} operations, adding new nodes to the original calculation graph.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-ms-create-sess-req.png}
-\caption{\code{CreateSession}}
- \label{fig:dist-ms-create-sess-req}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-ms-create-sess-req.png}
+  \caption{\code{CreateSession}}
+  \label{fig:dist-ms-create-sess-req}
 \end{figure}
 
 \begin{leftbar}
@@ -430,17 +428,17 @@ message CreateSessionResponse {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{ExtendSession}
 
+\subsubsection{ExtendSession}
 After \ascii{CreateSession} succeeds, the subsequent \ascii{Client} can pass the subgraph to be expanded to \ascii{Master} via \code{ExtendSession}, increasing the size of the original calculation graph (only submaps can be added) Cannot modify or delete nodes).
 
 As shown in \refig{dist-ms-extend-sess-req}, you need to carry \code{current\_graph\_version}, \ascii{Master} for version matching verification in the request message; wait for \code{ExtendSession} After the logical processing is completed, \code{new\_graph\_version} is carried in the response message for the next \code{ExtendSession} operation. The initial \code{graph\_version} is carried by \code{CreateSessionResponse} to \ascii{Client}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/dist-ms-extend-sess-req.png}
-\caption{\code{ExtendSession}}
- \label{fig:dist-ms-extend-sess-req}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/dist-ms-extend-sess-req.png}
+  \caption{\code{ExtendSession}}
+  \label{fig:dist-ms-extend-sess-req}
 \end{figure}
 
 \begin{leftbar}
@@ -468,15 +466,14 @@ message ExtendSessionResponse {
 \end{c++}
 \end{leftbar}
 
-\ Subsubsection {} RunStep
-
+\subsubsection{RunStep}
 In general, \code{RunStep} is iteratively executed on the client side. As shown in \refig{dist-ms-run-step-req}, during each \code{RunStep} execution, \ascii{Client} carries \code{feed, fetch, target} in the request message, respectively Indicates the list of \ascii{NamedTensor} entered, the name list of \ascii{Tensor} to be output, the name list of \ascii{OP} to be executed, and \code{tensor} in the response message, corresponding to \code{fetch A list of names for }, a list of \ascii{Tensor} output.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/dist-ms-run-step-req.png}
-\ Caption {\ code RunStep {}}
- \label{fig:dist-ms-run-step-req}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/dist-ms-run-step-req.png}
+  \caption{\code{RunStep}}
+  \label{fig:dist-ms-run-step-req}
 \end{figure}
 
 \begin{leftbar}
@@ -499,15 +496,15 @@ message RunStepResponse {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{CloseSession}
 
+\subsubsection{CloseSession}
 When the calculation is complete, you need to close the session and release the system computing resources. As shown in \refig{dist-ms-closs-sess}, \ascii{Client} initiates the release of computing resources by sending \code{CloseSession} to \ascii{Master}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/dist-ms-closs-sess.png}
-\caption{\code{CloseSession}}
- \label{fig:dist-ms-closs-sess}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/dist-ms-closs-sess.png}
+  \caption{\code{CloseSession}}
+  \label{fig:dist-ms-closs-sess}
 \end{figure}
 
 \begin{leftbar}
@@ -523,18 +520,17 @@ message CloseSessionResponse {
 
 \end{content}
 
+
 \section{Worker service}
-
 \begin{content}
-
 \code{WorkerService} is also a \ascii{gRPC} service that dispatches local device sets to execute local submaps. It defines the interface specification for accessing \ascii{Worker}, which is defined in \code{master\_service.proto}.
 
 \ascii{Master} finds other \ascii{Server} instances in the cluster based on the \code{ClusterSpec} information, at which point these \ascii{Server} instances will play the role of \ascii{Worker}. \ascii{Master} distributes the submap to each \ascii{Worker} node and starts the execution of the subgraph calculation for each \ascii{Worker} node.
 
 If there is a data dependency between \ascii{Worker}, the interaction is done through interprocess communication. Among them, between \ascii{Master} and \ascii{Worker}, the interaction between \ascii{Worker} and \ascii{Worker} follows the interface specification defined by \code{WorkerService}.
 
-\subsection{interface definition}
 
+\subsection{Interface definition}
 In the \code{worker\_service.proto} file, all interfaces of \code{WorkerService} are defined; in the \code{worker.proto} file, the body of each interface is defined.
 
 \begin{leftbar}
@@ -574,8 +570,8 @@ service WorkerService {
 \end{c++}
 \end{leftbar}
 
-\subsection{Access Service}
 
+\subsection{Access Service}
 In general, \ascii{Master/Worker} uses the interface \code{WorkerInterface} to get the service of the remote \code{WorkerService}. Where \code{WorkerInterface} defines the interface for asynchronous access to \code{WorkerService}; similar to \code{MasterInterface}, since \code{RunGraphRequest/RunGraphResponse} may contain a larger \code{Tensor}, in order to avoid A necessary copy of the object, specializing in the wrapper that implements the message.
 
 \begin{leftbar}
@@ -759,14 +755,14 @@ struct WorkerInterface {
 As shown by \refig{dist-worker-interface}, there are two implementations of \code{WorkerService}. Among them, in local mode, \code{GrpcWorker} is used directly; in distributed mode, \ascii{Worker} is deployed in a different process, using \code{GrpcRemoteWorker}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-worker-interface.png}
-\caption{\code{WorkerInterface}interface}
- \label{fig:dist-worker-interface}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-worker-interface.png}
+  \caption{\code{WorkerInterface}interface}
+  \label{fig:dist-worker-interface}
 \end{figure}
 
-\subsection{RPC procedure}
 
+\subsection{RPC procedure}
 As shown in \refig{dist-worker-interaction}, in distributed mode, \code{GrpcRemoteWorker} is an implementation of the \ascii{gRPC} client, which eventually gets the remote \ascii{ via \code{Stub} The \code{GrpcWorkerService} service on Worker} makes its behavior behave like a native function call. Among them, \code{GrpcWorkerService} implements all the service interfaces defined by \code{WorkerService}.
 
 \begin{remark}
@@ -776,14 +772,14 @@ Strictly speaking, \script{GrpcRemoteWorker} is part of the \ascii{Master} or pe
 In the local mode, the \ascii{WorkerService} service is directly obtained through the function call of \code{GrpcWorker}, which avoids extra network transmission overhead.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/dist-worker-interaction.png}
-\caption{Get the RPC process of \code{MasterService}}
- \label{fig:dist-worker-interaction}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/dist-worker-interaction.png}
+  \caption{Get the RPC process of \code{MasterService}}
+  \label{fig:dist-worker-interaction}
 \end{figure}
 
-\subsection{message definition}
 
+\subsection{Message definition}
 Next, we will take a closer look at the message definitions for each interface of \code{WorkerService}. Among them, the most important thing is to identify the identity of each service. When \code{WorkerSession} is created, the \code{MasterSession} identifier is passed to \ascii{Worker}, which implements \code{MasterSession} to uniformly manage multiple dependent \code{WorkerSession} instances.
 
 When \code{Worker} first completes \code{RegisterGraph}, it returns a unique \code{graph\_handle} to \code{Master} to identify the graph instance. Therefore, the \code{(session\_handle, graph\_handle)} binary group can be used to uniquely identify the graph instance within the cluster.
@@ -791,22 +787,22 @@ When \code{Worker} first completes \code{RegisterGraph}, it returns a unique \co
 When \ascii{Master} broadcasts each \ascii{Worker} concurrently to \code{RunGraph}. To distinguish between different \code{step}, \ascii{Master} generates a globally unique \code{step\_id} and passes it to each \ascii{Worker} via \code{RunGraph}.
 
 \begin{enum}
-  \eitem{\code{session\_handle}: Automatically generated when creating a \code{MasterSession} instance, carried to \ascii{Client} via \code{CreateSessionResponse}; \ascii{Worker} via \code{CreateWorkerSessionRequest}; }  
-  \eitem{\code{graph\_id}: The first time \code{RegisterGraph} is generated by \code{Worker}, passed to \code{Master} via \code{RegisterGraphResponse};
+  \eitem{\code{session\_handle}: Automatically generated when creating a \code{MasterSession} instance, carried to \ascii{Client} via \code{CreateSessionResponse}; \ascii{Worker} via \code{CreateWorkerSessionRequest}; }
+  \eitem{\code{graph\_id}: The first time \code{RegisterGraph} is generated by \code{Worker}, passed to \code{Master} via \code{RegisterGraphResponse};}
   \eitem{\code{step\_id}: Each time \code{RunStep}, a unique identifier is generated by \code{Master}, which is carried to \ascii{Worker} via \code{RunGraphRequest}. }
 \end{enum}
 
-\subsubsection{CreateWorkerSession}
 
+\subsubsection{CreateWorkerSession}
 As shown in \refig{dist-worker-create-worker-sess}, the \code{CreateWorkerSessionRequest} message carries the \code{session\_handle} assigned by \code{MasterSession}. When \ascii{Worker} receives the request message, it generates a \code{WorkerSession} instance and uniquely identifies the instance within \ascii{Worker} using \code{session\_handle}.
 
 In the same cluster, for a \code{MasterSession} instance, the other \ascii{Worker} receives the same \code{session\_handle}. In this way, the \code{MasterSession} instance can uniformly manage all \code{WorkerSession} instances that belong to it.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-worker-create-worker-sess.png}
-\caption{\code{CreateWorkerSession}}
- \label{fig:dist-worker-create-worker-sess}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-worker-create-worker-sess.png}
+  \caption{\code{CreateWorkerSession}}
+  \label{fig:dist-worker-create-worker-sess}
 \end{figure}
 
 \begin{leftbar}
@@ -821,17 +817,17 @@ message CreateWorkerSessionResponse {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{RegisterGraph}
 
+\subsubsection{RegisterGraph}
 As shown in \refig{dist-worker-register-graph}, the \code{RegisterGraphRequest} message carries the \code{session\_handle} assigned by \code{MasterSession}, and its subgraph instance \ascii{graph\_def} . When \code{Worker} completes the subgraph registration and its initialization, it returns \code{graph\_handle} of the submap to \ascii{Master}.
 
 It should be noted that \code{Master} will only execute \code{RegisterGraph} once, unless the node of the calculation graph is reorganized, or the \code{Master} process is restarted.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-worker-register-graph.png}
-\caption{\code{RegisterGraph}}
- \label{fig:dist-worker-register-graph}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-worker-register-graph.png}
+  \caption{\code{RegisterGraph}}
+  \label{fig:dist-worker-register-graph}
 \end{figure}
 
 \begin{leftbar}
@@ -854,14 +850,13 @@ message RegisterGraphResponse {
 
 
 \subsubsection{DeregisterGraph}
-
 As shown in \refig{dist-worker-deregister-graph}, when the submap on the \code{Worker} node is no longer needed (for example, the calculation graph is rescheduled, the nodes in the graph are rearranged), at this time\ Code{Master} sends a \code{DeregisterGraph} message to \ascii{Worker} so that \code{Worker} unregisters the submap instance.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-worker-deregister-graph.png}
-\caption{\code{DeregisterGraph}}
- \label{fig:dist-worker-deregister-graph}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-worker-deregister-graph.png}
+  \caption{\code{DeregisterGraph}}
+  \label{fig:dist-worker-deregister-graph}
 \end{figure}
 
 \begin{leftbar}
@@ -876,17 +871,17 @@ message DeregisterGraphResponse {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{RunGraph}
 
+\subsubsection{RunGraph}
 When executing the submap registered on the \ascii{Worker} node, in order to distinguish between different \code{step}, \ascii{Master} generates a unique \code{step\_id} and passes it to each \ascii{Worker}, each \ascii {Worker} implements data collaboration through \code{step\_id}.
 
 In addition, \code{RunGraphRequest} carries \code{send, recv\_key}, which respectively represent the \code{Tensor} identifier and data entered by the submap, and the \code{Tensor} identifier of the submap output. \code{RunGraphResponse} returns a list of \code{Tensor} corresponding to \code{recv\_key}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-worker-run-graph.png}
-\caption{\code{RunGraph}}
- \label{fig:dist-worker-run-graph}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-worker-run-graph.png}
+  \caption{\code{RunGraph}}
+  \label{fig:dist-worker-run-graph}
 \end{figure}
 
 \begin{leftbar}
@@ -916,15 +911,15 @@ message RunGraphResponse {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{RecvTensor}
 
+\subsubsection{RecvTensor}
 When executing \code{step} one time, if two \ascii{Worker} need to interact with data, the consumer sends a \code{RecvTensorRequest} message to the producer, by carrying \code{(step\_id, rendezvous\_key) } Binary group, request the corresponding \code{Tensor} data of the peer \ascii{Worker} and return it via \code{RecvTensorResponse}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-worker-recv-tensor.png}
-\caption{\code{RecvTensor}}
- \label{fig:dist-worker-recv-tensor}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-worker-recv-tensor.png}
+  \caption{\code{RecvTensor}}
+  \label{fig:dist-worker-recv-tensor}
 \end{figure}
 
 \begin{leftbar}
@@ -967,14 +962,13 @@ message RecvTensorResponse {
 
 \end{content}
 
-\section{server}
 
+\section{Server}
 \begin{content}
-
 \code{Server} is a server based on \ascii{gRPC} that manages the local device set. It provides the \code{MasterService} service and the \code{WorkerService} service externally, with the roles of \ascii{Master} and \ascii{Worker}.
 
-\subsection{domain model}
 
+\subsection{Domain model}
 As shown by \refig{cc-server-model}, \code{GrpcServer} provides the \code{MasterService} service when it plays the role of \ascii{Master}; where it is the \ascii{Client for each access. } Start a \code{MasterSession} instance and identify it with a globally unique \code{session\_handle}. In other words, \ascii{Master} can access multiple \ascii{Client}, while a \ascii{Client} can only access a specific \ascii{Master}.
 
 \code{GrpcServer} provides the \code{WorkerService} service when playing the role of \ascii{Worker}; where each \ascii{Worker} can provide computing services for multiple \ascii{Master}, it is for each Generate a corresponding \code{WorkerSession} instance from the \code{MasterSession} requesting the computing service, and wait for the corresponding \code{MasterSession} to issue the \emph{registration} and \emph{execute} commands for the calculation graph.
@@ -982,18 +976,18 @@ As shown by \refig{cc-server-model}, \code{GrpcServer} provides the \code{Master
 The entire \code{GrpcServer} instance is hosted on the \code{grpc::Server} process, which listens for messages on specific ports and automatically dispatches the corresponding message to \code{MasterService} or \code{WorkerService} when the message arrives. The callback function being processed.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/cc-server-model.png}
-\caption{Server domain model}
- \label{fig:cc-server-model}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/cc-server-model.png}
+  \caption{Server domain model}
+  \label{fig:cc-server-model}
 \end{figure}
 
-\subsubsection{ProtobufDescription}
 
+\subsubsection{ProtobufDescription}
 When \code{protocol} is \code{grpc}, the \code{GrpcServer} instance based on \ascii{gRPC} is enabled when the system is running. In addition, the configuration of runtime parameters can be implemented via \code{ConfigProto}. In other words, the \tf{} architecture is open to the public. For example, by extending \code{protocol} to support new communication protocols, implement a \code{Server} instance based on the new protocol.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 message ServerDef {
   ClusterDef cluster = 1;
   
@@ -1006,57 +1000,58 @@ message ServerDef {
 \end{python}
 \end{leftbar}
 
-\subsubsection{Service Interconnect}
 
+\subsubsection{Service Interconnect}
 As shown by \refig{cc-server-interact}, an \ascii{Server} instance is interconnected with other \ascii{Server} instances in the cluster via \code{tf.train.ClusterSpec}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/cc-server-interact.png}
-\caption{service interconnect}
- \label{fig:cc-server-interact}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/cc-server-interact.png}
+  \caption{service interconnect}
+  \label{fig:cc-server-interact}
 \end{figure}
 
 As shown in \refig{cc-server-interact-1}, when \ascii{Client} accesses one of \ascii{Server}, it plays the role of \ascii{Master}, and other \ascii{Server} Then played the role of \ascii{Worker}. In particular, \ascii{Server} accessed by \ascii{Client} also plays the role of \ascii{Worker}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/cc-server-interact-1.png}
-\caption{Single Client Access Cluster}
- \label{fig:cc-server-interact-1}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/cc-server-interact-1.png}
+  \caption{Single Client Access Cluster}
+  \label{fig:cc-server-interact-1}
 \end{figure}
 
 As shown by \refig{cc-server-interact-2}, there may be multiple \ascii{Client} accessing different \ascii{Server} instances. At this point, the \ascii{Server} instance accessed by \ascii{Client} plays the \ascii{Master} role. However, the \ascii{Server} instance plays the \ascii{Worker} role relative to the other \ascii{Server} instances in the cluster.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/cc-server-interact-2.png}
-\caption{Multi-Client Access Cluster}
- \label{fig:cc-server-interact-2}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/cc-server-interact-2.png}
+  \caption{Multi-Client Access Cluster}
+  \label{fig:cc-server-interact-2}
 \end{figure}
 
 In particular, \ascii{Client} and \ascii{Master} can be deployed in the same process. At this point, the interaction between \ascii{Client} and \ascii{Master} is much simpler, and the two directly use function calls, avoiding the extra overhead of \ascii{gRPC} interaction. And so on, in the same \ascii{Server}, \ascii{Master} and \ascii{Worker} can be deployed in the same process. At this point, the function call is used directly between \ascii{Master} and \ascii{Worker}.
 
-\subsection{state machine}
 
+\subsection{State machine}
 As shown by \refig{dist-grpc-server-state-machine}, \code{GrpcServer} is a server based on \code{grpc::Server} that manages and maintains a simple state machine.
 
 \code{GrpcServer} starts the \code{grpc::Server} service on the \code{New} state, but does not provide services externally; instead, it starts the service on the \code{Started} state and provides \code{MasterService } and \code{WorkerService}'s \code{RPC} message service; eventually, the \code{MasterService} and \code{WorkerService} services are stopped in the \code{Stopped} state.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/dist-grpc-server-state-machine.png}
-\caption{GrpcServer state machine}
- \label{fig:dist-grpc-server-state-machine}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/dist-grpc-server-state-machine.png}
+  \caption{GrpcServer state machine}
+  \label{fig:dist-grpc-server-state-machine}
 \end{figure}
+
 
 \subsubsection{Create Service}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/dist-grpc-server-factory.png}
-\caption{Polymorphic creation of Server instance}
- \label{fig:dist-grpc-server-factory}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/dist-grpc-server-factory.png}
+  \caption{Polymorphic creation of Server instance}
+  \label{fig:dist-grpc-server-factory}
 \end{figure}
 
 \begin{leftbar}
@@ -1090,20 +1085,20 @@ void GrpcServer::Create(
 As shown by \refig{cc-server-model}, \code{GrpcServer::Init} will complete the initialization of the \code{GrpcServer} domain object, including the following \ascii{3} basic procedures.
 
 \begin{enum}
-  \eitem{initialize \code{MasterEnv} instance;}  
-  \eitem{Initialize \code{WorkerEnv} instance;}  
-  \eitem{Create and start \code{grpc::Server}}    
+  \eitem{initialize \code{MasterEnv} instance;}
+  \eitem{Initialize \code{WorkerEnv} instance;}
+  \eitem{Create and start \code{grpc::Server}}
     \begin{enum}
-    \eitem{initialize\code{MasterService}}      
+    \eitem{initialize\code{MasterService}}
     \begin{nitemize}
-      \eitem{Create a \code{Master} instance;}  
+      \eitem{Create a \code{Master} instance;}
       \eitem{Create a \code{MasterService} instance;}
     \end{nitemize}
-    \eitem{initialize\code{WorkerService}}          
-    \begin{nitemize}          
-      \eitem{Create a \code{Worker} instance;}  
+    \eitem{initialize\code{WorkerService}}
+    \begin{nitemize}
+      \eitem{Create a \code{Worker} instance;}
       \eitem{Create a \code{WorkerService} instance. }
-    \end{nitemize}      
+    \end{nitemize}
     \end{enum}
 \end{enum}
 
@@ -1119,34 +1114,34 @@ void GrpcServer::Init() {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Initialize MasterEnv}
 
+\subsubsection{Initialize MasterEnv}
 \code{MasterEnv} holds the context of the \code{Master} runtime, which has the same lifecycle as \code{GrpcServer}, so the entire \code{Master} runtime is visible.
 
 As shown by \refig{dist-master-env}, \code{LocalDevices} is used to get the local device set; \code{WorkerCacheFactory} is used to create the \code{WorkerCacheInterface} instance; \code{WorkerCacheInterface} is used to create the \code {MasterInterface} instance, the latter is used to call the remote \code{MasterService} service; \code{MasterSessionFactory} is used to create the \code{MasterSession} instance; \code{OpRegisteryInterface} is used to query the specific \code{OP} element Data; \code{Env} is used to get the cross-platform \ascii{API} interface. Among them, the following will focus on the creation process of \code{WorkerCacheInterface}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/dist-master-env.png}
-\caption{\code{MasterEnv}模型}
- \label{fig:dist-master-env}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/dist-master-env.png}
+  \caption{\code{MasterEnv} model}
+  \label{fig:dist-master-env}
 \end{figure}
 
-\subsubsection{Initialize WorkerEnv}
 
+\subsubsection{Initialize WorkerEnv}
 \code{WorkerEnv} holds the context of the \code{Worker} runtime, which has the same lifecycle as \code{GrpcServer}, so the entire \code{Worker} runtime is visible.
 
 As shown in \refig{dist-worker-env}, \code{LocalDevices} is used to get the local device set; \code{DeviceManager} is used to manage the local device set and the remote device set; \code{SessionManager} is used for management \code{WorkerSession} collection; \code{RendezvousManager} is used to manage the \code{Rendezvous} instance set; \code{ThreadPool} will automatically assign a thread from the compute pool, starting \ascii{OP}\ascii{ The execution of the Kernel} operator; \code{Env} is used to get the cross-platform \ascii{API} interface.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/dist-worker-env.png}
-\caption{\code{WorkerEnv}模型}
- \label{fig:dist-worker-env}
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/dist-worker-env.png}
+  \caption{\code{WorkerEnv} model}
+  \label{fig:dist-worker-env}
 \end{figure}
 
-\subsubsection{Start grpc::Server}
 
+\subsubsection{Start grpc::Server}
 The system implementation uses the builder to create a \code{grpc::Server} instance. First, configure the \code{grpc::Server} service options; then, build the \code{MasterService} instance and the \code{WorkerService} instance respectively. Finally, call the \code{builder.BuildAndStart} method to start the \code{grpc::Server} server.
 
 It should be noted that \code{GrpcServer} is still in the \code{New} state when \code{grpc::Server} is started.
@@ -1218,8 +1213,8 @@ void GrpcServer::InitWorkerService(::grpc::ServerBuilder& builder) {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Starting Service}
 
+\subsubsection{Starting Service}
 In the \code{New} state, \code{grpc::Server} has been started, but the \code{MasterService} service and \code{WorkerService} service are not provided externally. After calling the \code{GrpcServer::Start} method, the state of \code{GrpcServer} is migrated from \code{New} to the \code{Started} state, and two separate threads are started, starting \code{MasterService} respectively. And the message processor of \code{WorkerService}. At this point, \code{GrpcServer} officially provides \code{MasterService} and \code{WorkerService}.
 
 \begin{leftbar}
@@ -1248,8 +1243,8 @@ Status GrpcServer::Start() {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Wait for terminating service}
 
+\subsubsection{Wait for terminating service}
 In order to permanently provide the \code{MasterService} service and the \code{WorkerService} service, you need to implement the \code{join} operation on the threads \code{TF\_master\_service} and \code{TF\_worker\_service} respectively. Causes the main thread to hang until the two threads terminate.
 
 By calling the \code{GrpcServer::Join} method, when \code{GrpcServer} is in the \code{Started} or \code{Stoped} state, it will automatically call the \code{Thread} destructor.
@@ -1295,8 +1290,8 @@ struct StdThread : Thread {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Terminate service}
 
+\subsubsection{Terminate service}
 Unfortunately, the current \code{GrpcServer} does not gracefully exit. Therefore, in the engineering practice environment, the distributed runtime of \tf{} often requires the help of \code{Kubernetes} to implement automatic management of the \code{GrpcServer} service.
 
 \begin{leftbar}
@@ -1320,12 +1315,12 @@ Status GrpcServer::Stop() {
 \end{c++}
 \end{leftbar}
 
-\subsection{Create WorkerCacheInterface}
 
+\subsection{Create WorkerCacheInterface}
 After introducing the \code{GrpcServer} state machine model, go back to a previous question. \code{MasterEnv} holds the \code{WorkerCacheInterface} instance, which is used to query or delay the creation of \code{WorkerInterface}; where \code{WorkerInterface} is used to access the remote \code{WorkerService} service.
 
-\subsubsection{Factory method: GrpcServer::WorkerCacheFactory}
 
+\subsubsection{Factory method: GrpcServer::WorkerCacheFactory}
 When initializing \code{MasterEnv}, create a \code{WorkerCacheInterface} instance by calling the factory method \code{GrpcServer::WorkerCacheFactory}. Where \code{WorkerCacheFactoryOptions} is equivalent to \code{ServerDef}, which contains \code{ClusterDef} and its \code{job\_name:task\_index} information. Therefore, the \code{GrpcChannelSpec} instance obtained via \code{ParseChannelSpec} is equivalent to \code{ClusterSpec}, which contains the basic configuration information of the cluster.
 
 \begin{leftbar}
@@ -1351,9 +1346,9 @@ Status GrpcServer::WorkerCacheFactory(
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Factory method: NewGrpcChannelCache}
 
-\code{NewGrpcChannelCache} is used to create \code{GrpcChannelCache} instances, and \code{GrpcChannelCache} can get or delay the creation of the corresponding \code{grpc::Channel} instance based on the name of \code{Worker}. Among them, a \ascii{Job} creates a \code{SparseGrpcChannelCache} instance, \code{MultiGrpcChannelCache} holds multiple \code{SparseGrpcChannelCache}, which is a typical combination mode application, which will be explained in detail below. The design of GrpcChannelCache}.
+\subsubsection{Factory method: NewGrpcChannelCache}
+\code{NewGrpcChannelCache} is used to create \code{GrpcChannelCache} instances, and \code{GrpcChannelCache} can get or delay the creation of the corresponding \code{grpc::Channel} instance based on the name of \code{Worker}. Among them, a \ascii{Job} creates a \code{SparseGrpcChannelCache} instance, \code{MultiGrpcChannelCache} holds multiple \code{SparseGrpcChannelCache}, which is a typical combination mode application, which will be explained in detail below. The design of \code{GrpcChannelCache}.
 
 \begin{leftbar}
 \begin{c++}
@@ -1371,8 +1366,8 @@ GrpcChannelCache* NewGrpcChannelCache(
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Factory method: NewGrpcWorkerCacheWithLocalWorker}
 
+\subsubsection{Factory method: NewGrpcWorkerCacheWithLocalWorker}
 The factory method \code{NewGrpcWorkerCacheWithLocalWorker} is used to create a \code{GrpcWorkerCache} instance with local \code{Worker}.
 
 \begin{leftbar}
@@ -1385,8 +1380,8 @@ WorkerCacheInterface* NewGrpcWorkerCacheWithLocalWorker(
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Factory method: GrpcServer::GetChannelCreationFunction}
 
+\subsubsection{Factory method: GrpcServer::GetChannelCreationFunction}
 The design of \code{GetChannelCreationFunction} uses the idea of ​​\ascii{C++} functional programming, which returns a function object for creating a \code{grpc::Channel} instance. Unfortunately, the existing \code{NewHostPortGrpcChannel} function does not match the \code{ChannelCreationFunction} interface. Therefore, an adapter called \code{ConvertToChannelCreationFunction} is used here to transform \code{NewHostPortGrpcChannel} into \code{ChannelCreationFunction}.
 
 \begin{leftbar}
@@ -1429,14 +1424,14 @@ At this point, we have straightened out the creation process of \code{GrpcChanne
 
 \begin{enum}
   \eitem{Get a list of all \code{Worker} names in the cluster;}
-  \eitem{Create \ascii{RPC} channel according to the name of \code{Worker};}  
+  \eitem{Create \ascii{RPC} channel according to the name of \code{Worker};}
   \eitem{Create a \code{GrpcRemoteWorker} instance from the \ascii{RPC} channel of \code{Worker}. }
 \end{enum}
 
 Where \code{GrpcRemoteWorker} is a concrete implementation of \code{WorkerInterface}; \code{GrpcChannelCache} is responsible for getting the name of \code{Worker} and its corresponding \code{grpc::Channel} for creating \code{Worker} .
 
-\subsection{Create Worker's RPC Channel}
 
+\subsection{Create Worker's RPC Channel}
 \code{GrpcChannelCache} is used to get or create the \ascii{RPC} channel of the remote \code{Worker} in the cluster. Where \code{ListWorkers} is used to return a list of names for \code{Worker} in the cluster. \code{TranslateTask} is used to convert the name of \code{Worker} to the address information of \code{host:port}. \code{FindWorkerChannel} looks for a \code{grpc::Channel} instance from the cache; if not found, dynamically creates a \code{grpc::Channel} instance based on the address information and adds it to the cache.
 
 \begin{leftbar}
@@ -1452,19 +1447,19 @@ struct GrpcChannelCache {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{implicit tree}
 
+\subsubsection{Implicit tree}
 As shown in \refig{dist-grpc-channel-cache}, the \code{GrpcChannelCache} class hierarchy follows an implicit "tree" structure, \code{SparseGrpcChannelCache} is a tree node, and each instance corresponds to a \ascii {Job} instance. And \code{MultiGrpcChannelCache} holds multiple \code{SparseGrpcChannelCache} instances, each of which corresponds to multiple \code{Job} instances.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/dist-grpc-channel-cache.png}
-\caption{Combination to create GRPC channel}
- \label{fig:dist-grpc-channel-cache}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/dist-grpc-channel-cache.png}
+  \caption{Combination to create GRPC channel}
+  \label{fig:dist-grpc-channel-cache}
 \end{figure}
 
-\subsubsection{Cache Mechanism}
 
+\subsubsection{Cache Mechanism}
 To avoid the overhead of creating a \code{grpc::Channel} instance each time in real time, \code{CachingGrpcChannelCache} was introduced, which uses caching techniques in the process of looking for \code{grpc::Channel}. When the lookup in the cache fails, the \code{grpc::Channel} instance is dynamically created by calling \code{FindChannelOnce} and added to the cache.
 
 \begin{leftbar}
@@ -1497,8 +1492,8 @@ struct CachingGrpcChannelCache : GrpcChannelCache {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Foliage node}
 
+\subsubsection{Foliage node}
 Each instance of \code{SparseGrpcChannelCache} corresponds to a \ascii{Job} instance, which creates a corresponding \code{grpc::Channel} instance set for a \ascii{Job}, one for each \ascii{Task} \code{grpc::Channel}.
 
 Where \code{FindChannelOnce} extracts the corresponding \code{task\_id} from the \code{Worker} name by calling \code{TranslateTask}, and then indexes it from \code{host\_ports\_}\ The address information of code{host:port}, call the factory method \code{channel\_func\_} to create the corresponding \code{grpc::Channel} instance. Therefore, it is mainly responsible for the following three responsibilities:
@@ -1557,8 +1552,8 @@ struct SparseGrpcChannelCache : CachingGrpcChannelCache {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{non-leaf node}
 
+\subsubsection{Non-leaf node}
 \code{MultiGrpcChannelCache} holds multiple \code{SparseGrpcChannelCache} instances via \code{caches\_} to create a combination of \code{grpc::Channel} for all \ascii{Worker} nodes of the entire cluster. To further improve the lookup process for the \code{SparseGrpcChannelCache} instance, \code{MultiGrpcChannelCache} caches the visited \code{SparseGrpcChannelCache} instance; only when the cache finds a \code{SparseGrpcChannelCache} instance fails, it tries to get from \code The corresponding \code{SparseGrpcChannelCache} instance is indexed in the {caches\_} list and automatically added to the cache.
 
 \begin{leftbar}
@@ -1621,15 +1616,15 @@ class MultiGrpcChannelCache : public CachingGrpcChannelCache {
 \end{c++}
 \end{leftbar}
 
-\subsection{Create WorkerInterface}
 
+\subsection{Create WorkerInterface}
 As shown by \refig{dist-worker-cache-interface} , \code{GrpcWorkerCache} holds the \code{GrpcChannelCache} object and creates a \code{grpc::Channel} instance from it, thus implementing \code{GrpcRemoteWorker } Dynamic creation of instances.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/dist-worker-cache-interface.png}
-\caption{polymorphic creation\code{WorkerInterface} instance}
- \label{fig:dist-worker-cache-interface}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/dist-worker-cache-interface.png}
+  \caption{polymorphic creation\code{WorkerInterface} instance}
+  \label{fig:dist-worker-cache-interface}
 \end{figure}
 
 \begin{leftbar}
@@ -1683,117 +1678,114 @@ struct GrpcWorkerCache : WorkerCachePartial {
 
 \end{content}
 
-\section{session control}
 
+\section{Session control}
 \begin{content}
-
 \emph{session control} is the core of the \tf{} distributed runtime and the critical path for the entire \tf{} execution engine. In order to streamline the context of session control, the next article will focus on the detailed process of the entire session control.
 
 
-\subsection{session collaboration}
-
+\subsection{Session collaboration}
 As shown in \refig{dist-session-overview}, in distributed mode, session control is implemented through the synergy between \code{GrpcSession, MasterSession, WorkerSession}, which reside in \code{Client, Master, respectively. On Worker}, use the same \code{session\_handle} to work together.
 
 Among them, \code{tf.Session} is implemented using \ascii{Python}, which is \ascii{API} provided by \tf{}. It is in the same process as \code{GrpcSession} and directly holds the handle (or pointer) of \code{GrpcSession}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-session-overview-1.png}
-\caption{session collaboration}
- \label{fig:dist-session-overview}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-session-overview-1.png}
+  \caption{session collaboration}
+  \label{fig:dist-session-overview}
 \end{figure}
 
 As shown in \refig{dist-multi-client-conn}, in distributed mode, there may be multiple \ascii{Client} connected to one \ascii{Master} at the same time, \ascii{Master} for each connection The \ascii{Client} entered creates a \code{MasterSession} instance. \ascii{Worker} may also provide computing services for multiple \ascii{Master}, and \ascii{Worker} creates a \code{WorkerSession} instance for each of the requested \ascii{Master}. To distinguish between different \ascii{Client} computing services, use a different \code{session\_handle} distinction.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/dist-multi-client-conn.png}
-\caption{session control: domain model}
- \label{fig:dist-multi-client-conn}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/dist-multi-client-conn.png}
+  \caption{session control: domain model}
+  \label{fig:dist-multi-client-conn}
 \end{figure}
 
-\subsection{Lifecycle}
 
+\subsection{Lifecycle}
 \code{GrpcSession} controls the session lifecycle of \ascii{Client}, \code{MasterSession} controls the session lifecycle of \ascii{Master}, \code{WorkerSession} controls the session lifecycle of \ascii{Worker}, they are Synergy is achieved through \code{session\_handle}.
 
-\subsubsection{GrpcSession Lifecycle}
 
+\subsubsection{GrpcSession Lifecycle}
 In distributed mode, the runtime of \code{Client} is controlled by \code{GrpcSession}, and the lifecycle of \code{GrpcSession} is shown in \refig{dist-grpc-session-life-cycle}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/dist-grpc-session-life-cycle.png}
-\caption{\code{GrpcSession}Lifecycle}
- \label{fig:dist-grpc-session-life-cycle}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/dist-grpc-session-life-cycle.png}
+  \caption{\code{GrpcSession}Lifecycle}
+  \label{fig:dist-grpc-session-life-cycle}
 \end{figure}
 
-\subsubsection{MasterSession Lifecycle}
 
+\subsubsection{MasterSession Lifecycle}
 In distributed mode, the runtime of \code{Master} is controlled by \code{MasterSession}, and the \code{MasterSession} lifecycle process is shown in \refig{dist-master-session-life-cycle}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/dist-master-session-life-cycle.png}
-\caption{\code{MasterSession}Lifecycle}
- \label{fig:dist-master-session-life-cycle}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/dist-master-session-life-cycle.png}
+  \caption{\code{MasterSession}Lifecycle}
+  \label{fig:dist-master-session-life-cycle}
 \end{figure}
 
-\subsubsection{WorkerSession Lifecycle}
 
+\subsubsection{WorkerSession Lifecycle}
 In distributed mode, the runtime of \code{Worker} is controlled by \code{WorkerSession}, and the \code{WorkerSession} lifecycle process is shown in \refig{dist-worker-session-life-cycle}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/dist-worker-session-life-cycle.png}
-\caption{\code{WorkerSession}Lifecycle}
- \label{fig:dist-worker-session-life-cycle}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/dist-worker-session-life-cycle.png}
+  \caption{\code{WorkerSession}Lifecycle}
+  \label{fig:dist-worker-session-life-cycle}
 \end{figure}
 
-\subsection{session process}
 
+\subsection{Session process}
 In the user programming environment, \ascii{Client} starts from \code{tf.Session(target)} and starts iterative execution via \code{Session.run}. After the final calculation is completed, call \code{Session.close} to close. Conversation. However, in the implementation of a distributed execution engine, the process is much more complicated.
 
 \begin{nitemize}
-  \eitem{Create session}    
+  \eitem{Create session}
     \begin{enum}
-      \ item {创建 \ code {GrpcSession};}  
-      \eitem{Get the remote device set;} 
+      \eitem{创建 \code{GrpcSession};}
+      \eitem{Get the remote device set;}
       \eitem{Create\code{MasterSession};}
-      \eitem{Create\code{WorkerSession};}      
+      \eitem{Create\code{WorkerSession};}
     \end{enum}
-  \eitem{iteration execution}          
+  \eitem{iteration execution}
     \begin{enum}
-      \eitem{Start execution;}  
-      \eitem{图剪枝;}  
-      \eitem{Figure split;}        
-      \eitem{Register submap;}              
-      \eitem{Run submap;}                         
-    \end{enum}      
-  \eitem{Close session}          
-    \begin{enum}          
-      \ item {关闭 \ code {GrpcSession};}  
+      \eitem{Start execution;}
+      \eitem{图剪枝;}
+      \eitem{Figure split;}
+      \eitem{Register submap;}
+      \eitem{Run submap;}
+    \end{enum}
+  \eitem{Close session}
+    \begin{enum}
+      \eitem{关闭 \code{GrpcSession};}
       \eitem{close\code{MasterSession};}
-      \eitem{关闭\code{WorkerSession}；}      
-    \end{enum}  
+      \eitem{关闭\code{WorkerSession}；}
+    \end{enum}
 \end{nitemize}
 
 \end{content}
 
+
 \section{Create session}
-
 \begin{content}
+Before starting the calculation, you need to create a \code{GrpcSession} instance on \ascii{Client}, a \code{MasterSession} instance on \ascii{Master}, and \code{WorkerSession} on each \ascii{Worker} For example, the three implement the collaboration through \code{MasterSession}'s \code{session\_handle} to serve the \ascii{Client} instance of the access.
 
-Before starting the calculation, you need to create a \code{GrpcSession} instance on \ascii{Client}, a \code{MasterSession} instance on \ascii{Master}, and \code{WorkerSession} on each \ascii{Worker} For example, the three implement the collaboration through \code{Master\ession}'s \code{session\_handle} to serve the \ascii{Client} instance of the access.
 
 \subsection{Create GrpcSession}
-
 When \ascii{Client} calls \code{tf.Session(target)}, the \code{GrpcSession} instance is triggered by calling the \ascii{C API} interface of \code{TF\_NewDeprecatedSession}. Among them, \ascii{C API} is a standard interface for multi-language programming provided by the \tf{} back-end system. Finally, \code{tf.Session} will directly hold the handle to \code{GrpcSession} as shown in \refig{dist-create-grpc-session-1}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-create-grpc-session-1.png}
-\caption{Create\code{GrpcSession}: \code{tf.Session} holds \code{GrpcSession} handle}
- \label{fig:dist-create-grpc-session-1}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-create-grpc-session-1.png}
+  \caption{Create\code{GrpcSession}: \code{tf.Session} holds \code{GrpcSession} handle}
+  \label{fig:dist-create-grpc-session-1}
 \end{figure}
 
 \begin{leftbar}
@@ -1828,10 +1820,10 @@ TF_DeprecatedSession* TF_NewDeprecatedSession(
 As shown by \refig{dist-grpc-session-factory}, \code{GrpcSession} is created by \code{GrpcSessionFactory} polymorphism. When \code{target} starts with \code{grpc://}, \code{SessionFactory::GetFactory} returns the \code{GrpcSessionFactory} instance, and \code{GrpcSessionFactory::NewSession}'s factory method delegate\code{ The static factory method of GrpcSession::Create} creates a \code{GrpcSession} instance.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/dist-grpc-session-factory.png}
-\caption{Polymorphic creation of GrpcSession}
- \label{fig:dist-grpc-session-factory}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/dist-grpc-session-factory.png}
+  \caption{Polymorphic creation of GrpcSession}
+  \label{fig:dist-grpc-session-factory}
 \end{figure}
 
 \begin{leftbar}
@@ -1859,7 +1851,7 @@ struct GrpcSessionFactory : SessionFactory {
 The \code{GrpcSession::Create} static factory method is primarily responsible for creating the \code{GrpcSession} instance and completing the corresponding initialization. In the initialization process, the most important thing is to build the \code{MasterInterface} instance; where \code{MasterInterface} is used for \ascii{Client} to access the \code{MasterService} remote service on \ascii{Master}, which exists Two subclasses are implemented, which correspond to two different application scenarios:
 
 \begin{enum}
-  \eitem{\code{LocalMaster}:\ascii{Client} is in the same process as \ascii{Master}, calling \code{LocalMaster::Lookup} to get the \code{LocalMaster} instance directly;
+  \eitem{\code{LocalMaster}:\ascii{Client} is in the same process as \ascii{Master}, calling \code{LocalMaster::Lookup} to get the \code{LocalMaster} instance directly;}
   \eitem{\code{GrpcRemoteMaster}:\ascii{Client} is not in the same process as \ascii{Master}, call the factory method \code{NewGrpcMaster} to generate the \code{GrpcRemoteMaster} instance. }
 \end{enum}
 
@@ -1890,15 +1882,15 @@ Status GrpcSession::Create(
 \end{c++}
 \end{leftbar}
 
-\subsection{Create MasterSession}
 
+\subsection{Create MasterSession}
 As shown in \refig{dist-create-master-session-1}, when the \code{GrpcSession} instance is created successfully, the call to \code{GprcSession::Create} will be triggered, and the initial calculation graph will be passed to \code. The {CreateSessionRequst} message is sent to \ascii{Master}; when \ascii{Master} receives the \code{CreateSessionRequst} message, it generates the corresponding \code{MasterSession} instance and uses the globally unique \code{session\_handle } Identifies the instance and finally brings it back to \code{GrpcSession} via the \code{CreateSessionResponse} message.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-create-master-session-1.png}
-\caption{Create\code{MasterSession}}
- \label{fig:dist-create-master-session-1}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-create-master-session-1.png}
+  \caption{Create\code{MasterSession}}
+  \label{fig:dist-create-master-session-1}
 \end{figure}
 
 % \begin{figure}[H]
@@ -1908,8 +1900,8 @@ As shown in \refig{dist-create-master-session-1}, when the \code{GrpcSession} in
 %  \label{fig:dist-create-master-session}
 % \end{figure}
 
-\subsubsection{GrpcSesion::Create(graph\_def)}
 
+\subsubsection{GrpcSesion::Create(graph\_def)}
 The \code{GrpcSession::Create(graph\_def)} method is mainly used for \code{Client} requests\code{Master} to create \code{MasterSession} instances. First, the \code{GrpcSession::Create} method finishes constructing the \code{CreateSessionRequst} message and then sends it to \ascii{Master} via \code{GrpcRemoteMaster}.
 
 When \code{GrpcSession} receives the \code{CreateSessionResponse} message, save \code{handle} of \code{MasterSession} and its version number \code{graph\_version}. Where \code{handle} is used to identify the \code{MasterSession} instance on the \ascii{Master} side, and \code{graph\_version} is used for subsequent extended calculation graphs.
@@ -1959,8 +1951,8 @@ Status GrpcSession::Create(const GraphDef& graph) {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{GrpcRemoteMaster::CreateSession}
 
+\subsubsection{GrpcRemoteMaster::CreateSession}
 \code{GrpcRemoteMaster} is a client implementation of \ascii{gRPC}. Its implementation is very simple, call the corresponding service interface of the remote \ascii{Master} via a \code{stub} of \ascii{gRPC}.
 
 \begin{leftbar}
@@ -1976,8 +1968,8 @@ Status GrpcRemoteMaster::CreateSession(
 \end{c++}
 \end{leftbar}
 
-\subsubsection{GrpcMasterService::CreateSessionHandler}
 
+\subsubsection{GrpcMasterService::CreateSessionHandler}
 \code{GrpcMasterService} is a \ascii{gRPC} service that implements the \ascii{RPC} service interface for \code{MasterService}. When the \code{CreateSession} message is received, it will be processed by the \code{GrpcMasterService::CreateSessionHandler} callback, which will delegate \code{Master} to process the message.
 
 When \code{Master} is processed, the \ascii{lambda} expression at the completion of the callback is returned, and the response message of \code{CreateSessionResponse} is returned to \ascii{Client}.
@@ -1996,8 +1988,8 @@ void GrpcMasterService::CreateSessionHandler(
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Master::CreateSession}
 
+\subsubsection{Master::CreateSession}
 \code{Master::CreateSession} will start a thread in the thread pool and look for all \ascii{Worker} in the thread according to the \code{cluster\_spec} information to collect information about the remote device set. Finally, a \code{MasterSession} was created.
 
 \begin{remark}
@@ -2065,8 +2057,8 @@ void Master::CreateSession(const CreateSessionRequest* req,
 \end{c++}
 \end{leftbar}
 
-\subsubsection{MasterSession::Create(graph\_def)}
 
+\subsubsection{MasterSession::Create(graph\_def)}
 \code{MasterSession::Create(graph\_def)} mainly accomplishes two things.
 
 \begin{enum}
@@ -2100,21 +2092,21 @@ Status MasterSession::Create(
 \end{c++}
 \end{leftbar}
 
-\subsection{Get remote device set}
 
+\subsection{Get remote device set}
 As shown in \refig{dist-worker-get-status}, \code{MasterSession} polls all \code{Worker} instances before creating \code{MasterSession}, getting all remote \code{Worker} Device information. Get the remote device set by calling \code{DeviceFinder::GetRemoteDevices} with the device finder of \code{DeviceFinder}.
 
 It works very simply, it gets a list of all \ascii{Worker} names in the cluster according to \code{GrpcWorkerCache::ListWorkers}; then, according to the name of \code{worker\_name}, call \code{GrpcWorkerCache: The :CreateWorker} factory method creates a \code{WorkerInterface} instance, which is used to access the remote \code{WorkerService} service. Finally, the \code{GetStatusRequest} request message is broadcasted to the remote \ascii{Worker} list via \code{WorkerInterface} to obtain the remote device set.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/dist-worker-get-status.png}
-\caption{Get remote device set}
- \label{fig:dist-worker-get-status}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/dist-worker-get-status.png}
+  \caption{Get remote device set}
+  \label{fig:dist-worker-get-status}
 \end{figure}
 
-\subsubsection{Device Finder}
 
+\subsubsection{Device Finder}
 \code{DeviceFinder} implements a function object that implements the algorithm for remote device lookups. The process is divided into three steps:
 
 \begin{enum}
@@ -2250,13 +2242,13 @@ struct DeviceFinder {
 Tips: When the \code{num\_pending\_} counter is not zero, the main thread periodically sleeps for \code{10} seconds. If you find that \ascii{Worker} has not returned a response message when you wake up, Then print the names of those \ascii{Worker}. When you see the following information printed cyclically, you should understand whether \code{Server} corresponding to \code{/job:worker/task:2} exits abnormally, or \ascii corresponding to \ascii{Master} Whether there is an abnormality in the network between {Worker}, etc., analyze and process according to the specific situation.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 CreateSession still waiting for response from worker: /job:worker/task:2
 \end{python}
 \end{leftbar}
 
-\subsubsection{NewRemoteDevices}
 
+\subsubsection{NewRemoteDevices}
 \code{NewRemoteDevices} will look for the \code{WorkerInterface} instance based on \code{worker\_name} and send a \code{GetStatusRequest} message to the corresponding \code{Worker} to get its device information. When the message is returned, the function object of \code{cb} will be called back. The device information obtained from the remote \code{Worker} is not complete. It does not contain the information of \code{worker\_name}, so it needs to be manually added.
 
 \begin{leftbar}
@@ -2306,8 +2298,8 @@ void NewRemoteDevices(
 \end{c++}
 \end{leftbar}
 
-\subsubsection{GrpcRemoteWorker::GetStatusAsync}
 
+\subsubsection{GrpcRemoteWorker::GetStatusAsync}
 \code{GrpcRemoteWorker} is a concrete implementation of \code{WorkerInterface}, which is a client implementation of \ascii{gRPC}, which calls the corresponding service interface of the remote \code{WorkerService} via \code{stub}.
 
 \begin{leftbar}
@@ -2322,8 +2314,8 @@ struct GrpcRemoteWorker : WorkerInterface {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{GrpcRemoteWorker::GetStatusAsync}
 
+\subsubsection{GrpcRemoteWorker::GetStatusAsync}
 \code{GrpcWorkerService} is a concrete implementation of \code{WorkerService}. When the \code{GetStatusRequest} message is received, it will be handled by the \code{GetStatusHandler} callback.
 
 \begin{leftbar}
@@ -2340,8 +2332,8 @@ struct GrpcWorkerService : AsyncServiceInterface {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Worker::GetStatusAsync}
 
+\subsubsection{Worker::GetStatusAsync}
 \code{Worker::GetStatusAsync} will delegate \code{DeviceMgr} to the local device information summary, and finally return to the peer through the \code{GetStatusResponse} message.
 
 \begin{leftbar}
@@ -2373,8 +2365,8 @@ void DeviceMgr::ListDeviceAttributes(
 \end{c++}
 \end{leftbar}
 
-\subsection{Create WorkerSession}
 
+\subsection{Create WorkerSession}
 When \code{MasterSession} is created successfully, if there is no dynamic configuration of the cluster (the default distributed configuration environment), all \ascii{Worker} will not be broadcast dynamically to create \code{WorkerSession}. In fact, every \ascii{Worker} has a \code{SessionMgr} instance that holds a \code{WorkerSession} instance named \code{legacy\_session\_}. Therefore, each \ascii{Worker} has a globally unique \code{WorkerSession} instance.
 
 \begin{leftbar}
@@ -2403,10 +2395,10 @@ Among them, \code{MasterSession} introduces the \code{BlockingCounter} counter i
 In addition, the \code{WorkerInterface} instance is queried or created via \code{WorkerCacheInterface}, which will be explained in more detail later.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/dist-create-worker-session.png}
-\caption{Dynamic creation\code{WorkerSession}}
- \label{fig:dist-create-worker-session}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/dist-create-worker-session.png}
+  \caption{Dynamic creation\code{WorkerSession}}
+  \label{fig:dist-create-worker-session}
 \end{figure}
 
 \begin{leftbar}
@@ -2545,8 +2537,8 @@ Status MasterSession::CreateWorkerSessions(
 \end{c++}
 \end{leftbar}
 
-\subsubsection{GrpcRemoteWorker}
 
+\subsubsection{GrpcRemoteWorker}
 \code{GrpcRemoteWorker} is the \ascii{gRPC} client that accesses the remote \ascii{Worker}. It calls the corresponding \code{stub} to call the remote service.
 
 \begin{leftbar}
@@ -2562,8 +2554,8 @@ struct GrpcRemoteWorker : WorkerInterface {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{GrpcWorkerService::CreateWorkerSessionHandler}
 
+\subsubsection{GrpcWorkerService::CreateWorkerSessionHandler}
 On the \ascii{Worker} side, the \code{CreateWorkerSession} message is handled by the \code{CreateWorkerSessionHandler} callback. It starts a runnable thread in the thread pool and triggers \code{Worker} to dynamically create a \code{WorkerSession} instance.
 
 \begin{leftbar}
@@ -2582,15 +2574,15 @@ struct GrpcWorkerService : AsyncServiceInterface {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Create a WorkerSession instance}
 
+\subsubsection{Create a WorkerSession instance}
 \code{Worker} delegates the responsibility for creating a \code{WorkerSession} instance to \code{SessionMgr}, which manages and maintains the lifecycle of all \code{WorkerSession} instances. As shown by \refig{dist-worker-session-manager}, \code{SessionMgr} may hold multiple instances of \code{WorkerSession}, and each \code{WorkerSession} instance is identified by \code{session\_handle}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-worker-session-manager.png}
-\caption{\code{Session}Manager}
- \label{fig:dist-worker-session-manager}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-worker-session-manager.png}
+  \caption{\code{Session}Manager}
+  \label{fig:dist-worker-session-manager}
 \end{figure}
 
 \begin{leftbar}
@@ -2610,10 +2602,10 @@ void Worker::CreateWorkerSessionAsync(
 As shown in \refig{dist-worker-session-model}, \code{WorkerSession} holds a \code{GraphMgr} instance for registering and running multiple graph instances. Among them, each graph instance uses the \code{graph\_handle} identifier. At the same time, each \code{WorkerSession} holds a \code{DeviceMgr} instance that manages the collection of local computing devices.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/dist-worker-session-model.png}
-\caption{\code{WorkerSession} domain model: multiple graph instances can be registered and run}
- \label{fig:dist-worker-session-model}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/dist-worker-session-model.png}
+  \caption{\code{WorkerSession} domain model: multiple graph instances can be registered and run}
+  \label{fig:dist-worker-session-model}
 \end{figure}
 
 \begin{leftbar}
@@ -2653,18 +2645,20 @@ Status SessionMgr::CreateSession(const string& session,
 
 \end{content}
 
-\section{iteration execution}
 
+\section{Iteration execution}
 \begin{content}
+
 
 \subsection{Start execution}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/dist-run-step-stage-1.png}
-\ caption {GprcSession: 启动 RunStep}
- \label{fig:dist-run-step-stage-1}
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/dist-run-step-stage-1.png}
+  \caption{GprcSession: 启动 RunStep}
+  \label{fig:dist-run-step-stage-1}
 \end{figure}
+
 
 \subsubsection{GrpcSession::Run}
 
@@ -2827,7 +2821,8 @@ Status GrpcSession::RunProto(
 \end{c++}
 \end{leftbar}
 
-\ Subsubsection {GrpcRemoteMaster :: RunStep}
+
+\subsubsection{GrpcRemoteMaster::RunStep}
 
 \begin{leftbar}
 \begin{c++}
@@ -2845,7 +2840,8 @@ struct GrpcRemoteMaster : MasterInterface {
 \end{c++}
 \end{leftbar}
 
-\ Subsubsection {GrpcMasterService :: RunStepHandler}
+
+\subsubsection{GrpcMasterService::RunStepHandler}
 
 \begin{leftbar}
 \begin{c++}
@@ -2890,7 +2886,8 @@ struct GrpcMasterService : AsyncServiceInterface {
 \end{c++}
 \end{leftbar}
 
-\ Subsubsection {Master :: RunStep}
+
+\subsubsection{Master::RunStep}
 
 \begin{leftbar}
 \begin{c++}
@@ -2907,6 +2904,7 @@ void Master::RunStep(CallOptions* opts,
 }
 \end{c++}
 \end{leftbar}
+
 
 \subsubsection{MasterSession::Run}
 
@@ -2961,6 +2959,7 @@ Status MasterSession::DoRunWithLocalExecution(
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{MasterSession::BuildAndRegisterPartitions}
 
 \begin{leftbar}
@@ -2986,6 +2985,7 @@ Status MasterSession::BuildAndRegisterPartitions(ReffedClientGraph* rcg) {
 }
 \end{c++}
 \end{leftbar}
+
 
 \subsubsection{ReffedClientGraph::RegisterPartitions}
 
@@ -3021,7 +3021,9 @@ Status ReffedClientGraph::RegisterPartitions(
 \end{c++}
 \end{leftbar}
 
-\subsection{Figure split: SplitByWorker}
+
+\subsection{Graph split: SplitByWorker}
+
 
 \subsubsection{ReffedClientGraph::DoBuildPartitions}
 
@@ -3036,14 +3038,16 @@ Status MasterSession::ReffedClientGraph::DoBuildPartitions(
 \end{c++}
 \end{leftbar}
 
-\subsection{Register Map}
+
+\subsection{Register Graph}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/dist-run-step-stage-2.png}
-\caption{RegisterGraph}
- \label{fig:dist-run-step-stage-2}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/dist-run-step-stage-2.png}
+  \caption{RegisterGraph}
+  \label{fig:dist-run-step-stage-2}
 \end{figure}
+
 
 \subsubsection{ReffedClientGraph::DoRegisterPartitions}
 
@@ -3099,6 +3103,7 @@ Status ReffedClientGraph::DoRegisterPartitions(
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{GrpcRemoteWorker::RegisterGraphAsync}
 
 \begin{leftbar}
@@ -3120,6 +3125,7 @@ class GrpcRemoteWorker : public WorkerInterface {
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{GrpcWorkerService::RegisterGraphHandler}
 
 \begin{leftbar}
@@ -3136,6 +3142,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
 };
 \end{c++}
 \end{leftbar}
+
 
 \subsubsection{Worker::RegisterGraphAsync}
 
@@ -3155,6 +3162,7 @@ void Worker::RegisterGraphAsync(
 }
 \end{c++}
 \end{leftbar}
+
 
 \subsubsection{GraphMgr::Register}
 
@@ -3185,7 +3193,7 @@ Status GraphMgr::Register(
 \end{c++}
 \end{leftbar}
 
-\subsection{Figure split: SplitByDevice}
+\subsection{Graph split: SplitByDevice}
 
 \begin{leftbar}
 \begin{c++}
@@ -3291,14 +3299,16 @@ Status GraphMgr :: InitItem (
 \end{c++}
 \end{leftbar}
 
-\subsection{Run Figure}
+
+\subsection{Run Graph}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/dist-run-step-stage-3.png}
-\caption{RunGraph}
- \label{fig:dist-run-step-stage-3}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/dist-run-step-stage-3.png}
+  \caption{RunGraph}
+  \label{fig:dist-run-step-stage-3}
 \end{figure}
+
 
 \subsubsection{ReffedClientGraph::RunPartitions}
 
@@ -3397,6 +3407,7 @@ Status MasterSession::ReffedClientGraph::RunPartitions(
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{GrpcRemoteWorker::RunGraphAsync}
 
 \begin{leftbar}
@@ -3445,6 +3456,7 @@ struct GrpcWorkerService : AsyncServiceInterface {
 };
 \end{c++}
 \end{leftbar}
+
 
 \subsubsection{Worker::RunGraphAsync}
 
@@ -3543,13 +3555,14 @@ void Worker::DoRunGraph(
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{GraphMgr}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/dist-run-step-overview.png}
-\caption{Worker: RunStep Formalization}
- \label{fig:dist-run-step-overview}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/dist-run-step-overview.png}
+  \caption{Worker: RunStep Formalization}
+  \label{fig:dist-run-step-overview}
 \end{figure}
 
 \begin{leftbar}
@@ -3695,56 +3708,62 @@ Status GraphMgr::RecvOutputs(int64 step_id, NamedTensors* out) {
 \end{c++}
 \end{leftbar}
 
+
 \subsection{Rendzvous}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/rendezvous-hierarchy.png}
-\caption{Rendezvous hierarchy}
- \label{fig:rendezvous-hierarchy}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/rendezvous-hierarchy.png}
+  \caption{Rendezvous hierarchy}
+  \label{fig:rendezvous-hierarchy}
 \end{figure}
 
-\subsubsection{polymorphic creation}
+
+\subsubsection{Polymorphic creation}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/rendezvous-remote-mgr.png}
-\caption{RemoteRendezvous polymorphic creation}
- \label{fig:rendezvous-remote-mgr}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/rendezvous-remote-mgr.png}
+  \caption{RemoteRendezvous polymorphic creation}
+  \label{fig:rendezvous-remote-mgr}
 \end{figure}
 
-\subsubsection{send}
+
+\subsubsection{Send}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/rendzvous-send.png}
-\caption{Rendezvous send}
- \label{fig:rendzvous-send}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/rendzvous-send.png}
+  \caption{Rendezvous send}
+  \label{fig:rendzvous-send}
 \end{figure}
 
-\subsubsection{receive}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/rendezvous-recv-case-1.png}
-\caption{Rendezvous receiving: distributed sender and receiver are in the same worker}
- \label{fig:rendezvous-recv-case-1}
-\end{figure}
+\subsubsection{Receive}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.4\textwidth]{figures/rendezvous-recv-case-2.png}
-\caption{Rendezvous receiving: The distributed sender and receiver are not in the same worker}
- \label{fig:rendezvous-recv-case-2}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/rendezvous-recv-case-1.png}
+  \caption{Rendezvous receiving: distributed sender and receiver are in the same worker}
+  \label{fig:rendezvous-recv-case-1}
 \end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\textwidth]{figures/rendezvous-recv-case-2.png}
+  \caption{Rendezvous receiving: The distributed sender and receiver are not in the same worker}
+  \label{fig:rendezvous-recv-case-2}
+\end{figure}
+
 
 \subsection{Logout Map}
 
 \end{content}
 
-\section{Close session}
 
+\section{Close session}
 \begin{content}
+
 
 \subsubsection{GrpcSession}
 
@@ -3768,6 +3787,7 @@ Status GrpcSession::Close() {
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{GrpcRemoteMaster}
 
 \begin{leftbar}
@@ -3785,6 +3805,7 @@ struct GrpcRemoteMaster : MasterInterface {
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{GrpcMasterService}
 
 \begin{leftbar}
@@ -3801,6 +3822,7 @@ struct GrpcMasterService : AsyncServiceInterface {
 };
 \end{c++}
 \end{leftbar}
+
 
 \subsubsection{Master}
 
@@ -3835,6 +3857,7 @@ void Master::CloseSession(const CloseSessionRequest* req,
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{MasterSession}
 
 \begin{leftbar}
@@ -3859,6 +3882,7 @@ Status MasterSession::Close() {
 }
 \end{c++}
 \end{leftbar}
+
 
 \subsubsection{ReffedClientGraph}
 
@@ -3903,6 +3927,7 @@ void ReffedClientGraph::DeregisterPartitions() {
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{GrpcWorkerService}
 
 \begin{leftbar}
@@ -3921,6 +3946,7 @@ struct GrpcWorkerService : AsyncServiceInterface {
 \end{c++}
 \end{leftbar}
 
+
 \subsubsection{Worker}
 
 \begin{leftbar}
@@ -3936,6 +3962,7 @@ void Worker::DeregisterGraphAsync(const DeregisterGraphRequest* request,
 }
 \end{c++}
 \end{leftbar}
+
 
 \subsubsection{GraphMgr}
 
@@ -3971,5 +3998,3 @@ GraphMgr::Item::~Item() {
 \end{leftbar}
 
 \end{content}
-
-

@@ -1,97 +1,93 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
 \chapter{System Architecture} 
 \label{ch:architecture}
-
 \begin{content}
-
 This chapter will explain the system architecture of \tf{}, and a simple example of the transformation process of the graph structure. Finally, by mining the working mechanism of session management, deepen understanding of the working mechanism of \tf{} runtime.
-
 \end{content}
 
-\section{System Architecture}
-	
-\begin{content}
 
-As shown in \refig{tf-architecture}, the system structure of \tf{} is bounded by \ascii{C API}, dividing the whole system into \emph{front end} and \emph{backend} two subsystems\footnote {In fact, the code of \ascii{Client} also exists in the backend system, and the front-end system is the external programming interface of \tf{}. This issue will be discussed in detail in later chapters. }.
+\section{System Architecture}	
+\begin{content}
+As shown in \refig{tf-architecture}, the system structure of \tf{} is bounded by \ascii{C API}, dividing the whole system into \emph{front end} and \emph{backend} two subsystems\footnote {In fact, the code of \ascii{Client} also exists in the backend system, and the front-end system is the external programming interface of \tf{}. This issue will be discussed in detail in later chapters.}.
 
 \begin{enum}
-  \eitem{front-end system: provides a programming model responsible for constructing computational graphs;}
-  \eitem{Backend system: Provides a runtime environment responsible for executing calculation diagrams. }
+  \eitem{Front-end system: provides a programming model responsible for constructing computational graphs.}
+  \eitem{Backend system: provides a runtime environment responsible for executing calculation diagrams.}
 \end{enum}
 
 The system design of \tf{} follows a good layered architecture, and the design and implementation of the backend system can be further broken down into \ascii{4} layers.
 
 \begin{enum}
-  \eitem{Runtime: Provide local mode and distributed mode, respectively, and share most of the design and implementation;}
-  \eitem{Calculation layer: consists of the \ascii{Kernel} implementation of each \ascii{OP}; at runtime, \ascii{Kernel} implements the specific mathematical operations of \ascii{OP}; 
-  \eitem{Communication layer: implements data exchange between components based on \ascii{gRPC} and can implement \ascii{RDMA} communication between nodes supporting \ascii{IB} network;
-  \eitem{Device layer: The computing device is the main carrier executed by \ascii{OP}, and \tf{} supports a variety of heterogeneous computing device types. }
+  \eitem{Runtime: provides local mode and distributed mode, respectively, and shares most of the design and implementation;}
+  \eitem{Calculation layer: consists of the \ascii{Kernel} implementation of each \ascii{OP}; at runtime, \ascii{Kernel} implements the specific mathematical operations of \ascii{OP}; }
+  \eitem{Communication layer: implements data exchange between components based on \ascii{gRPC} and can implement \ascii{RDMA} communication between nodes supporting \ascii{IB} network;}
+  \eitem{Device layer: the computing device is the main carrier executed by \ascii{OP}, and \tf{} supports a variety of heterogeneous computing device types. }
 \end{enum}
 
 From the point of view of the operation of the system, the \tf{} runtime is to complete the construction, layout, and operation of the calculation diagram.
 
 \begin{enum}
   \eitem{Expression diagram: constructing a calculation diagram, but not executing a diagram;}
-  \eitem{Organization diagram: The nodes that calculate the graph are deployed on the various computing devices in the cluster with the best execution plan; } 
-  \eitem{Run graph: Execute the nodes in the graph by topology and start the \ascii{Kernel} calculation for each \ascii{OP}. }   
+  \eitem{Organization diagram: The nodes that calculate the graph are deployed on the various computing devices in the cluster with the best execution plan;}
+  \eitem{Run graph: Execute the nodes in the graph by topology and start the \ascii{Kernel} calculation for each \ascii{OP}.}
 \end{enum}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/tf-architecture.png}
-\caption{TensorFlow System Architecture}
- \label{fig:tf-architecture}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/tf-architecture.png}
+  \caption{TensorFlow System Architecture}
+  \label{fig:tf-architecture}
 \end{figure}
 
-\subsection{Client}
 
+\subsection{Client}
 \ascii{Client} is the main component of the front-end system, which is a programming environment that supports multiple languages. \ascii{Client} constructs a calculation graph based on the programming interface of \ascii{TensorFlow}. Currently, \ascii{TensorFlow} supports the \ascii{Python} and \ascii{C++} programming interfaces, especially the \ascii{API} support for \ascii{Python} is the most comprehensive. Also, \ascii{API} support for other programming languages ​​is getting better.
 
 At this point, \ascii{TensorFlow} does not perform any graph calculation until \ascii{Session} is established with the background calculation engine, and \ascii{Session} is used as a bridge to establish \ascii{Client} and \ascii{Master} The channel between, and \ascii{GraphDef} in \ascii{Protobuf} format is serialized and passed to \ascii{Master} to start the execution of the calculation graph.
 
-\subsection{Master}
 
+\subsection{Master}
 In a distributed runtime environment, \ascii{Client} executes \code{Session.run} and passes the entire calculation graph to the backend's \ascii{Master}. At this point, the calculation graph is complete, often called \emph{\ascii{Full Graph}}. Subsequently, \ascii{Master} passes the \code{fetches, feeds} parameter list passed to it according to \code{Session.run}, traverses \ascii{Full Graph} in reverse, and prunes it according to the dependency. Finally, the smallest dependent subgraph is calculated, often called \ascii{Client Graph}.
 
 Next, \ascii{Master} is responsible for splitting \ascii{Client Graph} by task name (\code{SplitByTask}) into multiple \ascii{Graph Partition}; each \ascii{Worker} corresponds to a \ascii {Graph Partition}. Subsequently, \ascii{Master} registers \ascii{Graph Partition} to the corresponding \ascii{Worker} to execute these \ascii{Graph Partition} concurrently on different \ascii{Worker}. Finally, \ascii{Master} will notify all \ascii{Work} to start the corresponding \ascii{Graph Partition} implementation.
 
 Among them, there may be data dependencies between \ascii{Work}, \ascii{Master} does not participate in the data exchange between the two, they communicate with each other, and independently exchange data until all calculations are completed.
 
-\subsection{Worker}
 
-For each task, \tf{} will launch an \ascii{Worker} instance. \ascii{Worker} is mainly responsible for the following \ascii{3} aspects:
+\subsection{Worker}
+For each task, \tf{} will launch a \ascii{Worker} instance. A \ascii{Worker} is mainly responsible for the following \ascii{3} aspects:
 
 \begin{enum}
   \eitem{Processing requests from \ascii{Master};}
-  \eitem{Performs the registered \ascii{Graph Partition} to perform a second split (\code{SplitByDevice}) according to the local computing device set, and notifies each computing device to execute each \ascii{Graph Partition} concurrently;
-  \eitem{Execute local submap on a computing device according to the topology sorting algorithm, and schedule \ascii{Kernel} implementation of \ascii{OP}; 
+  \eitem{Performs the registered \ascii{Graph Partition} to perform a second split (\code{SplitByDevice}) according to the local computing device set, and notifies each computing device to execute each \ascii{Graph Partition} concurrently;}
+  \eitem{Execute local submap on a computing device according to the topology sorting algorithm, and schedule \ascii{Kernel} implementation of \ascii{OP}; }
   \eitem{Data communication between collaborative tasks. }
 \end{enum}
 
-First, \ascii{Worker} receives the graph execution command sent by \ascii{Master}. The calculation graph at this time is complete with respect to \ascii{Worker}, also known as \ascii{Full Graph}, which corresponds to \ascii{Graph Partition} of \ascii{Master}. Subsequently, \ascii{Worker} according to the currently available hardware environment, including \ascii{(GPU/CPU)} resources, according to the constraint specification of \ascii{OP} device, then split the graph \code{(SplitByDevice)} \ascii{Graph Partition}; where each computing device corresponds to a \ascii{Graph Partition}. Next, \ascii{Worker} starts the execution of all \ascii{Graph Partition}. Finally, for each computing device, \ascii{Worker} will perform the topology sorting algorithm according to the dependencies between the nodes in the calculation graph, and then call \ascii{Kernel} of \ascii{OP} to complete the \ascii{OP The operation of } (a typical polymorphic implementation technique).
+First, \ascii{Worker} receives the graph execution command sent by \ascii{Master}. The calculation graph at this time is complete with respect to \ascii{Worker}, also known as \ascii{Full Graph}, which corresponds to \ascii{Graph Partition} of \ascii{Master}. Subsequently, \ascii{Worker} according to the currently available hardware environment, including \ascii{(GPU/CPU)} resources, according to the constraint specification of \ascii{OP} device, then split the graph \code{(SplitByDevice)} \ascii{Graph Partition}; where each computing device corresponds to a \ascii{Graph Partition}. Next, \ascii{Worker} starts the execution of all \ascii{Graph Partition}. Finally, for each computing device, \ascii{Worker} will perform the topology sorting algorithm according to the dependencies between the nodes in the calculation graph, and then call \ascii{Kernel} of \ascii{OP} to complete the \ascii{OP} (The operation of a typical polymorphic implementation technique).
 
-Among them, \ascii{Worker} is also responsible for sending the results of the \ascii{OP} operation to other \ascii{Worker}, or accepting the results from other \ascii{Worker} to achieve \ascii Data interaction between {Worker}. The \tf{} specialization implements \ascii{Send/Recv} between the source device and the target device.
+Among them, \ascii{Worker} is also responsible for sending the results of the \ascii{OP} operation to other \ascii{Worker}, or accepting the results from other \ascii{Worker} to achieve \ascii{Data} interaction between \ascii{Worker}. The \tf{} specialization implements \ascii{Send/Recv} between the source device and the target device.
 
 \begin{enum}
-  Between \eitem{local\ascii{CPU} and \ascii{GPU}, use \code{cudaMemcpyAsync} to implement asynchronous copy;}
-  Between \eitem{local\ascii{GPU}, use the end-to-end \ascii{DMA} operation to avoid copying of the host\ascii{CPU}. }
+  \eitem{Between local\ascii{CPU} and \ascii{GPU}, use \code{cudaMemcpyAsync} to implement asynchronous copy;}
+  \eitem{Between local\ascii{GPU}, use the end-to-end \ascii{DMA} operation to avoid copying of the host\ascii{CPU}. }
 \end{enum}
 
 For communication between tasks, \tf{} supports multiple communication protocols.
 
 \begin{enum}
   \eitem{\ascii{gRPC over TCP;}}
-  \eitem{\ascii{RDMA over Converged Ethernet. }}
+  \eitem{\ascii{RDMA over Converged Ethernet.}}
 \end{enum}
 
-In addition, \tf{} has initially begun to support the \ascii{cuNCCL} library to improve communication between multiple \ascii{GPU}.
+In addition, \tf{} has initially begun to support the \ascii{NCCL} library to improve communication between multiple \ascii{GPU}.
+
 
 \subsection{Kernel}
-
 \ascii{Kernel} is a specific implementation of \ascii{OP} in a hardware device that is responsible for executing the specific operations of \ascii{OP}. Currently, the \ascii{TensorFlow} system contains \ascii{200} multiple standard \ascii{OP}, including numerical calculations, multidimensional array operations, control flow, state management, and more.
 
 Generally, every \ascii{OP} will have an optimized \ascii{Kernel} implementation depending on the device type. At runtime, the runtime selects a specific \ascii{Kernel} implementation for \ascii{OP} based on the device constraint specification of \ascii{OP} and its local device type, completing the calculation of \ascii{OP}.
@@ -102,62 +98,61 @@ In addition, \ascii{TensorFlow} implements vectorization technology to enable mo
 
 \end{content}
 
-\section{图控制}
 
+\section{Graph control}
 \begin{content}
-
 Through a simple example, further stripping and stripping, and gradually unearthing the control and operation mechanism of the \tf{} calculation graph.
 
-\subsection{Building a cluster}
 
+\subsection{Building a cluster}
 As shown in \refig{tf-1ps-1worker}. If there is a simple distributed environment: \ascii{1 PS + 1 Worker}, and divide it into two tasks:
 
 \begin{enum}
-  \eitem{\ascii{ps0}: Use the \code{/job:ps/task:0} tag to be responsible for storing and updating model parameters;}
-  \eitem{\ascii{worker0}: The \code{/job:worker/task:0} tag is responsible for the training of the model. }
+  \eitem{\ascii{ps0}: the \code{/job:ps/task:0} tag to be responsible for storing and updating model parameters.}
+  \eitem{\ascii{worker0}: the \code{/job:worker/task:0} tag is responsible for the training of the model.}
 \end{enum}
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/tf-1ps-1worker.png}
-\caption{TensorFlow cluster: \ascii{1 PS + 1 Worker}}
- \label{fig:tf-1ps-1worker}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/tf-1ps-1worker.png}
+  \caption{TensorFlow cluster: \ascii{1 PS + 1 Worker}}
+  \label{fig:tf-1ps-1worker}
 \end{figure}
 
-\subsection{Figure construction}
 
-As shown in \refig{tf-graph-construction}. \ascii{Client} builds a simple calculation graph; first, multiply the $w$ and $x$ matrices, add them in bits with the intercept $b$, and finally update them to $s$.
+\subsection{Graph construction}
+As shown in \refig{tf-graph-construction}, a \ascii{Client} builds a simple calculation graph; first, multiply the $w$ and $x$ matrices, add them in bits with the intercept $b$, and finally update them to $s$.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/tf-graph-construction.png}
-\caption{Figure construction}}
- \label{fig:tf-graph-construction}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/tf-graph-construction.png}
+  \caption{Figure construction}
+  \label{fig:tf-graph-construction}
 \end{figure}
 
-\subsection{图Execution}
-
-As shown in \refig{tf-graph-execution}. First, \ascii{Client} creates a \code{Session} instance and establishes a channel with \ascii{Master}; then, \ascii{Client} passes the calculation graph to \ by calling \code{Session.run} Ascii{Master}.
+\subsection{Graph Execution}
+As shown in \refig{tf-graph-execution}. First, \ascii{Client} creates a \code{Session} instance and establishes a channel with \ascii{Master}; then, \ascii{Client} passes the calculation graph to \ by calling \code{Session.run} \ascii{Master}.
 
 Subsequently, \ascii{Master} starts the graph calculation process of \ascii{Step}. Before execution, \ascii{Master} implements a series of optimization techniques such as \emph{common expression elimination}, \emph{constant folding} and so on. Finally, \ascii{Master} is responsible for the collaboration between the tasks and performs the optimized calculation diagram.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/tf-graph-execution.png}
-\caption{图作}}
- \label{fig:tf-graph-execution}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/tf-graph-execution.png}
+  \caption{Graph execution}
+  \label{fig:tf-graph-execution}
 \end{figure}
 
-\subsubsection{Figure split}
 
+\subsubsection{Graph split}
 As shown in \refig{tf-graph-split-by-task}, there is a reasonable graph partitioning algorithm. \ascii{Master} divides the \ascii{OP} related to the model parameters into a group and places them on the \ascii{ps0} task; the other \ascii{OP} is divided into another group and placed in \ascii{worker0} Execute on the task.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/tf-graph-split-by-task.png}
-\caption{Figure split: by task}}
- \label{fig:tf-graph-split-by-task}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/tf-graph-split-by-task.png}
+  \caption{Figure split: by task}
+  \label{fig:tf-graph-split-by-task}
 \end{figure}
+
 
 \subsubsection{Submap registration}
 
@@ -168,65 +163,64 @@ The \code{Send} and \code{Recv} nodes are also \ascii{OP}, except that they are 
 Finally, \ascii{Master} registers the submap to the corresponding \ascii{Worker} by calling the \code{RegisterGraph} interface, and the corresponding \ascii{Worker} is responsible for performing the operation.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/tf-register-graph.png}
-\caption{Submap registration: Insert Send and Recv nodes}}
- \label{fig:tf-register-graph}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/tf-register-graph.png}
+  \caption{Submap registration: Insert Send and Recv nodes}
+  \label{fig:tf-register-graph}
 \end{figure}
 
-\subsubsection{Submap operation}
 
+\subsubsection{Submap operation}
 As shown in \refig{tf-run-graph}. \ascii{Master} notifies all \ascii{Worker} to perform submap operations by calling the \code{RunGraph} interface. Among them, \ascii{Worker} can exchange data by calling \code{RecvTensor} interface.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/tf-run-graph.png}
-\caption{Submap execution}}
- \label{fig:tf-run-graph}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/tf-run-graph.png}
+  \caption{Submap execution}
+  \label{fig:tf-run-graph}
 \end{figure}
 
 \end{content}
 
-\section{session management}
-	
-\begin{content}
 
+\section{Session management}
+\begin{content}
 Next, the internal runtime mechanism of the runtime is further uncovered by an overview of the entire lifecycle process of the session and its association with the graph control.
 
-\subsection{Create session}
 
+\subsection{Create session}
 First, when \ascii{Client}\emph{first} executes \code{tf.Session.run}, the entire image will be serialized and the \code{CreateSessionRequest} message will be sent via \ascii{gRPC} to pass the image to \ascii{Master}.
 
 Subsequently, \ascii{Master} creates a \code{MasterSession} instance, which is identified by the globally unique \code{handle} and finally returned to \ascii{Client} via \code{CreateSessionResponse}. As shown in \refig{tf-create-session-overview}.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/tf-create-session-overview.png}
-\caption{Create session}}
- \label{fig:tf-create-session-overview}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/tf-create-session-overview.png}
+  \caption{Create session}
+  \label{fig:tf-create-session-overview}
 \end{figure}
 
-\subsection{iteration run}
 
+\subsection{Iteration run}
 Subsequently, \ascii{Client} initiates the iterative execution process and calls each iteration a \ascii{Step}. At this point, \ascii{Client} sends a \code{RunStepRequest} message to \ascii{Master}, and the message carries the \code{handle} identifier for the corresponding \code{MasterSession} instance of \ascii{Master}. As shown in \refig{tf-run-step-overview}.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=1.0\textwidth]{figures/tf-run-step-overview.png}
-\caption{iteration execution}}
- \label{fig:tf-run-step-overview}
+  \centering
+  \includegraphics[width=1.0\textwidth]{figures/tf-run-step-overview.png}
+  \caption{iteration execution}
+  \label{fig:tf-run-step-overview}
 \end{figure}
 
-\subsubsection{Register Submap}
 
+\subsubsection{Register submap}
 After \ascii{Master} receives the \code{RunStepRequest} message, it will perform operations such as pruning, splitting, and optimization. Finally, according to the task \ascii{(Task)}, the graph is divided into multiple sub-picture segments \ascii{(Graph Partition)}. Subsequently, \ascii{Master} sends a \code{RegisterGraphRequest} message to each \ascii{Worker}, registering the sub-picture segments to each \ascii{Worker} node in turn.
 
-When \ascii{Worker} receives the \code{RegisterGraphRequest} message, it performs the split operation again, and finally divides the graph into multiple sub-picture segments \ascii{(Graph Partition)} according to the device \ascii{(Device)}. \footnote{When distributed running, the graph splits through a two-stage splitting process. Split by task on \ascii{Master} and split by device in \ascii{Worker}. Therefore, the results are referred to as sub-picture segments, which only have a range and a difference in their size. }
+When \ascii{Worker} receives the \code{RegisterGraphRequest} message, it performs the split operation again, and finally divides the graph into multiple sub-picture segments \ascii{(Graph Partition)} according to the device \ascii{(Device)}. \footnote{When distributed running, the graph splits through a two-stage splitting process. Split by task on \ascii{Master} and split by device in \ascii{Worker}. Therefore, the results are referred to as sub-picture segments, which only have a range and a difference in their size.}
 
 When \ascii{Worker} completes the subgraph registration, it returns the \code{RegisterGraphReponse} message and carries the \code{graph\_handle} flag. This is because \ascii{Worker} can register and run multiple subgraphs concurrently, each using a unique identifier of \code{graph\_handle}.
 
-\subsubsection{Run Submap}
 
+\subsubsection{Run submap}
 After \ascii{Master} completes the subgraph registration, all \ascii{Worker} will be broadcast and all subgraphs will be executed concurrently. This process is done by \ascii{Master} sending a \code{RunGraphRequest} message to \ascii{Worker}. The message carries the identifier information of the \code{(session\_handle, graph\_handle, step\_id)} triplet for the corresponding subgraph of the \ascii{Worker} index.
 
 After \ascii{Worker} receives the message \code{RunGraphRequest} message, \ascii{Worker} indexes the corresponding submap according to \code{graph\_handle}. Finally, \ascii{Worker} starts all local computing devices and executes all submaps concurrently. Among them, each subgraph is placed in a separate \code{Executor}, and \code{Executor} will calculate the subpicture segment according to the topological sorting algorithm. The above algorithm can be formally described as the following code.
@@ -234,36 +228,36 @@ After \ascii{Worker} receives the message \code{RunGraphRequest} message, \ascii
 
 \begin{leftbar}
   \begin{python}
-Def run_partitions(rendezvous, executors_and_partitions, inputs, outputs):
-  Rendezvous.send(inputs)
-  For (executor, partition) in executors_and_partitions: 
-    Executor.run(partition)
-  Rendezvous.recv(outputs)
+def run_partitions(rendezvous, executors_and_partitions, inputs, outputs):
+  rendezvous.send(inputs)
+  for (executor, partition) in executors_and_partitions: 
+    executor.run(partition)
+  rendezvous.recv(outputs)
   \end{python}
 \end{leftbar}
 
-\subsubsection{Exchange data}
 
+\subsubsection{Exchange data}
 If there is a need to exchange data between the two devices, it is done by inserting the \ascii{Send/Recv} node. In particular, if there is a need to exchange data between two \ascii{Worker}, then cross-process communication is required.
 
 At this point, you need to send the \code{RecvTensorRequest} message to the sender through the receiver, and then take the corresponding \ascii{Tensor} from the sender's mailbox and return it via \code{RecvTensorResponse}. As shown in \refig{tf-recv-tensor-overview}.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/tf-recv-tensor-overview.png}
-\caption{Data exchange between workers}}
- \label{fig:tf-recv-tensor-overview}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/tf-recv-tensor-overview.png}
+  \caption{Data exchange between workers}
+  \label{fig:tf-recv-tensor-overview}
 \end{figure}
 
-\subsection{Close session}
 
+\subsection{Close session}
 When the calculation is complete, \ascii{Client} sends a \code{CloseSessionReq} message to \ascii{Master}. After \ascii{Master} receives the message, it starts releasing all the resources held by \code{MasterSession}. As shown in \refig{tf-close-session-overview}.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/tf-close-session-overview.png}
-\caption{Close session}}
- \label{fig:tf-close-session-overview}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/tf-close-session-overview.png}
+  \caption{Close session}
+  \label{fig:tf-close-session-overview}
 \end{figure}
 
 \end{content}

@@ -1,31 +1,26 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{calculation diagram} 
+\chapter{Compute graph} 
 \label{ch:computation-graph}
-
 \begin{content}
-
-In the calculation diagram of \tf{}, use \ascii{OP} to represent nodes, construct data dependencies between production and consumption between \ascii{OP} according to the calculation and data dependencies between \ascii{OP}, and Expressed by directed edges. Among them, there are two types of directed edges, one for carrying data and one for \code{Tensor}; the other for not carrying data, only for computing dependencies.
-
-This chapter will explain the most important domain objects in \tf{}: \emph{calculation graph}. In order to comprehensively expound the key implementation techniques of the computational graph, the system design and implementation of the front and back ends will be discussed separately, and the workflow principle of the computational graph transformation between the front and back systems will be explored.
-
+In the compute graph of \tf{}, use \ascii{OP} to represent nodes, construct data dependencies between production and consumption between \ascii{OP} according to the calculation and data dependencies between \ascii{OP}, and Expressed by directed edges. Among them, there are two types of directed edges, one for carrying data and one for \code{Tensor}; the other for not carrying data, only for computing dependencies.
+This chapter will explain the most important domain objects in \tf{}: \emph{compute graph}. In order to comprehensively expound the key implementation techniques of the computational graph, the system design and implementation of the front and back ends will be discussed separately, and the workflow principle of the computational graph transformation between the front and back systems will be explored.
 \end{content}
 
+
 \section{Python front end}
-
 \begin{content}
-
 In the front-end system of \ascii{Python}, there is no concept of \code{Node, Edge}, only the concept of \code{Operation, Tensor} exists. In fact, in the front-end \ascii{Python} system, \code{Operation} represents the \code{Node} instance in the diagram, and \code{Tensor} represents the \code{Edge} instance in the diagram.
 
-\subsection{Operation}
 
+\subsection{Operation}
 \code{OP} is used to express some kind of abstract mathematical calculation, which represents the nodes in the calculation graph. \code{Operation} is the most important domain object in the front-end \ascii{Python} system, and is the smallest unit of computation at the \tf{} runtime.
 
-\subsubsection{domain model}
 
+\subsubsection{Domain model}
 As shown by \refig{py-operation}, \code{Operation} represents some kind of abstract calculation. Zero or more \code{Tensor} output by the upstream node as its input, after calculation, output zero or more\ Code{Tensor} to the downstream node, resulting in data dependencies between the upstream and downstream \code{Operation}. In particular, \code{Operation} may hold a collection of upstream control dependent edges, indicating potential computational dependencies.
 
 During the calculation of the graph construction, construct the \code{Operation} instance via the \ascii{OP} constructor\ascii{(OP Constructor)} and register it in the default graph instance. At the same time, \code{Operation} in turn holds the graph instance directly via \ascii{graph}.
@@ -33,16 +28,17 @@ During the calculation of the graph construction, construct the \code{Operation}
 The metadata for \code{Operation} is held by \code{OpDef} and \code{NodeDef}, which exist in the format \ascii{ProtoBuf}, which describes the most essential thing of \code{Operation}. Among them, \code{OpDef} describes the static attribute information of \ascii{OP}, such as the name of \ascii{OP}, input/output parameter list, attribute set definition and other information. And \code{NodeDef} describes the dynamic attribute value information of \ascii{OP}, such as attribute value and other information.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/py-operation.png}
-\caption{Domain object: Operation}
- \label{fig:py-operation}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/py-operation.png}
+  \caption{Domain object: Operation}
+  \label{fig:py-operation}
 \end{figure}
 
-\subsubsection{constructor}
+
+\subsubsection{Constructor}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Operation(object):
   def __init__(self, node_def, g, inputs=None, output_types=None,
                control_inputs=None, input_types=None, original_op=None,
@@ -93,12 +89,12 @@ class Operation(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{property set}
 
+\subsubsection{Property set}
 \code{Operation} defines a common attribute method for getting the metadata of the \ascii{OP}. Where \code{name} represents the name of the node in the diagram, including the hierarchical name of \code{name\_scope}, which is unique within the scope of the diagram instance, such as \code{layer\_2/MatMul};\code{ Type} indicates the unique name of the \code{OP} type, such as \code{MatMul, Variable}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Operation(object):
   @property
   def name(self):
@@ -132,12 +128,12 @@ class Operation(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Run OP}
 
+\subsubsection{Run OP}
 You can traverse the graph from the \ascii{OP} for the end, look for the smallest dependent submap, and execute the submap in the default \code{Session}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Operation(object):
   def run(self, feed_dict=None, session=None):
     """Runs this operation in a `Session`.
@@ -152,7 +148,7 @@ class Operation(object):
 Where \code{\_run\_using\_default\_session} will run the \ascii{OP} with the default \code{Session}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def _run_using_default_session(operation, feed_dict, session=None):
   """Uses the default session to run "operation".
   """
@@ -162,40 +158,40 @@ def _run_using_default_session(operation, feed_dict, session=None):
 \end{python}
 \end{leftbar}
 
-\subsection{Tensor}
 
+\subsection{Tensor}
 In the graph construction period, \code{Tensor} does not carry data in the graph, it only represents a symbol handle output by \code{Operation}. In fact, you need to use \code{Session.run} to get the real data held by \code{Tensor}.
 
-\subsubsection{producer and consumer}
 
+\subsubsection{Producer and consumer}
 As shown by \refig{py-tensor-producter-consumer}, \code{Tensor} is a bridge between two \code{Operation} data exchanges, which construct a typical \emph{producer and consumer} Relationship between. Upstream \code{Operation} as a producer, after some abstract calculation, produces a \code{Tensor} as one of the outputs of the upstream \code{Operation} and uses \code{output\_index} As an identification. The \code{Tensor} is passed to the downstream \code{Operation} and is used as input to the downstream \code{Operation}, and the downstream \code{Operation} acts as the consumer of the \code{Tensor}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/py-tensor-producter-consumer.png}
-\caption{Tensor: Producer-Consumer}
- \label{fig:py-tensor-producter-consumer}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/py-tensor-producter-consumer.png}
+  \caption{Tensor: Producer-Consumer}
+  \label{fig:py-tensor-producter-consumer}
 \end{figure}
 
-\subsubsection{domain model}
 
+\subsubsection{Domain model}
 As shown by \refig{py-tensor}, \code{Tensor} holds the \code{Operation} that plays the producer role via \ascii{op} and uses \code{index} to indicate that the \code{Tensor} is The \code{Operation} outputs the index in the list. That is, you can use the binary information of \code{op:index} to uniquely identify a \code{Tensor} instance in the diagram.
 
 In addition, \code{Tensor} holds a list of consumers of \code{Operation} that are used to track which \code{Operation} instances the \code{Tensor} output to. Therefore, \code{Tensor} acts as the edge of the computation graph and builds the data dependencies between \code{Operation}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-tensor.png}
-\caption{Domain object: Tensor}
- \label{fig:py-tensor}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-tensor.png}
+  \caption{Domain object: Tensor}
+  \label{fig:py-tensor}
 \end{figure}
 
-\subsubsection{establish association}
 
+\subsubsection{Establish association}
 Finally, with reference to the partial implementation of \code{Operation} and \code{Tensor}, it is easy to find a producer-consumer relationship between the two. When the \code{Tensor} list is passed as input to \code{Operation}, the consumer relationship between the downstream \code{Operation} and the input \code{Tensor} list is established.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Operation(object):
   def __init__(self, node_def, graph, inputs=None, output_types=None):
     # self(Operation) as consumer for input tensors.
@@ -213,7 +209,7 @@ class Operation(object):
 Similarly, \code{Tensor} holds the upstream producer \code{Operation} in the constructor and its \code{Tensor} instance in the \code{Operation}\code{outputs} list index. Also, when \code{\_add\_consumer} is called, the downstream \code{Operation} is appended to the consumer list.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Tensor(_TensorLike):
   def __init__(self, op, value_index, dtype):    
     # Index of the OP's endpoint that produces this tensor.
@@ -231,12 +227,12 @@ class Tensor(_TensorLike):
 \end{python}
 \end{leftbar}
 
-\subsubsection{property set}
 
-The \code{Tperor} can be traced back through \code{Tensor} to get the relevant metadata. It can be speculated that the algorithm for traversing the computational graph is reversed, as opposed to the traversal direction of the topological sorting algorithm. Among them, \code{name} returns the binary information of \code{(node:output\_index)}, which uniquely identifies the \code{Tensor} instance within the scope of the calculation graph.
+\subsubsection{Property set}
+The \code{Operation} can be traced back through \code{Tensor} to get the relevant metadata. It can be speculated that the algorithm for traversing the computational graph is reversed, as opposed to the traversal direction of the topological sorting algorithm. Among them, \code{name} returns the binary information of \code{(node:output\_index)}, which uniquely identifies the \code{Tensor} instance within the scope of the calculation graph.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Tensor(_TensorLike):
   @property
   def on (self):
@@ -276,10 +272,11 @@ class Tensor(_TensorLike):
 \end{python}
 \end{leftbar}
 
-\subsubsection{evaluation}
+
+\subsubsection{Evaluation}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Tensor(_TensorLike):
   def eval(self, feed_dict=None, session=None):
     """Evaluates this tensor in a `Session`.
@@ -295,7 +292,7 @@ class Tensor(_TensorLike):
 Where \code{\_eval\_using\_default\_session} will evaluate the \ascii{Tensor} instance using the default \code{Session}. Note that the \code{fetches} list of \code{tf.Session.run} can be mixed to receive \code{Operation, Tensor} instances.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def _eval_using_default_session(tensors, feed_dict, graph, session=None):
   """Uses the default session to evaluate one or more tensors."""
   if session is None:
@@ -304,21 +301,21 @@ def _eval_using_default_session(tensors, feed_dict, graph, session=None):
 \end{python}
 \end{leftbar}
 
-\subsection{TensorShape}
 
+\subsection{TensorShape}
 \code{Tensor} uses \code{TensorShape} to describe its shape information. It holds the data type of the \code{Tensor} and its \code{Dimension} list, and each \code{Dimension} describes the size of the dimension. Among them, \code{TensorShape} and \code{Dimension} are value objects, including some practical mathematical calculation methods, such as counting, merging, compatibility checking, etc.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-tensor-shape.png}
-\caption{TensorShape}
- \label{fig:py-tensor-shape}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-tensor-shape.png}
+  \caption{TensorShape}
+  \label{fig:py-tensor-shape}
 \end{figure}
 
 Obviously, you can use \code{TensorShape} to figure out the number of elements included in \code{Tensor}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class TensorShape(object):
   def num_elements(self):
     if self.is_fully_defined():
@@ -331,12 +328,12 @@ class TensorShape(object):
 \end{python}
 \end{leftbar}      
 
-\subsubsection{factory method}
 
+\subsubsection{Factory method}
 There are several practical factory methods, \code{scalar, vector, matrix} for constructing the \ascii{0} dimension, the \ascii{1} dimension, the \code{TensorShape} instance of the \ascii{2} dimension, respectively.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def scalar():
   return TensorShape([])
 
@@ -348,12 +345,12 @@ def matrix(rows, cols):
 \end{python}
 \end{leftbar}
 
-\subsubsection{partial definition}
 
+\subsubsection{Partial definition}
 When constructing a calculation graph, its \code{TensorShape} is temporarily undetermined, and it can be represented by \code{None}. There are two cases. If the size of \code{rank} is unknown, the \code{TensorShape} is called unknown; if the size of \code{rank} is known, it is called \code{TensorShape}\emph{partial definition}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def unknown_shape(ndims=None):
   if ndims is None:
     return TensorShape(None)
@@ -362,12 +359,12 @@ def unknown_shape(ndims=None):
 \end{python}
 \end{leftbar}
 
-\subsubsection{full definition}
 
+\subsubsection{Full definition}
 Conversely, when the size of each dimension of \code{TensorShape} is determined, it is called \emph{fully defined}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class TensorShape(object):
   def is_fully_defined(self):
     return (self._dims is not None and all(dim.value is not None
@@ -375,12 +372,12 @@ class TensorShape(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{property set}
 
+\subsubsection{Property set}
 You can use the \code{ndims} property to return the \code{rank} size of \code{TensorShape} and the \code{dims} property to return the \code{Dimension} list.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class TensorShape(object):
   @property
   def dims(self):
@@ -395,12 +392,12 @@ class TensorShape(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{conversion}
 
+\subsubsection{Conversion}
 It can be converted to \code{TensorShapeProto} using \code{as\_proto}. In particular, when a \code{Dimension} is unknown, in order to be able to implement serialization, you need to convert \code{None} to \ascii{-1}.
 
 \begin{leftbar}
-\ Begin {python} 
+\begin{python}
 class TensorShape(object):
   def _dims_as_proto(self): 
     def _size(dim):
@@ -420,7 +417,7 @@ class TensorShape(object):
 You can also use \code{as\_list} to turn it into a list of \code{Dimension}. If the \code{rank} size of \code{TensorShape} is unknown, a \code{ValueError} exception is thrown.
 
 \begin{leftbar}
-\ Begin {python} 
+\begin{python}
 class TensorShape(object):
   def as_list(self):
     if self._dims is None:
@@ -432,7 +429,7 @@ class TensorShape(object):
 Instead, use \code{as\_shape} to convert the \code{Deimension} list, or \code{TensorShapeProto} to the \code{TensorShape} instance.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def as_shape(shape):
   if isinstance(shape, TensorShape):
     return shape
@@ -444,7 +441,7 @@ def as_shape(shape):
 In particular, when \code{TensorShape} is constructed, when a dimension of \code{TensorShapeProto} is \ascii{-1}, it is converted to a representation of \code{None}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class TensorShape(object):
   def __init__(self, dims):
     if dims is None:
@@ -471,25 +468,25 @@ class TensorShape(object):
 \end{python}
 \end{leftbar}
 
-\subsection{Graph}
 
+\subsection{Graph}
 \code{Graph} is the most important domain object of \tf{}. The runtime of \tf{} is to complete the construction, passing, pruning, optimization, splitting, and execution of \code{Graph}. Therefore, familiarity with the domain model of \code{Graph} is useful for understanding the entire \tf{} runtime.
 
-\subsubsection{domain model}
 
+\subsubsection{Domain model}
 As shown in \refig{py-graph}, a \code{Graph} object will contain a series of \code{Operation} objects representing a collection of computational units. At the same time, it indirectly holds a series of \code{Tensor} objects representing a collection of data units.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/py-graph.png}
-\caption{Domain object: Graph}
- \label{fig:py-graph}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/py-graph.png}
+  \caption{Domain object: Graph}
+  \label{fig:py-graph}
 \end{figure}
 
 In order to quickly index the node information in the graph, assign a unique \code{id} to each \code{Operation} in the scope of the current graph, and store the data dictionary of \code{\_nodes\_by\_id} in the graph. . At the same time, in order to quickly index the node information according to the name of the node, the data dictionary of \code{\_nodes\_by\_name} is also stored in the figure.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Graph(object):
   def __init__(self):
     self._lock = threading.Lock()
@@ -503,7 +500,7 @@ class Graph(object):
 During the graph construction period, \code{OP} is created by the \ascii{OP} constructor and eventually added to the current \code{Graph} instance. When the graph is frozen, you can't append nodes to the graph, making the \code{Graph} instance safely shared in multiple threads.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Graph(object):
   def _add_op (self-on):
     self._check_not_finalized()
@@ -514,12 +511,12 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{group}
 
+\subsubsection{Group}
 In order to better manage the nodes in \code{Graph}, a specific tag is placed on each \code{Operation} to implement the classification of the nodes. Nodes of the same type are grouped in the same \code{Collection} and are identified by a unique \code{GraphKey}. Then, you can quickly index related node information according to \code{GraphKey}. Among them, the system pre-defined the commonly used \code{GraphKey}, and also supports the custom \code{GraphKey}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class GraphKeys(object):
   # Key to collect Variable objects that are global (shared across machines).
   # Default collection for all variables, except local ones.
@@ -612,7 +609,7 @@ class GraphKeys(object):
 When a \code{Opeartion} is created, it can be grouped into a specific collection for quick indexing based on \code{GraphKey}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Graph(object):
   def add_to_collection(self, name, value):
     self._check_not_finalized()
@@ -625,12 +622,11 @@ class Graph(object):
 \end{leftbar}
 
 
-\subsubsection{Figure instance}
-
+\subsubsection{Graph instance}
 In general, \ascii{OP} is registered in a global, unique, implicit, default graph instance. In particular, \tf{} can also explicitly create a new graph instance \code{g} and call \code{g.as\_default()} to make it the only default graph instance in the current thread, and The \ascii{OP} created in this context manager will be automatically registered to the diagram instance.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with tf.Graph().as_default() as g:
   c = tf.constant(5.0)
   assert c.graph is g
@@ -640,7 +636,7 @@ with tf.Graph().as_default() as g:
 In fact, \code{g.as\_default} returns a context manager from the current thread's graph stack, so that the current graph instance \code{g} overrides the original default graph instance; when the context manager is exited , restore the original default image instance. However, at any one time, there is one and only one graph instance in the current thread that becomes \emph{default}, you can call \code{tf.get\_default\_graph()} to return the default graph instance.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 _default_graph_stack = _DefaultGraphStack()
 
 def get_default_graph():
@@ -657,7 +653,7 @@ class Graph(object):
 Among them, \code{get\_controller} in \code{\_DefaultStack} appends a new graph instance at the top of the stack; when exiting the context manager, the graph instance is removed from the top of the stack, and the previous graph instance is restored. When \code{get\_default} is called, a global, unique, and implicit graph instance is returned via \code{\_GetGlobalDefaultGraph} if the stack is empty. In most \tf{} programs, if you do not explicitly create multiple graph instances, all \ascii{OP} are registered to the graph instance by default.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class _DefaultStack(threading.local):
   """A thread-local stack for providing implicit defaults."""
 
@@ -698,14 +694,14 @@ class _DefaultGraphStack(_DefaultStack):
 \end{python}
 \end{leftbar}
 
-\subsubsection{namespace}
 
+\subsubsection{Namespace}
 To better manage the nodes in the graph, use \code{name\_scope} to hierarchically name the nodes in the graph. For example, if you want to locate the location of the Forbidden City within the universe, you can implement a hierarchical name: Universe / Milky Way / Solar System / Earth / China / Beijing / Forbidden City. This is very helpful for \ascii{TensorBoard} to realize the visualization of the calculation graph. When the calculation graph is large, you can display the graph in a folded way, or you can glimpse it by expanding it.
 
 The embedded \code{name\_scope} will inherit the \code{name\_scope} of the periphery; if the embedded \code{name\_scope} ends with \code{/}, it will be reset to the specified \code{ Name\_scope}; if the embedded \code{name\_scope} is an empty string or \code{None}, the entire \code{name\_scope} will be reset.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with tf.Graph().as_default() as g:
   with g.name_scope("nested") as scope:
     nested_c = tf.constant(10.0, name="c")
@@ -732,7 +728,7 @@ with tf.Graph().as_default() as g:
 In fact, \code{name\_scope} is a context manager that implements \code{name\_scope} stack management in nested \code{name\_scope}. When \code{name\_scope} is scoped, the peripheral \code{name\_scope} is automatically restored.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def _name_from_scope_name(name):
   return name[:-1] if name[-1] == "/" else name
 
@@ -760,7 +756,7 @@ class Graph(object):
 During the graph construction period, the \ascii{OP} constructor is more accustomed to using \code{tf.name\_scope}, which attempts to get a graph instance from the input \code{Operation} or \code{Tensor} list; if not If it can be obtained, it returns the default graph instance. Then, append a new \code{name\_scope} to the image instance.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 @tf_contextlib.contextmanager
 def name_scope(name, default_name=None, values=[]):
   n = default_name if name is None else name
@@ -770,12 +766,12 @@ def name_scope(name, default_name=None, values=[]):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Control Dependency}
 
+\subsubsection{Control Dependency}
 You can merge the surrounding \code{control\_dependencies} with the embedded \code{control\_dependencies} or reset the control dependency collection with the \code{None} reset.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with g.control_dependencies([a, b]):
   # Ops constructed here run after `a` and `b`.
   with g.control_dependencies(None):
@@ -791,7 +787,7 @@ with g.control_dependencies([a, b]):
 In fact, \code{control\_dependencies} returns a context manager that specifies the control dependencies for \ascii{OP}. Where \code{control\_ops} records the list of \ascii{Operation} that the current layer depends on, and \code{current} records the current layer and all the \ascii{Operation} lists it depends on.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Graph(object):
   def control_dependencies(self, control_inputs):
     if control_inputs is None:
@@ -813,7 +809,7 @@ class Graph(object):
 \code{\_ControlDependenciesController} implements a controller that controls dependencies. \code{control\_inputs} is \code{None}, which will enable a new scope, thus implementing a new stack to replace the old stack; when exiting the scope of the current context, restore the previous old stack, thus clearing all Previous control dependencies. Otherwise, each time you enter a layer of \code{control\_inputs}, the current scope is overlaid onto the current stack.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Graph(object):
   def __init__(self):
     self._control_dependencies_stack = []
@@ -855,7 +851,7 @@ class Graph(object):
 \code{\_current\_control\_dependencies} is used to declare all peripheral \code{control\_inputs} up to the list of \code{Operation} that the current layer depends on.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Graph(object):
   def _current_control_dependencies(self):
     right = set ()
@@ -866,10 +862,10 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-\ subsubsection {Container}
+\subsubsection{Container}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with g.container('experiment0'):
   # All stateful Operations constructed in this context will be placed
   # in resource container "experiment0".
@@ -897,7 +893,7 @@ tf.Session.reset(target, ["experiment0"])
 \end{leftbar}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Graph(object):
   @tf_contextlib.contextmanager
   def container(self, container_name):
@@ -911,18 +907,18 @@ class Graph(object):
 \end{python}
 \end{leftbar}
 
-\subsection{Figure construction}
 
+\subsection{Graph construction}
 No calculations for \ascii{OP} are performed during the construction of the calculation graph. Simply put, the construction of the graph is based on the \ascii{OP} constructor to complete the construction of the \code{Operation} instance. Before the construction of the \code{Operation} instance, you need to implement the construction process of \code{OpDef} and \code{NodeDef}.
 
-\subsubsection{OpDef repository}
 
+\subsubsection{OpDef repository}
 The \code{OpDef} repository implements lazy loading and registration of \code{OpDef} for the first time the system is accessed. That is, for a \code{OpDef} repository of a certain type, when the \code{\_InitOpDefLibrary} module is first imported, scan all \ascii{OP} represented by \code{op\_list\_ascii} and convert it The \code{OpList} instance in \ascii{Protobuf} format is finally registered in the \code{OpDefLibrary} instance.
 
 For example, the module \code{gen\_array\_ops} is automatically generated when the build version is built. It mainly completes the definition of \code{array\_ops} type \code{OpDef} and is automatically registered to \code{OpDefLibrary} In the repository instance, and provide a service interface to find \code{OpDef} by name.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 _op_def_lib = _InitOpDefLibrary ()
 
 def _InitOpDefLibrary():
@@ -952,8 +948,8 @@ _InitOpDefLibrary.op_list_ascii = """op {
 \end{python}
 \end{leftbar}
 
-\subsubsection{factory method}
 
+\subsubsection{Factory method}
 As shown in \refig{py-op-factory-and-repo}. When \ascii{Client} creates a \code{Operation} instance using the \ascii{OP} constructor, it will eventually call the \code{Graph.create\_op} method to register the \code{Operation} instance to the map. In the example.
 
 That is to say, on the one hand, \code{Graph} acts as a factory for \code{Operation} and is responsible for the creation of \code{Operation}; on the other hand, \code{Graph} acts as a repository for \code{Operation} and is responsible for \code{Operation} storage, retrieval, conversion and other operations.
@@ -961,68 +957,66 @@ That is to say, on the one hand, \code{Graph} acts as a factory for \code{Operat
 This process is often referred to as the construction of a computational graph. During the construction of the graph, the runtime \ascii{OP} operation is not triggered. It only describes the dependencies between the compute nodes and builds the \ascii{DAG} map to plan the entire calculation process.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-op-factory-and-repo.png}
-\caption{Graph: OP Factory + OP Warehouse}
- \label{fig:py-op-factory-and-repo}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-op-factory-and-repo.png}
+  \caption{Graph: OP Factory + OP Warehouse}
+  \label{fig:py-op-factory-and-repo}
 \end{figure}
 
-\subsubsection{OP Constructor}
 
+\subsubsection{OP Constructor}
 As shown in \refig{py-op-constructor}. In the graph construction period, \ascii{Client} uses \code{tf.zeros\_like} to construct a \ascii{OP} named \code{ZerosLike}, which has an input and outputs a full \ \ascii{Tensor} of ascii{0}; where \code{tf.zeros\_like} is often called the \ascii{OP} constructor.
 
 The \ascii{OP} constructor then calls an automatically generated code to transpose the \code{OpDefLibrary.apply\_op} method.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-op-constructor.png}
-\caption{OP constructor and code generator}
- \ label {fig: py-op-constructor}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-op-constructor.png}
+  \caption{OP constructor and code generator}
+  \label{fig: py-op-constructor}
 \end{figure}
 
-\subsubsection{Construct OpDef and NodeDef}
 
+\subsubsection{Construct OpDef and NodeDef}
 Then, as shown in \refig{py-graph-create-op}. \code{OpDefLibrary} find the corresponding \code{OpDef} instance from \code{OpDefLibrary} according to the name of \ascii{OP}; finally, create \code{ via the factory method of \code{Graph.create\_op} The NodeDef} instance, which in turn creates a \code{Operation} instance, registers itself into the graph instance.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-graph-create-op.png}
-\caption{Create Operation instance: Create OpDef, NodeDef instance}
- \label{fig:py-graph-create-op}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-graph-create-op.png}
+  \caption{Create Operation instance: Create OpDef, NodeDef instance}
+  \label{fig:py-graph-create-op}
 \end{figure}
 
 \end{content}
 
+
 \section{Backend C++}
-
 \begin{content}
-
 At the \ascii{C++} backend, the computational graph is at the heart of the \ascii{TensorFlow} domain model.
 
-\subsection{边}
 
+\subsection{Edges}
 \code{Edge} holds the predecessor node and the post-drive node, thus implementing the connection of the calculation graph. A node can have zero or more input edges, and can have zero or more output edges. In general, there are two types of edges in the calculation graph:
 
 \begin{enum}
-  \eitem{Normal side: used to carry data (represented by \code{Tensor}), indicating the data dependency of the "producer-consumer" between nodes, usually indicated by solid lines;
+  \eitem{Normal side: used to carry data (represented by \code{Tensor}), indicating the data dependency of the "producer-consumer" between nodes, usually indicated by solid lines;}
   \eitem{Control Dependency: Does not carry data, is used to indicate the execution dependencies between nodes, usually indicated by dotted lines. }
 \end{enum}
 
-\subsubsection{two identifiers}
 
+\subsubsection{Two identifiers}
 \ascii{Edge} holds two important indexes:
-
 \begin{enum}
-  \eitem{\code{src\_output}: indicates that the edge is the \code{src\_output} output edge of the "predecessor node";
+  \eitem{\code{src\_output}: indicates that the edge is the \code{src\_output} output edge of the "predecessor node";}
   \eitem{\code{dst\_input}: Indicates that the edge is the \code{dst\_input} input edge of the "rear drive node". }
 \end{enum}
 
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/cc-edge-model.png}
-\caption{Domain object: Edge}
- \label{fig:cc-edge-model}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/cc-edge-model.png}
+  \caption{Domain object: Edge}
+  \label{fig:cc-edge-model}
 \end{figure}
 
 For example, there are two precursor nodes \code{s1, s2}, which have two output edges; there are two backdrive nodes \code{d1, d2}, and there are two input edges.
@@ -1034,8 +1028,8 @@ For example, there are two precursor nodes \code{s1, s2}, which have two output 
  \label{fig:cc-edge-model-example}
 \end{figure}
 
-\subsubsection{Control Dependency}
 
+\subsubsection{Control Dependency}
 For control dependent edges, its \code{src\_output, dst\_input} is \code{-1(Graph::kControlSlot)}, which means that the control dependent edge does not carry any data.
 
 \begin{leftbar}
@@ -1047,8 +1041,8 @@ bool Edge::IsControlEdge() const {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Tensor ID}
 
+\subsubsection{Tensor ID}
 In general, the "normal side" of the calculation graph carries \code{Tensor} and is identified by \code{TensorId}. The \code{Tensor} flag is uniquely determined by the name of the source node and its \code{src\_output}.
 
 \begin{leftbar}
@@ -1059,19 +1053,19 @@ TensorId ::= node_name:src_output
 
 By default, \code{src\_output} defaults to \ascii{0}; that is, \code{node\_name} is equivalent to \code{node\_name:0}. Specifically, when \code{src\_output} is equal to \ascii{-1}, it means that the edge is "control dependent edge", \code{TensorId} can be identified as \code{\^node\_name}, identifying the It depends on the node where \code{node\_name} is located.
 
-\subsection{node}
 
+\subsection{Nodes}
 \code{Node} (node) can have zero or more input/output edges and use \code{in\_edges, out\_edges} to represent the set of input and output edges, respectively. In addition, \code{Node} holds \code{NodeDef, OpDef}. Where \code{NodeDef} contains device allocation information and a list of attribute values ​​for \ascii{OP}; \code{OpDef} holds metadata for \ascii{OP}, including \ascii{OP} input and output types, etc. information.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/cc-node-model.png}
-\caption{Domain object: Node}
- \label{fig:cc-node-model}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/cc-node-model.png}
+  \caption{Domain object: Node}
+  \label{fig:cc-node-model}
 \end{figure}
 
-\subsubsection{input side}
 
+\subsubsection{Input side}
 In the collection of input edges, you can linearly search by index \code{(dst\_input)}. When the node inputs more edges, it may become a performance bottleneck. And so on, according to the index \code{(src\_output)} to find the output edge, the algorithm is similar.
 
 \begin{leftbar}
@@ -1088,8 +1082,8 @@ Status Node::input_edge(int idx, const Edge** e) const {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{precursor node}
 
+\subsubsection{Precursor node}
 First find the input edge through the \code{idx} index, then find the precursor node through the input side. And so on, according to the index to find the rear drive node, the algorithm is similar.
 
 \begin{leftbar}
@@ -1103,28 +1097,28 @@ Status Node::input_node(int idx, const Node** n) const {
 \end{c++}
 \end{leftbar}
 
-\subsection{图}
 
+\subsection{Graph}
 \code{Graph} is a collection of nodes and edges. The calculation graph is a \ascii{DAG} diagram. The execution of the calculation graph will be sorted according to the topology of \ascii{DAG}, and the operation of \ascii{OP} will be started in turn. Among them, if there are multiple nodes with the degree of intrusion \ascii{0}, the \ascii{TensorFlow} runtime can implement concurrency and execute multiple \ascii{OP} operations at the same time to improve execution efficiency.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/cc-graph-model.png}
-\caption{domain model: diagram}
- \label{fig:cc-graph-model}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/cc-graph-model.png}
+  \caption{domain model: diagram}
+  \label{fig:cc-graph-model}
 \end{figure}
 
-\subsubsection{空图}
 
+\subsubsection{Empty graph}
 Calculating the initial state of the graph is not an empty graph. The implementation adds two special nodes: \code{Source} and \code{Sink} nodes, which represent the starting and ending nodes of the \ascii{DAG} graph, respectively. Where \code{Source}'s \code{id} is \ascii{0}, \code{Sink}'s \code{id} is \ascii{1}; in turn, ordinary \ascii{OP}node\ Ascii{id} will be greater than \ascii{1}.
 
 Between \code{Source} and \code{Sink}, by connecting the edges of the "control dependencies", the execution of the calculation graph starts at the \code{Source} node, finally the \code{Sink} node. Their previous control depends on the edge, and their \code{src\_output, dst\_input} values ​​are all \ascii{-1}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/cc-empty-graph.png}
-\caption{空图}
- \label{fig:cc-empty-graph}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/cc-empty-graph.png}
+  \caption{Empty graph}
+  \label{fig:cc-empty-graph}
 \end{figure}
 
 \code{Source} and \code{Sink} are two internal implementation-reserved nodes whose node names begin with an underscore and are named with \code{\_SOURCE} and \code{\_SINK} respectively; and they are \ Code{NoOp}, which means no calculation is performed.
@@ -1154,19 +1148,19 @@ Graph::Graph(const OpRegistryInterface* ops)
 
 Conventionally, computational graphs that only contain \code{Source} and \code{Sink} nodes are often referred to as empty maps.
 
-\subsubsection{Non-empty map}
 
+\subsubsection{Non-empty graph}
 At the front end, the user uses the \ascii{OP} constructor to construct a computational graph of any complexity. For runtime, the implementation of the user-constructed computational graph is connected to the \code{Source/Sink} node by controlling the dependent edges, ensuring that the computation graph execution begins at the \code{Source} node, and finally the \code{Sink} node.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/cc-non-empty-graph.png}
-\caption{non-empty map}
- \label{fig:cc-non-empty-graph}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/cc-non-empty-graph.png}
+  \caption{non-empty map}
+  \label{fig:cc-non-empty-graph}
 \end{figure}
 
-\subsubsection{Add Edge}
 
+\subsubsection{Add Edge}
 The construction process of the calculation graph is very simple. First, put the nodes in the graph through \code{Graph::AddNode}, and then place the edges in the graph through \code{Graph::AddEdge} to realize the connection between the nodes.
 
 \begin{leftbar}
@@ -1200,8 +1194,8 @@ const Edge* Graph::AddEdge(Node* source, int x, Node* dest, int y) {
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Add control dependency edge}
 
+\subsubsection{Add control dependency edge}
 Add control to the dependent edge, you can forward the call to the \code{Graph::AddEdge} implementation; at this point, \code{src\_output, dst\_input} are both \ascii{-1}.
 
 \begin{leftbar}
@@ -1212,28 +1206,28 @@ const Edge* Graph::AddControlEdge(Node* src, Node* dst) {
 \end{c++}
 \end{leftbar}
 
-\subsection{OpDef repository}
 
+\subsection{OpDef repository}
 Similarly, the \code{OpDef} repository completes the loading and registration of \code{OpDef} before the \ascii{C++}system\code{main} function starts. It uses the \ascii{REGISTER\_OP} macro to complete the registration of \ascii{OpDef}.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/cc-op-repo.png}
-\caption{OpDef registration: use REGISTER\_OP}
- \label{fig:cc-op-repo}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/cc-op-repo.png}
+  \caption{OpDef registration: use REGISTER\_OP}
+  \label{fig:cc-op-repo}
 \end{figure}
 
 \end{content}
 
-\section{图传}
 
+\section{Transfering graphs}
 \begin{content}
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-graph-creation.png}
-\caption{Serialization and deserialization of graphs}
- \label{fig:py-graph-creation}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-graph-creation.png}
+  \caption{Serialization and deserialization of graphs}
+  \label{fig:py-graph-creation}
 \end{figure}
 
 \end{content}

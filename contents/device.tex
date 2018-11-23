@@ -1,27 +1,25 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{device} 
+\chapter{Device} 
 \label{ch:device}
 
 \begin{content}
-
 \end{content}
 
+
 \section{Device Specification}
-
 \begin{content}
-
 The device specification \ascii{(Device Specification)} is used to describe the specific location of the \ascii{OP} storage or computing device.
 
-\subsection{formalization}
 
+\subsection{Formalization}
 A device specification can be formally described as:
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 DEVICE_SPEC ::= COLOCATED_NODE | PARTIAL_SPEC
 COLOCATED_NODE ::= "@" NODE_NAME
 PARTIAL_SPEC ::= ("/" CONSTRAINT) *
@@ -32,40 +30,39 @@ CONSTRAINT ::= ("job:" JOB_NAME)
 \end{python}
 \end{leftbar}
 
-\subsubsection{full designation}
 
+\subsubsection{Full designation}
 As shown in the following example, a complete description of a \ascii{OP} is placed in the \ascii{PS} job, \ascii{0} backup, \ascii{0} task, \ascii{GPU 0} device.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 /job:ps/replica:0/task:0/device:GPU:0
 \end{python}
 \end{leftbar}
 
-\subsubsection{partially specified}
 
+\subsubsection{Partially specified}
 Equipment specifications can also be specified in part or even empty. For example, the following example only describes the device number \code{GPU0}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 /device:GPU:0
 \end{python}
 \end{leftbar}
 
 In particular, when the device specification is empty, it means that the device constraint is not implemented for \ascii{OP}, and the device is automatically selected to place \ascii{OP} at runtime.
 
-\ subsubsection {peer}
-
+\subsubsection{Peer}
 Use \code{COLOCATED\_NODE} to indicate that the \ascii{OP} is placed on the same device as the specified node. For example, the node is placed on the same device as \code{other/node}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 @other/node  # colocate with "other/node"
 \end{python}
 \end{leftbar}
 
-\subsubsection{DeviceSpec}
 
+\subsubsection{DeviceSpec}
 A device specification can be represented using a string, or \code{DeviceSpec}. Where \code{DeviceSpec} is a value object, using the following \ascii{5} identifiers to determine the device specification.
 
 \begin{enum}
@@ -79,18 +76,18 @@ A device specification can be represented using a string, or \code{DeviceSpec}. 
 For example, use the device specification constructed by \code{DeviceSpec}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 # '/job:ps/replica:0/task:0/device:CPU:0'
 DeviceSpec(job="ps", replica=0, task=0, device_type="CPU", device_index=0)
 \end{python}
 \end{leftbar}
 
-\subsection{Context Manager}
 
+\subsection{Context Manager}
 The \ascii{OP} device specification is often specified using the context manager \code{device(device\_spec)}, and the \code{OP} constructed within the scope of the context will be placed on the specified device at runtime.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with g.device('/gpu:0'):
   # All OPs constructed here will be placed on GPU 0.
 \end{python}
@@ -98,12 +95,12 @@ with g.device('/gpu:0'):
 
 Among them, \code{device} is a method of \code{Graph}, which designs a stack structure context manager to implement the closure, merge, and overlay of device specifications.
 
-\subsubsection{Merge}
 
+\subsubsection{Merge}
 Two different ranges of device specifications can be combined.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with device("/job:ps"):
   # All OPs constructed here will be placed on PS.
   with device("/task:0/device:GPU:0"):
@@ -112,12 +109,12 @@ with device("/job:ps"):
 \end{python}
 \end{leftbar}
 
-\subsubsection{override}
 
+\subsubsection{Override}
 When merging two identical ranges of device specifications, the internally specified device specification has a high priority to achieve coverage of the device specification.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with device("/device:CPU:0"):
   # All OPs constructed here will be placed on CPU 0.
   with device("/job:ps/device:GPU:0"):
@@ -126,12 +123,12 @@ with device("/device:CPU:0"):
 \end{python}
 \end{leftbar}
 
-\subsubsection{reset}
 
+\subsubsection{Reset}
 In particular, when the internal device specification is set to \code{None}, the definition of all external device specifications is ignored.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with device("/device:GPU:0"):
   # All OPs constructed here will be placed on CPU 0.
   with device(None):
@@ -139,12 +136,12 @@ with device("/device:GPU:0"):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Device Specification Function}
 
+\subsubsection{Device Specification Function}
 When specifying a device specification, it is often described using a string, or \code{DeviceSpec}. You can also use the more flexible \emph{device specification function}, which provides a more flexible extension to specify device specifications. The device specification function is a callback function with the input parameter \code{Operation}, which generates a device specification in string format.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def matmul_on_gpu(n):
  if n.type == "MatMul":
    return "/gpu:0"
@@ -158,12 +155,13 @@ with g.device(matmul_on_gpu):
 \end{python}
 \end{leftbar}
 
-\subsubsection{implementation}
+
+\subsubsection{Implementation}
 
 \code{Graph.device(spec)} implements a stack-structured context manager that accepts device specifications in string format, or \emph{device specification functions}. In fact, when passing a string to \code{device} function, or \code{DeviceSpec}, a simple adaptation of the string, or \code{DeviceSpec}, is first converted to a device specification function.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Graph(object):
   def device(self, device_name_or_func):
     def to_device_func():
@@ -184,19 +182,19 @@ class Graph(object):
 When a user uses \code{device}, the graph instance is not explicitly specified, and the globally unique default graph instance is implicitly used. That is, the \code{tf.device(spec)} function is actually a simple wrapper around \code{get\_default\_graph().device(spec)}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 # tensorflow/python/framework/ops.py
 def device(device_name_or_function):
   return get_default_graph().device(device_name_or_function)
 \end{python}
 \end{leftbar}
 
-\subsubsection{Apply}
 
+\subsubsection{Apply}
 In the \code{Graph.device} implementation, \code{pydev.merge\_device} generates a device specification function. The device function creates a new copy with the input \code{spec} and merges the existing \code{node\_def.device} device specification by calling \code{copy\_spec.merge\_from(current\_device)} And \code{node\_def.device} has a higher priority. The implementation is more obscure, why does \code{node\_def.device} have a higher priority? This depends on the need for \code{\_apply\_device\_functions} to override, merge, and reset.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def merge_device(spec):
   # replace string to DeviceSpec
   if not isinstance(spec, DeviceSpec):
@@ -217,7 +215,7 @@ def merge_device(spec):
 When \code{Graph.create\_op}, \code{\_apply\_device\_functions} is set to set the device specification for \code{NodeDef}. It will perform a pop operation on \code{\_device\_function\_stack} in turn, and call the corresponding device specification function, and set the result directly to the device specification of \code{NodeDef}. Thus, the inline specified \code{device} has a higher priority, which implements merging, overwriting, and resetting the peripheral-specific \code{device}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class Graph(object):
   def _apply_device_functions(self, op):
     for device_function in reversed(self._device_function_stack):

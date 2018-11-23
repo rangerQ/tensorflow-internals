@@ -1,13 +1,12 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
+
 
 \chapter{Queue} 
 \label{ch:queue}
-
 \begin{content}
-
 \ascii{TensorFlow}'s \code{Session} is thread-safe. That is, multiple threads can use the same \code{Session} instance to concurrently execute the same \ascii{OP} of the same graph instance; the \ascii{TensorFlow} execution engine prunes the graph based on input and output. , get a sub-graph with minimal dependence.
 
 Therefore, by multithreading and using the same \code{Session} instance, concurrently executing the different \ascii{OP} of the same graph instance, the final effect is the concurrent execution between the subgraphs.
@@ -18,46 +17,44 @@ This article will explain the infrastructure in the concurrency model above, inc
 
 \end{content}
 
+
 \section{Queue}
-
 \begin{content}
-
 In the execution engine of \ascii{TensorFlow}, \ascii{Queue} is a powerful tool for controlling asynchronous computing. In particular, \ascii{Queue} is a special \ascii{OP}, similar to \ascii{Variable}, which is a class of stateful \ascii{OP}.
 
 Similarly, \ascii{Variable} has the associated \ascii{Assign} and other \ascii{OP}, \ascii{OP}, and \ascii{OP}, such as \code{Enqueue, Dequeue, EnqueueMany, DequeueMany} and other \ascii{OP}, they can directly modify the state of \ascii{Queue}.
 
-\subsection{FIFOQueue}
 
+\subsection{FIFOQueue}
 Give a simple example. First, a \code{FIFOQueue} queue is constructed; then, a \code{EnqueueMany} is added to the calculation graph, and the \ascii{OP} is used to append \ascii{1} or more elements to the head of the queue. Secondly, add a dequeue of \code{Dequeue}; finally, increase the value of the dequeue element by \ascii{1} and then join the result. The construction of the calculation graph is shown in the figure below before starting the calculation diagram execution.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-queue-example-1.png}
-\caption{Figure construction period}
- \label{fig:py-queue-example-1}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-queue-example-1.png}
+  \caption{Figure construction period}
+  \label{fig:py-queue-example-1}
 \end{figure}
 
 After executing the \code{EnqueueMany} operation, the state of the calculation graph is as shown below.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-queue-example-2.png}
-\caption{Figure execution period: Execute EnqueueMany}
- \label{fig:py-queue-example-2}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-queue-example-2.png}
+  \caption{Figure execution period: Execute EnqueueMany}
+  \label{fig:py-queue-example-2}
 \end{figure}
-
 
 After executing the first step \code{Enqueue}, the state of the calculation graph is as shown below.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-queue-example-3.png}
-\caption{Figure execution period: Execute Enqueue once}
- \label{fig:py-queue-example-3}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-queue-example-3.png}
+  \caption{Figure execution period: Execute Enqueue once}
+  \label{fig:py-queue-example-3}
 \end{figure}
 
-\subsection{use}
 
+\subsection{Use}
 Queues play an important role in model training. Later, we will cover the \ascii{Pipeline} of data loading. The training model often uses \code{RandomShuffleQueue} to prepare sample data for it. To improve the throughput of \ascii{IO}, you can use multithreading to append sample data to the sample queue concurrently; at the same time, the thread of the training model iterates through \code{train\_op} and gets \code once. Batch sample data of {batch\_size} size.
 
 Obviously, the queue plays the role of asynchronous coordination and data exchange in the \ascii{Pipeline} process, which brings a lot of flexibility to the design and implementation of \ascii{Pipeline}.
@@ -65,8 +62,8 @@ Obviously, the queue plays the role of asynchronous coordination and data exchan
 It's important to note that in order for the queue to maximize its multithreading, two tricky issues need to be addressed:
 
 \begin{enum}
-  \eitem{How do I stop all threads at the same time, and how to handle exception reports? }
-  \eitem{How to append sample data to the queue concurrently? }
+  \eitem{How do I stop all threads at the same time, and how to handle exception reports?}
+  \eitem{How to append sample data to the queue concurrently?}
 \end{enum}
 
 Therefore, \ascii{TensorFlow} designed two classes, \code{tf.train.Coordinator} and \code{tf.train.QueueRunner}, to solve the above two problems.
@@ -75,10 +72,9 @@ These two classes complement each other, \code{Coordinator} coordinates multiple
 
 \end{content}
 
+
 \section{Coordinator}
-
 \begin{content}
-
 \code{Coordinator} provides a simple mechanism to stop the execution of a group of threads at the same time. It has \ascii{3} important methods:
 
 \begin{enum}
@@ -87,12 +83,12 @@ These two classes complement each other, \code{Coordinator} coordinates multiple
 \eitem{\code{join}: Wait for all threads to stop executing}
 \end{enum}
 
-\subsection{Usage method}
 
+\subsection{Usage method}
 In general, the main program often uses the following pattern to use \code{Coordinator}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 # Create a coordinator.
 coord = tf.train.Coordinator()
 
@@ -114,7 +110,7 @@ Any child thread can notify other threads to stop execution by calling \code{coo
 In general, the iterative execution method of a child thread follows the implementation pattern as follows.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def MyLoop(coord):
   try
     while not coord.should_stop():
@@ -124,12 +120,12 @@ def MyLoop(coord):
 \end{python}
 \end{leftbar}
 
-\subsection{Exception handling}
 
+\subsection{Exception handling}
 When an exception occurs on a thread, the exception can be reported via \code{coord.request\_stop(e)}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 try:
   while not coord.should_stop():
     # ...do some work...
@@ -141,7 +137,7 @@ except Exception as e:
 To eliminate duplicate code for exception code handling, you can use the context manager of \code{coord.stop\_on\_exception()}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with coord.stop_on_exception():
   while not coord.should_stop():
     # ...do some work...
@@ -151,7 +147,7 @@ with coord.stop_on_exception():
 Among them, the exception will be re-thrown in \code{coord.join}. Therefore, the main program also needs to handle exceptions reasonably.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 try:
   # Create a coordinator.
   coord = tf.train.Coordinator()
@@ -171,40 +167,39 @@ except Exception as e:
 \end{python}
 \end{leftbar}
 
-\subsection{Combat: LoopThread}
 
+\subsection{Combat: LoopThread}
 \end{content}
 
+
 \section{QueueRunner}
-
 \begin{content}
-
 A \code{QueueRunner} instance holds one or more \code{Enqueue} enqueues\ascii{OP}, which starts a thread for each \code{Enqueue OP}.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/tf-queue-runner-model.png}
-\caption{TensorFlow System Architecture}
- \label{fig:tf-queue-runner-model}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/tf-queue-runner-model.png}
+  \caption{TensorFlow System Architecture}
+  \label{fig:tf-queue-runner-model}
 \end{figure}
 
-\subsection{Register QueueRunner}
 
+\subsection{Register QueueRunner}
 You can call \code{tf.train.add\_queue\_runner} to register the \code{QueueRunner} instance into the calculation diagram and add it to the \code{GraphKeys.QUEUE\_RUNNERS} collection.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def add_queue_runner(qr, collection=ops.GraphKeys.QUEUE_RUNNERS):
   ops.add_to_collection(collection, qr)
 \end{python}
 \end{leftbar}
 
-\subsection{Execute QueueRunner}
 
+\subsection{Execute QueueRunner}
 When \code{tf.train.start\_queue\_runners} can be called, it will find all \code{QueueRunner} instances from the calculation graph and fetch all \code{Enqueue OP} from the \code{QueueRunner} instance. Start a thread for each \ascii{OP}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def start_queue_runners(sess, coord, daemon=True, start=True,
                         collection=ops.GraphKeys.QUEUE_RUNNERS):
   with sess.graph.as_default():
@@ -219,7 +214,7 @@ def start_queue_runners(sess, coord, daemon=True, start=True,
 In the \code{QueueRunner.create\_threads} method, start a separate thread for each \code{Enqueue} type of \ascii{OP} it contains.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class QueueRunner(object):
   def create_threads(self, sess, coord, daemon, start):
     """Create threads to run the enqueue ops.
@@ -242,12 +237,12 @@ class QueueRunner(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{Iterative execution Enqueue}
 
+\subsubsection{Iterative execution Enqueue}
 Each \code{Enqueue} child thread will iterate through \code{Enqueue OP}. When a \code{OutOfRangeError} exception occurs, the queue is automatically closed and the child thread is exited; however, if other types of exceptions occur, \code{Coordinator} is actively notified to stop all threads from running and exit the child thread.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class QueueRunner(object):
   def _run (self, sess, enqueue_op, coord):
     try:
@@ -265,12 +260,12 @@ class QueueRunner(object):
 \end{python}
 \end{leftbar}
 
-\subsubsection{listening queue off}
 
+\subsubsection{Listening queue off}
 In addition, if a \code{Coordinator} instance is given, \code{QueueRunner} will additionally start a thread; when the \code{Coordinator} instance is triggered to call the \code{request\_stop} method, the thread will automatically close. queue.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 class QueueRunner(object):
   def _close_on_stop(self, sess, cancel_op, coord):
     """Close the queue, and cancel pending enqueue ops
@@ -286,6 +281,8 @@ class QueueRunner(object):
 
 Among them, \code{Cancel OP} and \code{Close OP} of \code{Queue} will close the queue, but \code{Cancel OP} will undo the cached list of \code{Enqueue OP}, but \code{Close OP} keeps a list of cached \code{Enqueue OP}.
 
-\subsection{Close Queue}
 
+\subsection{Close Queue}
 When the queue is closed, an error will be generated for any attempt on \code{Enqueue}. However, for any attempt to \code{Dequeue} it is still successful, as long as the elements are left in the queue; otherwise, \code{Dequeue} will fail immediately, throwing a \code{OutOfRangeError} exception without blocking waiting for more elements to be Enter the team.
+
+\end{content}

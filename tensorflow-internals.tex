@@ -22,6 +22,9 @@
 \usepackage{geometry}
 \geometry{left=3.75cm,right=3.25cm,top=3cm,bottom=2.5cm}
 
+\usepackage{tikz}
+%% \usepackage{graphicx}
+
 %% en_preamble Contains basic package configuration
 \input{style/en_preamble}
 
@@ -52,6 +55,7 @@
 %%%% Body section
 
 \begin{document}
+
 
 \frontmatter
 \pagestyle{empty}
@@ -90,38 +94,38 @@
 % \input{contents/logistic-regression}
 
 \part{Basic knowledge}
-\input{contents/introduction}
-\input{contents/prog-env}
-\input{contents/ice-breaker}
+  \input{contents/introduction}
+  \input{contents/prog-env}
+  \input{contents/ice-breaker}
 
 \part{System structure}
-\input{contents/architecture}
-\input{contents/c-api}
+  \input{contents/architecture}
+  \input{contents/c-api}
 
 \part{Programming model}
-\input{contents/graph}
-\input{contents/device}
-\input{contents/session}
-\input{contents/variable}
-\input{contents/queue}
-\input{contents/essential-op}
+  \input{contents/graph}
+  \input{contents/device}
+  \input{contents/session}
+  \input{contents/variable}
+  \input{contents/queue}
+  \input{contents/essential-op}
 
 \part{Runtime model}
-\input{contents/local}
-\input{contents/distributed}
+  \input{contents/local}
+  \input{contents/distributed}
 
 \part{Model training}
-\input{contents/bp}
-\input{contents/input-pipeline}
-\input{contents/saver}
-\input{contents/monitored-session}
+  \input{contents/bp}
+  \input{contents/input-pipeline}
+  \input{contents/saver}
+  \input{contents/monitored-session}
 
 %%%%%%%%%%%%%%%%%%％%%
 \appendix
 
 \part{Appendix}
-\input{contents/code-reading}
-\input{contents/learning}
+  \input{contents/code-reading}
+  \input{contents/learning}
 
 %%%%%%%%%%%%%%%%%％%%
 \backmatter
@@ -132,7 +136,7 @@
 % \myclearpage
 
 \bibliographystyle{alpha}
-\input{contents/biblio}
+  \input{contents/biblio}
 
 \end{document}
 %%%% End of the body part

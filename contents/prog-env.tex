@@ -1,47 +1,42 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{programming environment} 
+
+\chapter{Programming Environment} 
 \label{ch:prog-env}
 
 \begin{content}
-
 In order to achieve a quick introduction to \tf{}, this chapter introduces the programming environment of \tf{}, including code structure, engineering construction, in order to establish a basic perceptual understanding of the \tf{} system architecture.
-
 \end{content}
 
-\section{Code Structure}
 
+\section{Code structure}
 \begin{content}
 
-\subsection{clone source}
 
+\subsection{Clone source}
 First, clone the source code for \tf{} from \ascii{Github}.
-
-
 \begin{leftbar}
-\ Begin {python}
-$ git clone git@github.com:tensorflow/tensorflow.git
+\begin{python}
+git clone git@github.com:tensorflow/tensorflow.git
 \end{python}
 \end{leftbar}
 
 Then, switch to the latest stable branch. For example, the \code{r1.4} branch.
-
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ cd tensorflow
 $ git checkout r1.4
-\end{python}
+\end{python}%
 \end{leftbar}
 
+
 \subsection{Source Structure}
-
-Run the following command to print out the organization structure of the \tf{} source.
-
+Run the following command to print out the organization structure of the \tf{} source:
 \begin{leftbar}
-\ Begin {python} []
+\begin{python}[]
 $ tree -d -L 1 ./tensorflow
 \end{python}
 \end{leftbar}
@@ -68,7 +63,7 @@ Among them, this book will focus on the \code{core, python} component, and some 
 \end{c++}
 \end{leftbar}
 
-As of the latest release of \ascii{1.4}, the \tf{} codebase has approximately \ascii{100} million code. Among them, including \ascii{53} million lines\ascii{C/C++} code, \ascii{37} million lines\ascii{Python} code, and the code size is constantly expanding. Among them, the \ascii{API} provided by \ascii{Python} is the most complete; in contrast, the \ascii{API} of other programming languages ​​is not yet mature, even in its infancy.
+As of the latest release of \ascii{1.4}, the \tf{} codebase has approximately \ascii{100} million code. Among them, including \ascii{53} million line \ascii{C/C++} code, \ascii{37} million lines\ascii{Python} code, and the code size is constantly expanding. Among them, the \ascii{API} provided by \ascii{Python} is the most complete; in contrast, the \ascii{API} of other programming languages ​​is not yet mature, even in its infancy.
 
 \begin{leftbar}
 \begin{python}[caption={TensorFlowCode Stats}]
@@ -103,9 +98,9 @@ SUM:                  5932   215258    291127    982956
 \end{python}
 \end{leftbar}
 
-\subsection{Core}
 
-The source code structure of the kernel is as follows, including platform, utility library, base framework, \ascii{Protobuf} definition, local runtime, distributed runtime, graph operation, \ascii{OP} definition, and \ascii{Kernel } Implementation and other components, this is one of the key components of this book, will focus on mining the hidden domain model in the basic framework, tracking the life cycle of the entire runtime environment and the detailed process of the graph operation, and reveal the common \ascii{OP} \ascii{Kernel} implementation principle and operating mechanism.
+\subsection{Core}
+The source code structure of the kernel is as follows, including platform, utility library, base framework, \ascii{Protobuf} definition, local runtime, distributed runtime, graph operation, \ascii{OP} definition, and \ascii{Kernel} implementation and other components, this is one of the key components of this book, will focus on mining the hidden domain model in the basic framework, tracking the life cycle of the entire runtime environment and the detailed process of the graph operation, and reveal the common \ascii{OP} \ascii{Kernel} implementation principle and operating mechanism.
 
 \begin{leftbar}
 \begin{c++}[caption={Core source structure}]
@@ -129,7 +124,7 @@ The source code structure of the kernel is as follows, including platform, utili
 \end{c++}
 \end{leftbar}
 
-Among them, \code{core} is mainly implemented by \code{C++}, which has about \ascii{26} million lines of code.
+Among them, \code{core} is mainly implemented in \code{C++}, which has about \ascii{26} million lines of code.
 
 \begin{leftbar}
 \begin{python}[caption={CoreCode Stats}]
@@ -147,12 +142,12 @@ SUM:                  2091    60894     65813    312904
 \end{python}
 \end{leftbar}
 
-\subsection{Python}
 
-\ascii{Python} defines and implements the programming model of \tf{}, and opens \ascii{API} for programmers. The source structure is as follows, which is also the focus of this book.
+\subsection{Python}
+\ascii{Python} defines and implements the programming model of \tf{}, and provides an \ascii{API} for programmers. The source structure is as follows, which is also the focus of this book.
 
 \begin{leftbar}
-\begin{c++}[caption={Python source structure}}
+\begin{c++}[caption={Python source structure}]
 ./tensorflow/python
 ├── client
 ├── debug
@@ -175,7 +170,7 @@ SUM:                  2091    60894     65813    312904
 \end{c++}
 \end{leftbar}
 
-Among them, the component is implemented by \code{Python}, which has about \ascii{18} million lines of code.
+Among them, the component is implemented in \code{Python}, which has about \ascii{18} million lines of code.
 
 \begin{leftbar}
 \begin{python}[caption={Python Code Statistics}]
@@ -194,8 +189,8 @@ SUM:                  757     46549     70338    183925
 \end{python}
 \end{leftbar}
 
-\subsection{Contrib}
 
+\subsection{Contrib}
 \code{contrib} is a programming library contributed by third parties. It is also an experimental programming interface before \tf{} standardization, just like the relationship between the \ascii{Boost} community and the \ascii{C++} standard. When the interface of \code{contrib} matures, it will be standardized by \tf{}, and will be moved from \code{contrib} to \code{core, python} and officially released.
 
 \begin{leftbar}
@@ -226,7 +221,7 @@ SUM:                  757     46549     70338    183925
 ├── graph_editor
 ├── grid_rnn
 ├── hooks
-Ä── hvx
+├── hvx
 ├── image
 ├── imperative
 ├── input_pipeline
@@ -275,7 +270,7 @@ SUM:                  757     46549     70338    183925
 ├── text
 ├── tfprof
 ├── timeseries
-Ãœ─ tpu
+├── tpu
 ├── training
 ├── useful
 ├── verbs
@@ -283,7 +278,7 @@ SUM:                  757     46549     70338    183925
 \end{python}
 \end{leftbar}
 
-Since the \tf{} community is quite active, the changes to \code{contrib} are quite frequent. As of \ascii{1.4}, there are about \ascii{23} million lines of code, mainly designed and implemented by \ascii{Python}. The interface, partially run by \ascii{C++}.
+Since the \tf{} community is quite active, the changes to \code{contrib} are quite frequent. As of \ascii{1.4}, there are about \ascii{23} million lines of code, mainly designed and implemented in \ascii{Python}. The interface, partially run by \ascii{C++}.
 
 \begin{leftbar}
 \begin{python}[caption={ContribCode Statistics}]
@@ -310,10 +305,9 @@ SUM:                 1457     52901     85570    233712
 \end{python}
 \end{leftbar}
 
+
 \subsection{StreamExecutor}
-
-\ascii{StreamExecutor} is another open source component library of \ascii{Google} that provides a host-side (\ascii{host-side}) programming model and runtime environment that implements \ascii{CUDA} and \ascii{ Unified packaging for OpenCL}. In the code on the host side, the \ascii{Kernel} function can be deployed seamlessly on the computing device of \code{CUDA} or \code{OpenCL}.
-
+\ascii{StreamExecutor} is another open source component library of \ascii{Google} that provides a host-side (\ascii{host-side}) programming model and runtime environment that implements \ascii{CUDA} and \ascii{Unified packaging for OpenCL}. In the code on the host side, the \ascii{Kernel} function can be deployed seamlessly on the computing device of \code{CUDA} or \code{OpenCL}.
 Currently, \ascii{StreamExecutor} is heavily used in the runtime of the \ascii{Google} internal\ascii{GPGPU} application. The \tf{} runtime also contains a snapshot version of \ascii{StreamExecutor} that encapsulates the runtimes of \ascii{CUDA} and \code{OpenCL}. This book will briefly introduce the programming model and threading model of \ascii{CUDA}, and introduce the system architecture and working principle of \ascii{StreamExecutor} in detail, revealing the implementation mode and idiom of \ascii{Kernel} function.
 
 \begin{leftbar}
@@ -326,7 +320,7 @@ Currently, \ascii{StreamExecutor} is heavily used in the runtime of the \ascii{G
 \end{c++}
 \end{leftbar}
 
-Among them, \ascii{StreamExecutor} is implemented using \code{C++}, which has about \ascii{2.5} million lines of code.
+Among them, a \ascii{StreamExecutor} is implemented in \code{C++}, which has about \ascii{2.5} million lines of code.
 
 \begin{leftbar}
 \begin{python}[caption={StreamExecutorCode Statistics}]
@@ -341,11 +335,10 @@ SUM:                  124      4762      6276     25202
 \end{python}
 \end{leftbar}
 
+
 \subsection{Compiler}
-
 As we all know, flexibility is the most important design goal and core advantage of \tf{}, so the system architecture of \tf{} has good scalability. \tf{} can be used to define arbitrary graph structures and execute efficiently using heterogeneous computing devices. However, the bear's paw and the shark's fin cannot be combined. When the low-level \ascii{OP} is combined to calculate the subgraph and is expected to be effectively executed on \ascii{GPU}, the runtime will start more \ascii{Kernel} Operation.
-
-Therefore, the \tf{}method of decomposing and combining \ascii{OP} is not guaranteed to run in the most efficient way at runtime. At this point, \ascii{XLA} technology was born, it uses \ascii{JIT} compilation technology to analyze the runtime calculation graph, which combines multiple \ascii{OP} and generates a more efficient local machine. Code to improve the execution efficiency of the calculation graph.
+Therefore, the \tf{} method of decomposing and combining \ascii{OP} is not guaranteed to run in the most efficient way at runtime. At this point, \ascii{XLA} technology was born, it uses \ascii{JIT} compilation technology to analyze the runtime calculation graph, which combines multiple \ascii{OP} and generates a more efficient local machine. Code to improve the execution efficiency of the calculation graph.
 
 \begin{leftbar}
 \begin{python}[caption={CompilerSource Structure}]
@@ -359,7 +352,7 @@ Therefore, the \tf{}method of decomposing and combining \ascii{OP} is not guaran
 \end{python}
 \end{leftbar}
 
-\ascii{XLA} technology is currently in the initial stage of research and development, and is a more active research direction in the community. As of now, the code size is approximately \ascii{12.5} million lines, mainly using \ascii{C++}.
+\ascii{XLA} technology is currently in the initial stage of research and development, and is a more active research direction in the community. As of now, the code size is approximately \ascii{12.5} million lines, mainly in \ascii{C++}.
 
 \begin{leftbar}
 \begin{python}[caption={CompilerCode Stats}]
@@ -379,33 +372,33 @@ SUM:                  749     26516     30574    125277
 
 \end{content}
 
+
 \section{Project Construction}
 
 \begin{content}
-
 Before you start, try the \tf{} source build process, understand the basic build methods of \tf{}, the tools, and their dependent component libraries, third-party toolkits, and have a great understanding of how \tf{} works. help. However, due to limited space, this chapter only uses the \ascii{Mac OS} system as an example to describe the source code compilation, installation, and verification process of \tf{}. For other operating systems, please check the official documentation published by \tf{}.
 
-\subsection{Environment preparation}
 
+\subsection{Environment preparation}
 The front end of \ascii{TensorFlow} is a programming interface that supports multiple languages. Therefore, before compiling the \ascii{TensorFlow} source code, you need to install the relevant compiler, interpreter, and its runtime environment. For example, to use \ascii{Python} as a programming interface, you need to install the \ascii{Python} interpreter beforehand. Second, before building the system, you also need to install \ascii{GCC} or \ascii{Clang} and other \ascii{C++} compilers to compile the backend system implementation. Since \ascii{TensorFlow} is implemented using the \ascii{C++11} syntax, it is important to ensure that the \ascii{C++} compiler is installed to support \ascii{C++11}. In addition, \ascii{TensorFlow} uses the \ascii{Bazel} build tool, which can be thought of as a more abstract \ascii{Make} tool. Unfortunately, \ascii{Bazel} is implemented using \ascii{Java8}, which relies on \ascii{JDK}. Therefore, before installing \ascii{Bazel}, you need to install \ascii{JDK} in \ascii{1.8} and above.
 
-\subsubsection{Install JDK}
 
+\subsubsection{Install JDK}
 It is recommended to download \ascii{JDK} from the \ascii{Oracle} website and create the relevant environment variables and add them to the \code{~/.bashrc} configuration file.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ echo 'export JAVA_HOME=$(/usr/libexec/java_home)' >> ~/.bashrc
 $ echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> ~/.bashrc
 \end{python}
 \end{leftbar}
 
-\subsubsection{Installing Bazel}
 
+\subsubsection{Installing Bazel}
 On \ascii{Mac OS}, you can install \ascii{Bazel} using \ascii{brew}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ brew install bazel
 \end{python}
 \end{leftbar}
@@ -413,27 +406,27 @@ $ brew install bazel
 If \ascii{brew} is not installed on the system, you can install \ascii{brew} by executing the following command. Of course, installing \ascii{brew} requires the \ascii{Ruby} interpreter to be installed beforehand, and will not be redundant here.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 \end{python}
 \end{leftbar}
 
-\subsubsection{Install Swig}
 
+\subsubsection{Install Swig}
 \ascii{TensorFlow} uses \ascii{Swig} to build a multi-language programming environment that automatically generates wrappers for related programming languages. Therefore, you need to install the \ascii{Swig} toolkit before you build it.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ brew install swig
 \end{python}
 \end{leftbar}
 
-\subsubsection{Install Python dependency package}
 
+\subsubsection{Install Python dependency package}
 Use \ascii{pip} to install the \ascii{Python} package that \ascii{TensorFlow} depends on.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ sudo pip install six numpy wheel autograd
 \end{python}
 \end{leftbar}
@@ -441,17 +434,18 @@ $ sudo pip install six numpy wheel autograd
 If \ascii{pip} is not installed on your system, you can pre-install \ascii{pip} using \ascii{brew}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ brew install pip
 \end{python}
 \end{leftbar}
 
+
 \subsubsection{Install CUDA Toolkit}
 
-When the system installs \ascii{CUDA} to calculate the \ascii{GPU} card with compatibility greater than or equal to \ascii{3.0}, you need to install the \ascii{CUDA} toolkit and its \ascii{cuDNN} to implement\ The tf{} runtime's \ascii{GPU} acceleration. It is recommended to download \ascii{CUDA Toolkit 8} and above from the \ascii{NVIDIA} website and install it into the system to configure related environment variables.
+When the system installs \ascii{CUDA} to calculate the \ascii{GPU} card with compatibility greater than or equal to \ascii{3.0}, you need to install the \ascii{CUDA} toolkit and its \ascii{cuDNN} to implement\ The \tf{} runtime's \ascii{GPU} acceleration. It is recommended to download \ascii{CUDA Toolkit 8} and above from the \ascii{NVIDIA} website and install it into the system to configure related environment variables.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ echo 'export CUDA_HOME=/usr/local/cuda' >> ~/.bashrc
 $ echo 'export LD_LIBRARY_PATH=$CUDA_HOME/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 \end{python}
@@ -460,27 +454,27 @@ $ echo 'export LD_LIBRARY_PATH=$CUDA_HOME/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 Then, download \ascii{cuDNN 5.1} and above and extract it to the \code{CUDA\_HOME} related system directory.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ sudo tar -xvf cudnn-8.0-macos-x64-v5.1.tgz -C /usr/local
 \end{python}
 \end{leftbar}
 
-\subsection{Configuration}
 
+\subsection{Configuration}
 At this point, the build environment is ready, execute the \code{./configure} configuration\ascii{TensorFlow} build environment. When the system supports \ascii{GPU}, you need to configure the relevant \ascii{CUDA/cuDNN} build environment.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ ./configure
 \end{python}
 \end{leftbar}
 
-\subsection{Build}
 
+\subsection{Build}
 When the configuration is successful, use \ascii{Bazel} to start the compilation of \ascii{TensorFlow}. Before the compilation starts, it will try to download the source code of the relevant dependencies from the code repository, including \ascii{gRPC, Protobuf, Eigen}, etc., and compile automatically.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package
 \end{python}
 \end{leftbar}
@@ -488,7 +482,7 @@ $ bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package
 Add the \code{--config=cuda} compile option when supporting \ascii{GPU} calculations.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ bazel build -c opt --config=cuda //tensorflow/tools/pip_package:build_pip_package
 \end{python}
 \end{leftbar}
@@ -496,27 +490,27 @@ $ bazel build -c opt --config=cuda //tensorflow/tools/pip_package:build_pip_pack
 After compiling successfully, you can build the \ascii{Wheel} package of \ascii{TensorFlow}.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
 \end{python}
 \end{leftbar}
 
-\subsection{Installation}
 
+\subsection{Installation}
 When the \ascii{Wheel} package is successfully built, use \ascii{pip} to install \ascii{TensorFlow} into the system.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ sudo pip install /tmp/tensorflow_pkg/tensorflow-1.4.0-py2-none-any.whl
 \end{python}
 \end{leftbar}
 
-\subsection{verification}
 
+\subsection{Verification}
 Start the \ascii{Python} interpreter and verify that the \ascii{TensorFlow} installation was successful.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 $ python
 >>> import tensorflow as tf
 >>> hello = tf.constant('Hello, TensorFlow!')
@@ -526,20 +520,20 @@ Hello, TensorFlow!
 \end{python}
 \end{leftbar}
 
-\subsection{IDE}
 
+\subsection{IDE}
 Choosing a suitable \ascii{IDE} can improve the quality and speed of code reading before reading the code. It is recommended to use the \ascii{Eclipse CDT} to read the \ascii{C++} code and install the \code{PyDev} plugin to read the \ascii{Python} code. At the same time, it is also recommended to \ascii{Clion}\ascii{C++}, \ascii{PyCharm}\ascii{Python} from \ascii{JetBrains}. However, when reading the \ascii{C++} code, you need to configure the search directory for the \ascii{TensorFlow, CUDA, Eigen3} header files and add the relevant predefined macros so that \code{IDE} correctly parses the symbols in the code. This chapter uses \ascii{Eclipse CDT} as an example to describe the relevant configuration methods.
 
-\subsubsection{Create Eclipse project}
 
+\subsubsection{Create Eclipse project}
 Create a \ascii{Eclipse C++} project, as shown by \refig{setup-eclipse}. Determine the unique project name, manually specify the root directory of the \ascii{TensorFlow} source code, and select the empty project for \ascii{Makefile}. Then, follow the \ascii{Properties > C/C++ General > Paths and Symbols > Includes} configuration directory for the header files.
 
-\begin{table}[!htbl]
+\begin{table}[!htb]
 \resizebox{0.95\textwidth}{!} {
 \begin{tabular*}{1.2\textwidth}{@{}ll@{}}
-\ toprule
+\toprule
 \ascii{Configuration Item} & \ascii{Directory} \\
-\ midrule
+\midrule
 \ascii{TensorFlow} & \code{/usr/local/lib/python2.7/site-packages/tensorflow/include} \\
 \ascii{CUDA} & \code{/usr/local/cuda/include} \\ 
 \bottomrule
@@ -549,45 +543,42 @@ Create a \ascii{Eclipse C++} project, as shown by \refig{setup-eclipse}. Determi
 \label{tbl:tf-includes}
 \end{table}
 
-\begin{figure}[!htbl]
-\centering
-\includegraphics[width=0.75\textwidth]{figures/setup-eclipse.png}
-\caption{Create Eclipse C++ project}}
- \label{fig:setup-eclipse}
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=0.75\textwidth]{figures/setup-eclipse.png}
+  \caption{Create Eclipse C++ project}
+  \label{fig:setup-eclipse}
 \end{figure}
+
 
 \subsubsection{Configure Eigen}
-
 Unfortunately, \ascii{Eigen}'s publicly available header files lack the suffix of \code{.h}, and \ascii{CDT} cannot resolve related symbols. See \code{\href{http://eigen.tuxfamily.org/index.php?title=IDEs}{http://eigen.tuxfamily.org/index.php?title=IDEs}} for instructions, follow \ascii{Preferences > C/C++ > Coding Style > Organize Includes > Header Substitution} Import the \code{eigen-header-substitution.xml} file as shown by \refig{eclipse-eigen3}.
 
-\begin{figure}[!htbl]
-\centering
-\includegraphics[width=0.75\textwidth]{figures/eclipse-eigen3.png}
-\caption{Replace the header file of \ascii{Eigen}}
- \label{fig:eclipse-eigen3}
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=0.75\textwidth]{figures/eclipse-eigen3.png}
+  \caption{Replace the header file of \ascii{Eigen}}
+  \label{fig:eclipse-eigen3}
 \end{figure}
 
 \end{content}
 
+
 \section{Code generation}
-
 \begin{content}
-
 When building the \ascii{TensorFlow} system, \ascii{Bazel} or \ascii{CMake} will automatically generate some source code. Understanding the output of the code generator can deepen understanding of the system's behavioral patterns.
-
 \end{content}
 
+
 \section{Technology stack}
-
 \begin{content}
-
 As shown in \refig{tf-stack}, the \tf{} technology stack is presented in terms of the hierarchy of the system, forming the core of the \tf{} ecosystem.
 
 \begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/tf-stack.png}
-\caption{TensorFlow Technology Stack}}
- \label{fig:tf-stack}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/tf-stack.png}
+  \caption{TensorFlow Technology Stack}
+  \label{fig:tf-stack}
 \end{figure}
 
 \end{content}

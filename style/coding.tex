@@ -10,20 +10,20 @@
 
 %% set some global styles for the listings package
 %% Reference http://hi.baidu.com/shawpinlee/blog/item/9ec431cbae28e41cbe09e6e4.html
-\ lstset {
-numberbychapter=true,
-breakatwhitespace=true,
-Showstringspaces=false, %% Set whether to display the space symbol between the codes
-Basicstyle=\footnotesize\ttfamily, %% set font size\tiny, \scriptsize, \footnotesize, \small, \Large, etc.
-keywordstyle=\bfseries,
-commentstyle=\color{red!50!green!50!blue!50},                           
-Escapechar=`, %% Chinese escape characters for Chinese and English mixed
-xleftmargin=1.5em,xrightmargin=0em, aboveskip=1em,
-Breaklines, %% This command allows LaTeX to automatically typeset long lines of code
-Extendedchars=false, %% This command can solve the problem that the Chinese characters of chapter titles, headers, etc. are not displayed when the code is spread across pages.
-frameround=fttt,
-captionpos=top,
-belowcaptionskip=1em
+\lstset{
+  numberbychapter=true,
+  breakatwhitespace=true,
+  showstringspaces=false, %% Set whether to display the space symbol between the codes
+  basicstyle=\footnotesize\ttfamily, %% set font size\tiny, \scriptsize, \footnotesize, \small, \Large, etc.
+  keywordstyle=\bfseries,
+  commentstyle=\color{red!50!green!50!blue!50},                           
+  escapechar=`, %% Chinese escape characters for Chinese and English mixed
+  xleftmargin=1.5em,xrightmargin=0em, aboveskip=1em,
+  breaklines, %% This command allows LaTeX to automatically typeset long lines of code
+  extendedchars=false, %% This command can solve the problem that the Chinese characters of chapter titles, headers, etc. are not displayed when the code is spread across   pages.
+  frameround=fttt,
+  captionpos=top,
+  belowcaptionskip=1em
 }
 
 \lstdefinestyle{numbers}{
@@ -36,9 +36,9 @@ belowcaptionskip=1em
 \lstdefinestyle{C++}{
    language=C++,
    texcl=true,
-   prebreak = \ text backslash,
+   prebreak=\textbackslash,
    breakindent=1em,
-   Keywordstyle=\bfseries, %% keyword highlighting
+   keywordstyle=\bfseries, %% keyword highlighting
    morekeywords={alignas, alignof, char16_t, char32_t, constexpr, decltype, noexcept, nullptr, static_assert, thread_local, override, OVERRIDE, INTERFACE, ABSTRACT, DEFINE_ROLE, ROLE, HAS_ROLE, USE_ROLE}
    style=numbers,
    %frame=leftline, %% to frame the code
@@ -57,10 +57,10 @@ belowcaptionskip=1em
 \lstdefinestyle{Java}{
    language=Java,
    texcl=true,
-   prebreak = \ text backslash,
+   prebreak=\textbackslash,
    breakindent=1em,
-   Keywordstyle=\bfseries, %% keyword highlighting
-   morekeywords = {}
+   keywordstyle=\bfseries, %% keyword highlighting
+   morekeywords={}
    style=numbers,
    %frame=leftline, %% to frame the code
    %framerule=2pt,
@@ -75,10 +75,10 @@ belowcaptionskip=1em
 \lstdefinestyle{Ruby}{
    language=Java,
    texcl=true,
-   prebreak = \ text backslash,
+   prebreak=\textbackslash,
    breakindent=1em,
-   Keywordstyle=\bfseries, %% keyword highlighting
-   morekeywords = {}
+   keywordstyle=\bfseries, %% keyword highlighting
+   morekeywords={}
    style=numbers,
    %frame=leftline, %% to frame the code
    %framerule=2pt,
@@ -93,10 +93,10 @@ belowcaptionskip=1em
 \lstdefinestyle{Python}{
    language=Python,
    texcl=true,
-   prebreak = \ text backslash,
+   prebreak=\textbackslash,
    breakindent=1em,
-   Keywordstyle=\bfseries, %% keyword highlighting
-   morekeywords = {}
+   keywordstyle=\bfseries, %% keyword highlighting
+   morekeywords={}
    style=numbers,
    %frame=leftline, %% to frame the code
    %framerule=2pt,
@@ -108,25 +108,25 @@ belowcaptionskip=1em
   \lstset{style=Python, #1}}
   {}
 
-\ Lstdefinestyle Scala {} {
-   language = Scala,
+\lstdefinestyle{Scala}{
+   language=Scala,
    texcl=true,
-   prebreak = \ text backslash,
+   prebreak=\textbackslash,
    breakindent=1em,
-   Keywordstyle=\bfseries, %% keyword highlighting
-   morekeywords = {}
+   keywordstyle=\bfseries, %% keyword highlighting
+   morekeywords={}
    style=numbers,
    %frame=leftline, %% to frame the code
    %framerule=2pt,
    %rulesep=5pt
 }
 
-\ Lstnewenvironment scale {} [1] []
+\lstnewenvironment{scala}[1][]
   {\setstretch{1}
   \lstset{style=Scala, #1}}
-  {}  
+  {} 
 
 \renewcommand{\lstlistingname}{sample code}
 \renewcommand\thefigure{\thechapter-\arabic{figure}}
 
-\newcommand\refcode[1]{{\itshape \lstlistingname\ascii{\ref{code:#1}（第\pageref{code:#1}页）}}}
+\newcommand\refcode[1]{{\itshape \lstlistingname\ascii{\ref{code:#1}page \pageref{code:#1}}}}

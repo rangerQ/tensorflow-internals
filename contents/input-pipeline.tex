@@ -1,13 +1,12 @@
 \begin{savequote}[45mm]
-\ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
-\qauthor{\ascii{- Martin Flower}}
+  \ascii{Any fool can write code that a computer can understand. Good programmers write code that humans can understand.}
+  \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{data loading} 
+
+\chapter{Data loading} 
 \label{ch:input-pipeline}
-
 \begin{content}
-
 In general, \ascii{TensorFlow} enters sample data into the training/inferion subgraph to perform the operation. There are three ways to read the sample data:
 
 \begin{enum}
@@ -19,19 +18,17 @@ In general, \ascii{TensorFlow} enters sample data into the training/inferion sub
 Based on large dataset training or inference tasks, the input of sample data often uses the pipeline mode of the data to ensure high throughput and improve the efficiency of training/inferencing. The process uses a queue to implement data interaction and asynchronous control between the input subgraph and the training/inference subgraph.
 
 This chapter will focus on the workings of \ascii{Pipeline} for data loading, and gain insight into the coordination mechanism for concurrent execution of \ascii{TensorFlow} and its role in concurrent execution.
-
 \end{content}
 
-\section{Data Injection}
 
+\section{Data injection}
 \begin{content}
-
 Data injection is the most common method of data loading. It passes the sample data to \code{Session.run} or the \code{Tensor.eval} method via the dictionary \code{feed\_dict}; where the dictionary keyword Is the name of \code{Tensor} and the value is sample data.
 
 \ascii{TensorFlow} will replace the sample data with the value of \code{Tensor} according to the name of the \code{Tensor} in the dictionary.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 x = tf.placeholder(tf.float32, [None, 784])
 y_ = tf.placeholder(tf.float32, [None, 10])
 
@@ -45,34 +42,33 @@ In general, \code{feed\_dict} can override any \code{Tensor} value. However, \co
 
 \end{content}
 
+
 \section{Data preloading}
-
 \begin{content}
-
 You can use \code{Const} or \code{Variable} to hold data directly and preload data into memory to improve execution efficiency. This method is only suitable for small data sets. When the sample data set is large, the memory resource consumption is very considerable. Here we take the \ascii{mnist} data set as an example to explain how to use data preloading.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 from tensorflow.examples.tutorials.mnist import input_data
 
 data_sets = input_data.read_data_sets('/tmp/mnist/data')
 \end{python}
 \end{leftbar}
 
-\subsection{Use Const}
 
+\subsection{Use Const}
 Since the value of \code{Const OP} output \code{Tensor} is directly inlined in the calculation graph. If the \code{Const OP} is used multiple times in the diagram, it may cause duplicate redundant data, wasting unnecessary memory resources.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with tf.name_scope('input'):
   input_images = tf.constant(data_sets.train.images)
   input_labels = tf.constant(data_sets.train.labels)
 \end{python}
 \end{leftbar}
 
-\subsection{Using Variable}
 
+\subsection{Using Variable}
 You can use an immutable, non-training \code{Variable} instead of \code{Const}. Once the \code{Variable} of this type is initialized, its value cannot be changed, thus having the attributes of \code{Const}.
 
 There is a difference between \code{Variable} for data preloading and \code{Variable} for training. It will set \code{trainable=False} and the system will not classify it as \code{GraphKeys .TRAINABLE\_VARIABLES} in the collection. During the training process, the system does not perform an update operation on it.
@@ -82,7 +78,7 @@ Also, when constructing this type of \code{Variable}, \code{collections=[]} will
 To create an immutable, non-training \code{Variable}, here is a simple factory method.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def immutable_variable(initial_value):
   initializer = tf.placeholder(
     dtype=initial_value.dtype,
@@ -94,19 +90,19 @@ def immutable_variable(initial_value):
 \code{immutable\_variable} Constructs the type and shape information of \code{Placeholder} using the passed \code{initial\_value} and uses it as the initial value of \code{Variable}. You can use \code{immutable\_variable} to create immutable \code{Variable} for data preloading.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with tf.name_scope('input'):
   input_images = immutable_variable(data_sets.train.images)
   input_labels = immutable_variable(data_sets.train.labels)
 \end{python}
 \end{leftbar}
 
-\subsection{Batch preloading}
 
+\subsection{Batch preloading}
 You can build \ascii{Pipeline} and combine the data preloading mechanism to implement batch loading of samples. First, use \code{tf.train.slice\_input\_producer} to randomize the entire sample space at the beginning of each \ascii{epoch}, each time taking a random sample from the sample set to get a training sample.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def one(input_xs, input_ys, num_epochs)
   return tf.train.slice_input_producer(
     [input_xs, input_ys], num_epochs=num_epochs)
@@ -116,7 +112,7 @@ def one(input_xs, input_ys, num_epochs)
 Then, use \code{tf.train.batch} to get sample data for one batch at a time.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def batch(x, y, batch_size)
   return tf.train.batch(
     [x, y], batch_size=batch_size)
@@ -126,7 +122,7 @@ def batch(x, y, batch_size)
 For preloading data with \code{Variable}, you can get sample data for a batch as follows.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 with tf.name_scope('input'):
   input_images = immutable_variable(data_sets.train.images)
   input_labels = immutable_variable(data_sets.train.labels)
@@ -140,15 +136,14 @@ In fact, \code{tf.train.slice\_input\_producer} will construct the sample queue 
 
 \end{content}
 
+
 \section{Data Pipeline}
-
 \begin{content}
-
 A typical data load \ascii{Pipeline(Input Pipeline)}, including the following important data processing entities:
 
 \begin{enum}
   \eitem{file name queue: add a list of file names to this queue;}
-  \eitem{Reader: Read the file name (dequeue) from the file name queue; and select the corresponding file reader according to the data format to parse the file record;
+  \eitem{Reader: Read the file name (dequeue) from the file name queue; and select the corresponding file reader according to the data format to parse the file record;}
   \eitem{decoder: decode file records and convert to data samples;}
   \eitem{Preprocessor: Preprocessing data samples, including regularization, whitening, etc.;}
   \eitem{sample queue: Add the processed sample data to the sample queue. }
@@ -156,10 +151,11 @@ A typical data load \ascii{Pipeline(Input Pipeline)}, including the following im
 
 Take the \ascii{mnist} data set as an example, if the data format is \code{TFRecord}. First, construct a \code{FIFOQueue} queue holding the list of file names (by executing \code{EnqueueMany OP}) using \code{tf.train.string\_input\_producer}, and at each \ascii{epoch } Randomize the list of file names in the cycle.
 
+
 \subsection{Build file name queue}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def input_producer(num_epochs):
   return tf.train.string_input_producer(
     ['/tmp/mnist/train.tfrecords'], num_epochs = num_epochs)
@@ -168,10 +164,11 @@ def input_producer(num_epochs):
 
 After constructing the file name queue, use \code{tf.TFRecordReader} to get the file name from the file name queue (dequeue, execute \code{Dequeue OP} by calling), and read the sample record from the file (\ascii {Record}). Then, parse the sample data using \code{tf.parse\_single\_example}.
 
-\subsection{reader}
+
+\subsection{Reader}
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def parse_record(filename_queue):
   reader = tf.TFRecordReader()
   _, serialized_example = reader.read(filename_queue)
@@ -185,12 +182,13 @@ def parse_record(filename_queue):
 \end{python}
 \end{leftbar}
 
-\subsection{decoder}
+
+\subsection{Decoder}
 
 The sample data is then decoded, and its optional pre-processing process, resulting in a training sample.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def decode_image(features):
   image = tf.decode_raw(features['image_raw'], tf.uint8)
   image.set_shape([28*28])
@@ -208,12 +206,13 @@ def one_example(features):
 \end{python}
 \end{leftbar}
 
+
 \subsection{Build sample queue}
 
 You can use \code{tf.train.shuffle\_batch} to build a \code{RandomShuffleQueue} queue, append the parsed training samples to the queue (by executing \code{Enqueue OP}); when the iteration execution starts, Get \code{batch\_size} sample data from the batch (by executing \code{DequeueMany OP}).
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def shuffle_batch(image, label, batch_size):
     # Shuffle the examples and collect them into batch\_size
     # batches.(Uses a RandomShuffleQueue)
@@ -226,12 +225,13 @@ def shuffle_batch(image, label, batch_size):
 \end{python}
 \end{leftbar}
 
-\subsection{Enter submap}
+
+\subsection{Input sub-graph}
 
 Finally, the entire program is passed over to construct an input subgraph.
 
 \begin{leftbar}
-\ Begin {python}
+\begin{python}
 def inputs(num_epochs, batch_size):
   with tf.name_scope('input'):
     filename_queue = input_producer(num_epochs)
@@ -243,10 +243,9 @@ def inputs(num_epochs, batch_size):
 
 \end{content}
 
+
 \section{Data synergy}
-
 \begin{content}
-
 In fact, the \ascii{Pipeline} of data loading is essentially constructing an input subgraph that implements concurrent \ascii{IO} operations so that the training process is not blocked by the operation \ascii{IO}, thus implementing \ascii{GPU Increase in utilization of }.
 
 For input subgraphs, the processing of data streams is divided into several stages (\ascii{Stage}), each stage completes a specific data processing function; each stage uses a queue as a medium to complete data coordination and interaction.
@@ -254,29 +253,29 @@ For input subgraphs, the processing of data streams is divided into several stag
 As shown in the figure below, a typical neural network training mode is described. The entire pipeline is mediated by two queues, which are divided into three phases.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/tf-input-pipeline.png}
-\caption{model training workflow}
- \label{fig:tf-input-pipeline}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/tf-input-pipeline.png}
+  \caption{model training workflow}
+  \label{fig:tf-input-pipeline}
 \end{figure}
 
-\subsection{stage 1}
 
+\subsection{Stage 1}
 \code{string\_input\_producer} constructs a queue of \code{FIFOQueue}, which is a stateful \ascii{OP}. According to the \code{shuffle} option, at the beginning of each \ascii{epoch}, a list of files is randomly generated and appended to the queue.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/tf-input-pipeline-stage-1.png}
-\caption{Phase 1: Model Training Workflow}
- \label{fig:tf-input-pipeline-stage-1}
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/tf-input-pipeline-stage-1.png}
+  \caption{Phase 1: Model Training Workflow}
+  \label{fig:tf-input-pipeline-stage-1}
 \end{figure}
 
-\subsubsection{randomization}
 
+\subsubsection{Randomization}
 First, execute \code{Const OP} named \code{filenames}, and then randomize the list of file names via \code{RandomShuffle}.
 
-\subsubsection{Epoch Control}
 
+\subsubsection{Epoch Control}
 To implement the count of \ascii{epoch}, the implementation subtly designed a local variable called \code{epochs}. Among them, the local variable only shares data between multiple rounds of the process, and is not updated by the training submap.
 
 Prior to \code{Session.run}, the system performs an initialization of the local variable list and implements zero initialization of \code{Variable} named \code{epochs}.
@@ -326,60 +325,60 @@ private:
 \end{c++}
 \end{leftbar}
 
-\subsubsection{Enqueue operation}
 
+\subsubsection{Enqueue operation}
 In fact, appending the list of filenames to the queue, executing \code{EnqueueMany}, similar to \code{Assign} modifying the value of \code{Variable}, \code{EnqueueMany} is also a stateful \ascii{ OP}, which holds the handle of the queue and directly completes the status update of the queue.
 
 Here, \code{EnqueueMany} will be executed by \code{Session.run}, the system will traverse backwards, find the dependent \code{Identity}, and the control will depend on \code{CountUpTo}, which will be started once. Ascii{epoch} counts until the \code{num\_epoch} number reaches the \code{OutOfRangeError} exception. At the same time, \code{Identity} relies on \code{RandomShuffle} to get a randomized list of filenames.
 
-\subsubsection{QueueRunner}
 
+\subsubsection{QueueRunner}
 In addition, when calling \code{tf.train.string\_input\_producer}, a special \ascii{OP}:\code{QueueRunner} will be registered in the calculation graph and added to \code{GraphKeys. In the QUEUE\_RUNNERS} collection. Also, a \code{QueueRunner} holds one or more \ascii{OP} of type \code{Enqueue, EnqueueMany}.
 
-\subsection{stage 2}
 
+\subsection{Stage 2}
 \code{Reader} gets the file name from the file name queue in the order of \ascii{FIFO}, and reads the file record according to the file name. After successful, the record is decoded and preprocessed, converted into data samples, and finally Append it to the sample queue.
 
-\subsubsection{reader}
 
+\subsubsection{Reader}
 In fact, the implementation constructs a \code{ReaderRead}\ascii{OP} that holds the handle to the filename queue and gets the filename from the queue in the order \ascii{FIFO}.
 
 Since the format of the file is \code{TFRecord}, ​​\code{ReaderRead} will delegate \ascii{OP} of \code{TFRecordReader} to read the file. Finally, after the operation of \code{ReaderRead}, you will get a serialized sample.
 
-\subsubsection{decoder}
 
+\subsubsection{Decoder}
 After the serialized samples are obtained, decoding is performed using a suitable decoder to obtain a desired sample data. Optionally, the sample can be pre-processed, such as \code{reshape}.
 
-\subsubsection{Enqueue operation}
 
+\subsubsection{Enqueue operation}
 After getting the sample data, the operation of \code{QueueEnqueue} will be started and the sample will be appended to the sample queue. Among them, \code{QueueEnqueue} is a stateful \ascii{OP}, which holds the handle of the sample queue and directly completes the update operation of the queue.
 
 In practice, the sample queue is a \code{RandomShuffleQueue} that uses a dequeue operation to achieve random sampling.
 
-\subsubsection{Concurrent execution}
 
+\subsubsection{Concurrent execution}
 To improve the throughput of \ascii{IO}, you can start multi-way concurrent \code{Reader} and \code{Decoder} workflows and concurrently append samples to the sample queue. Among them, \code{RandomShuffleQueue} is thread-safe and supports concurrent enqueue or dequeue operations.
 
-\subsection{stage 3}
 
+\subsection{Stage 3}
 When the data samples are accumulated to a \code{batch\_size}, the training/inference subgraph will take the sample data for the batch and initiate an iterative calculation (often called \ascii{Step}).
 
-\subsubsection{departure operation}
 
-In fact, the training submap uses \code{DequeueMany} to get sample data for a batch.
+\subsubsection{Departure operation}
+In fact, the training sub-graph uses \code{DequeueMany} to get sample data for a batch.
 
-\subsubsection{iteration execution}
 
+\subsubsection{Iteration execution}
 In general, an iterative run consists of two basic processes: forward calculation and reverse gradient transfer. The \ascii{Worker} task uses the \ascii{PS} task to update to the local current value, and performs a forward calculation to get the loss of this iteration.
 
 Then, based on the loss of this iteration, calculate the gradient of each \ascii{Variable} and update it to the \ascii{PS} task; the \ascii{PS} task updates the value of each \code{Variable} and will The current value is broadcast to each \ascii{Worker} task.
 
-\subsubsection{Checkpoint}
 
+\subsubsection{Checkpoint}
 The \ascii{PS} task periodically implements \ascii{Checkpoint} based on a fault-tolerant strategy. Persist all current \code{Variable} data, and its graph metadata, including static graph structure information, to an external storage device for subsequent recovery of the graph and all its \code{Variable} data.
 
-\subsection{Pipeline beat}
 
+\subsection{Pipeline beat}
 For example, add a list of file names to the queue of \code{FIFOQueue}, at which point the subgraph calculation starting with \code{EnqueueMany} is called, including the \code{CountUpTo} that the execution depends on. When \code{CountUpTo} reaches the upper limit of \code{limit}, the \code{OutOfRangeError} exception is automatically thrown.
 
 Plays the \code{QueueRunner} of the main program, catches the \code{OutOfRangeError} exception re-thrown by \code{coord.join}, then immediately closes the corresponding queue and exits the thread's execution. After the queue is closed, the enqueue operation becomes illegal; the dequeue operation remains legal unless the queue element is empty.
@@ -387,3 +386,5 @@ Plays the \code{QueueRunner} of the main program, catches the \code{OutOfRangeEr
 By the same token, downstream \ascii{OP} dequeues from the queue (filename queue) and automatically throws a \code{OutOfRangeError} exception once the queue element is empty. The corresponding \code{QueueRunner} at this stage will sense the occurrence of the exception, then catch the exception and close the downstream queue (sample queue), exiting the execution of the thread.
 
 In the final stage of \ascii{Pipeline}, \code{train\_op} dequeues the batch training sample from the sample queue, the queue is empty, and the queue is closed, throwing a \code{OutOfRangeError} exception, and finally Stop the entire training task.
+
+\end{content}

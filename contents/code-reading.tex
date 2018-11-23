@@ -1,18 +1,14 @@
-\chapter{code reading} 
+\chapter{Code reading} 
 \label{ch:code-reading}
-
 \begin{content}
-
 In the programmer's daily work, most of the time is in \emph{reading code}, not writing code. However, reading the code is often a very boring thing, especially when you encounter a design that is not beautiful, the psychology of resistance is often stronger. In fact, changing the habits, ideas and methods, code reading is actually a very enjoyable process.
 
 Read the patterns, practices, and habits of the code, and the masters of the Greek author \ascii{Diomidis Spinellis}: \ascii{Code Reading, The Open Source Perspective}. This article starts from another perspective, talks about some of my habits of reading the code, and looks forward to finding more people's resonance.
-
 \end{content}
 
+
 \section{Working for good things, you must first sharpen it}
-
 \begin{content}
-
 First, prepare a good toolbox before reading the code, including \ascii{IDE}, \ascii{UML}, brain map and other tools. The programming languages ​​I mainly use include \ascii{C++, Scala, Java, Ruby, Python}; I prefer to use \ascii{JetBrains} products, many of which are very intimate to programmers.
 
 Second, the efficient use of shortcuts, which is a good code reading habit, it greatly improves the efficiency and quality of code reading. For example, look at class hierarchy, function call chains, method reference points, and more.
@@ -23,10 +19,9 @@ Unplug the mouse and reduce the dependency on the mouse. When you find that ther
 
 \end{content}
 
-\section{力行而知知之}
 
+\section{Knowing the truth}
 \begin{content}
-
 A common anti-pattern for reading code is to read the code in the way of \ascii{Debug}. The author does not recommend this way of reading code. First, because the switching between threads at run time can easily lead to the loss of direction. Second, understanding the code call stack is not effective for understanding system behavior, because it contains too many implementation details. It is not easy to find the nature of the problem.
 
 But before reading the code, there are a few things that must be done. First, manually build a project and run test cases; second, hand-write several \ascii{Demo} to feel it.
@@ -34,30 +29,26 @@ But before reading the code, there are a few things that must be done. First, ma
 The project is run first, not for the \ascii{Debug} code, but for understanding the way the project is built, and understanding the basic structure of the system, and understanding how the system is used.
 
 If conditions permit, you can try to discover and mine the behavior of the system using \ascii{ATDD}. Through this process, thinking of yourself as a customer and thinking about the behavior of the system is the most important cornerstone for understanding the system.
-
 \end{content}
 
+
 \section{Discover domain model}
-
 \begin{content}
-
 Reading the code, not to understand each class, what each function does, but to mine more essential, less variable knowledge. In fact, the discovery of \emph{domain model} is the most important goal of reading code, because the domain model is the soul of the system. Through the code reading, find the knowledge of the essence of the system, and express it through its own mode, in order to truly grasp the context of the system, otherwise everything is empty talk.
 
 For example, when reading the client code implemented by \tf{}'s \ascii{Python}, it is extremely important to understand the domain model of the computation graph and understand the programming model of \ascii{TensorFlow} and its runtime behavior.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/py-graph.png}
-\caption{Domain object: Graph}
- \label{fig:py-graph}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/py-graph.png}
+  \caption{Domain object: Graph}
+  \label{fig:py-graph}
 \end{figure}
-
 \end{content}
 
+
 \section{Excavation System Architecture}
-
 \begin{content}
-
 Reading the code is like sailing in the sea, and the system architecture diagram is a nautical chart. Reading the code can't be without the overall system concept, otherwise the results will be poor and the reading quality will be greatly discounted. You must have a systematic mindset and a clear goal so that you don't lose your way.
 
 The first task is to find the boundaries of the system and to think about the behavioral characteristics of the external system in abstract thinking. Second, clarifying the interactions, relationships, and responsibilities between components in the system is critical to understanding the behavior of the entire system.
@@ -65,18 +56,16 @@ The first task is to find the boundaries of the system and to think about the be
 For example, for \ascii{TensorFlow}, \ascii{C API} is a bridge between the front and back systems. Understand the design of \ascii{C API} and basically be able to guess the behavior of the front-end system.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/tf-architecture-simple.png}
-\caption{TensorFlow System Architecture}
- \label{fig:tf-architecture-simple}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/tf-architecture-simple.png}
+  \caption{TensorFlow System Architecture}
+  \label{fig:tf-architecture-simple}
 \end{figure}
-
 \end{content}
 
+
 \section{Details are the devil}
-
 \begin{content}
-
 The entanglement in the details will lead to a significant discount in the efficiency and quality of the code reading code. For example, log printing, solving a patch implementation of \ascii{Bug}, a compatibility scheme for a version branch, a hammer code implementation for some metamorphosis requirements, and so on.
 
 A common anti-pattern for reading code is "annotating code." This is a practice that is highly inefficient and inefficient, with a very low input-output ratio. In general, the more elegant the system, the fewer comments; the more complex the system, the more comments are not helpful.
@@ -85,18 +74,16 @@ I have a habit of reading code, creating a separate \ascii{code-reading} branch 
 
 \begin{leftbar}
 \begin{scala}
-$ git checkout -b code-reading
+\$ git checkout -b code-reading
 \end{scala}
 \end{leftbar}
 
 After removing these noises, you will find that the system is not as complicated as you might think. In reality, the complexity of the system is often the additional complexity caused by immature design and implementation. With the in-depth understanding of the system, many details will naturally surface, and all mysterious veil will be revealed and publicized.
-
 \end{content}
 
-\section{可可止}
 
+\section{Jsut right}
 \begin{content}
-
 A common anti-pattern of reading code is "a rib is going to the end, not to the Yellow River." Programmers have a curiosity and are always interested in things that are unclear. For example, how is the message sent out? What is the principle of task scheduling? How is data storage done? Although this kind of courage is worthy of praise, it is definitely not worth encouraging when reading the code.
 
 Another common anti-pattern is the "Tracking Function Call Stack". This is an extremely boring process that often leads to the rigidity of thinking; because you live forever in the shadow of the author, there is no self at all.
@@ -104,13 +91,11 @@ Another common anti-pattern is the "Tracking Function Call Stack". This is an ex
 When I read the code personally, the depth of the function call stack never exceeds \ascii{3}, and then the underlying call is thought of using abstract thinking. Because I found that with age, the memory that I have been proud of now is gradually becoming my own shortcoming. When I tried to track the deep call stack, the previous reading information completely disappeared.
 
 In other words, I am more accustomed to "wide traversal" rather than accustomed to "deep traversal" reading. In this way, I can find the "hierarchical concept" that the system conceals and rationalize the hierarchy of the system.
-
 \end{content}
 
+
 \section{Discover her beauty}
-
 \begin{content}
-
 Threesome, there must be my teacher. When reading code, when you find a good design, including implementation mode, idioms, etc., don't miss it; otherwise, after a while, this code reading will be of little value to you.
 
 When I find a good design, I will try to use the class diagram, state machine, sequence diagram, etc. to express the design; if you find potential deficiencies, add your own ideas, it will be more perfect.
@@ -118,38 +103,36 @@ When I find a good design, I will try to use the class diagram, state machine, s
 For example, when I read \ascii{Hamcrest}, I tried to draw a class diagram, and realized the relationship between them, and felt the beauty of the design, which also benefited a lot.
 
 \begin{figure}[!h]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/hamcrest.png}
-\caption{Combination design}
- \label{fig:hamcrest}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/hamcrest.png}
+  \caption{Combination design}
+  \label{fig:hamcrest}
 \end{figure}
-
 \end{content}
 
+
 \section{Try to refactor}
-
 \begin{content}
-
 Because this is a process of code reading, there is no potential risk due to refactoring. In some complex logic, it can be made more explicit and intuitive through the reconstruction of equivalent transformations.
 
 For a giant function, I often extract an abstract code hierarchy to discover its underlying logic. For example, this is a \ascii{ArrayBuffer} implemented with \ascii{Scala}, and when you need to add an element to the end, the existing design is like this.
 
 \begin{leftbar}
 \begin{python}
-Def +=(elem: A): this.type = {
-  If (size + 1 > array.length) {
-    Var newSize: Long = array.length
-    While (n > newSize)
+def +=(elem: A): this.type = {
+  if (size + 1 > array.length) {
+    var newSize: Long = array.length
+    while (n > newSize)
       newSize *= 2
     newSize = math.min(newSize, Int.MaxValue).toInt
   
-    Val newArray = new Array[AnyRef](newSize)
+    val newArray = new Array[AnyRef](newSize)
     System.arraycopy(array, 0, newArray, 0, size)
-    Array = newArray
+    array = newArray
   }
-  Array(size) = elem.asInstanceOf[AnyRef]
-  Size += 1
-  This
+  array(size) = elem.asInstanceOf[AnyRef]
+  size += 1
+  this
 }
 \end{python}
 \end{leftbar}
@@ -158,22 +141,20 @@ This code creates a huge obstacle to reading, and I will try to find the backbon
 
 \begin{leftbar}
 \begin{python}
-Def +=(elem: A): this.type = {
-  If (atCapacity)
-    Grow()
+def +=(elem: A): this.type = {
+  if (atCapacity)
+    grow()
   addElement(elem)
 }
 \end{python}
 \end{leftbar}
 
 As for how \code{atCapacity, grow, addElement} is implemented, don't care, because I have achieved the effect of reading the code.
-
 \end{content}
 
+
 \section{Formalization}
-
 \begin{content}
-
 When reading the code, some people are used to drawing the "flow chart" of the program. On the contrary, I almost never draw a "flowchart" because the flow chart reflects too many implementation details and does not profoundly reflect the nature of the algorithm.
 
 I prefer to use a "formal" approach to describe the problem. It has a mathematical aesthetic, a simple expression, and its highly abstract thinking, which is critical to the nature of the problem.
@@ -198,13 +179,11 @@ Rd: others => string of others
 Spec: r3 || r2 || r1 || rd
 \end{python}
 \end{leftbar}
-
 \end{content}
 
-\section{instantiate}
 
+\section{Instantiate}
 \begin{content}
-
 Instantiation is an important way to understand the problem. When the logic is very complicated, a simple example often makes you suddenly open. Ideally, instantiation can be made into automated test cases that describe the behavior of the system.
 
 If there is an algorithm and implementation that is quite complex, it can also be used to instantiate the working principle of the algorithm, which is very beneficial for understanding the problem itself.
@@ -212,44 +191,39 @@ If there is an algorithm and implementation that is quite complex, it can also b
 Take the \ascii{DAG} algorithm in \ascii{Spark} as an example. Starting with \ascii{G}, the boundaries of each \ascii{Stage} are identified in turn according to the dependency of \ascii{RDD}.
 
 \begin{figure}[!htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/spark-stage-dag.png}
-\caption{Spark: Stage partitioning algorithm}
- \label{fig:spark-stage-dag}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/spark-stage-dag.png}
+  \caption{Spark: Stage partitioning algorithm}
+  \label{fig:spark-stage-dag}
 \end{figure}
 
 \begin{itemize}
- Division of \item \ascii{Stage 3}
+ \item Division of \ascii{Stage 3}
    \begin{enum}
-     Between \eitem{\ascii{G} and \ascii{B} is a narrow dependency, the same as \ascii{Stage(3)};}
-     Between \eitem{\ascii{B} and \ascii{A} is a wide dependency, \ascii{A} is the new starting \ascii{RDD}, which is called recursively;
+     \eitem{Between \ascii{G} and \ascii{B} is a narrow dependency, the same as \ascii{Stage(3)};}
+     \eitem{Between \ascii{B} and \ascii{A} is a wide dependency, \ascii{A} is the new starting \ascii{RDD}, which is called recursively;}
      \eitem{\ascii{G} is a wide dependency with \ascii{F}, and \ascii{F} is the new starting \ascii{RDD}, which is called recursively. }
    \end{enum}
 
- Division of \item \ascii{Stage 1}
+ \item Division of \ascii{Stage 1}
    \begin{enum}
-     \eitem{\ascii{A}No father} RDD}, \ascii{Stage(1)} The end of the division. In particular, \ascii{Stage(1)} only contains \ascii{RDD A}. }
+     \eitem{\ascii{A} No father RDD, \ascii{Stage(1)} The end of the division. In particular, \ascii{Stage(1)} only contains \ascii{RDD A}. }
    \end{enum}
- Division of \item \ascii{Stage 2}
+ \item Division of \ascii{Stage 2}
    \begin{enum}
      \eitem{Since the relationship between \ascii{RDD} is narrowly dependent, the rule is the same \ascii{Stage(2)};}
      \eitem{until \ascii{RDD C, E}, because there is no father \ascii{RDD}, \ascii{Stage(2)} ends. }
-   \end{enum} 
+   \end{enum}
 \end{itemize}
 
 Finally, the dependency of \ascii{Stage} is formed, and \ascii{TaskSet} to \ascii{TaskScheduler} are submitted in turn for scheduling execution.
-
 \end{content}
 
-\section{独乐乐, not as good as music}
-
+\section{Study together}
 \begin{content}
-
 Sharing your experience with others, you may find more inspiration; especially for people who are familiar with the field, if it is better than \ascii{Owner}, you will definitely get unexpected surprises and gains.
 
 You can also collect the experience of others through various channels, and combine your own thinking to find out your own understanding, so that you can put knowledge into your own bag.
 
 Reading the code is not a one-person world; you should go out and participate in some community activities to understand the mainstream research direction, technological dynamics, and industrial development in the ecosystem, which is extremely helpful for understanding the business.
-
-
 \end{content}
