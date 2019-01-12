@@ -25,7 +25,7 @@ $ sudo apt-get install texlive-full
 
 Download [MacTeX.pkg](http://tug.org/mactex/), and install it.
 
-- Windowns
+- Windows
       
 Download [CTEX-full](http://www.ctex.org/CTeXDownload), and install it.
 
@@ -99,4 +99,4 @@ open the file from directory `tensorflow-internals/output`.
 [MIT License](http://opensource.org/licenses/mit-license.html) 
 
 ## rangerQ's proofreading notes
-1. The Chinese version contains English terminologies (for example: 数据流图(Dataflow Graph)), Sergey's translation kepted both (e.g. \emph{dataflow graph} \ascii{(Dataflow Graph)}). To improve readability, I kept only \ascii{Dataflow Graph}. Unless the term in brackets is abbreviated. (e.g. \emph{directed acyclic graph} \ascii{(DAG)})
+1. The Chinese version contains English terminologies (for example: 数据流图(Dataflow Graph)), Sergey's translation kepted both (e.g. `\emph{dataflow graph} \ascii{(Dataflow Graph)}`). To improve readability, I kept only `\ascii{Dataflow Graph}`. Unless the term in brackets is abbreviated. (e.g. `\emph{directed acyclic graph} \ascii{(DAG)}`)
