@@ -36,6 +36,7 @@ Then you should install some missing chinese fonts. Please download missing font
 ```
 $ git clone https://gitlab.com/horance/fonts.git
 ```
+Note: `Monaco_Linux.ttf` is not a valid font on Windows, try this: https://github.com/todylu/monaco.ttf
 
 Then install all missing fonts.
 
