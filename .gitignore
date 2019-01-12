@@ -1,1 +1,7 @@
 output/
+
+tensorflow-internals.log
+tensorflow-internals.out
+tensorflow-internals.aux
+tensorflow-internals.synctex.gz
+tensorflow-internals.toc
