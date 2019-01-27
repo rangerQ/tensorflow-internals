@@ -63,7 +63,7 @@ Among them, this book will focus on the \code{core, python} component, and some 
 \end{c++}
 \end{leftbar}
 
-As of the latest release of \ascii{1.4}, the \tf{} codebase has approximately \ascii{100} million code. Among them, including \ascii{53} million line \ascii{C/C++} code, \ascii{37} million lines\ascii{Python} code, and the code size is constantly expanding. Among them, the \ascii{API} provided by \ascii{Python} is the most complete; in contrast, the \ascii{API} of other programming languages ​​is not yet mature, even in its infancy.
+As of the latest release of \ascii{1.4}, the \tf{} codebase has approximately \ascii{100} million lines of code. Among them, including \ascii{53} million lines of \ascii{C/C++} code, \ascii{37} million lines of \ascii{Python} code, and the scale of code is constantly expanding. Among them, the \ascii{API} provided by \ascii{Python} is the most complete; in contrast, the \ascii{API} of other programming languages are not yet mature, some even in their infancy.
 
 \begin{leftbar}
 \begin{python}[caption={TensorFlowCode Stats}]
@@ -100,7 +100,7 @@ SUM:                  5932   215258    291127    982956
 
 
 \subsection{Core}
-The source code structure of the kernel is as follows, including platform, utility library, base framework, \ascii{Protobuf} definition, local runtime, distributed runtime, graph operation, \ascii{OP} definition, and \ascii{Kernel} implementation and other components, this is one of the key components of this book, will focus on mining the hidden domain model in the basic framework, tracking the life cycle of the entire runtime environment and the detailed process of the graph operation, and reveal the common \ascii{OP} \ascii{Kernel} implementation principle and operating mechanism.
+The source code structure of the kernel is as follows, including platform, utility library, base framework, \ascii{Protobuf} definition, local runtime, distributed runtime, graph operation, \ascii{OP} definition, \ascii{Kernel} implementation, and other components. This is one of the key components of this book, will focus on unearthing the hidden domain model in the basic framework, tracking the life cycle of the entire runtime environment and the detailed process of the graph operation, and reveal the \ascii{Kernel} implementation principle and operating mechanism of common \ascii{OP}s.
 
 \begin{leftbar}
 \begin{c++}[caption={Core source structure}]
@@ -278,10 +278,10 @@ SUM:                  757     46549     70338    183925
 \end{python}
 \end{leftbar}
 
-Since the \tf{} community is quite active, the changes to \code{contrib} are quite frequent. As of \ascii{1.4}, there are about \ascii{23} million lines of code, mainly designed and implemented in \ascii{Python}. The interface, partially run by \ascii{C++}.
+Since the \tf{} community is quite active, the changes to \code{contrib} are quite frequent. As of \ascii{1.4}, there are about \ascii{23} million lines of code,  The interface is mainly designed and implemented in \ascii{Python}, and is partially implemented by \ascii{C++} when running.
 
 \begin{leftbar}
-\begin{python}[caption={ContribCode Statistics}]
+\begin{python}[caption={Contrib Code Statistics}]
 -------------------------------------------------- -----
 Language            files     blank   comment      code
 -------------------------------------------------- -----
@@ -307,7 +307,8 @@ SUM:                 1457     52901     85570    233712
 
 
 \subsection{StreamExecutor}
-\ascii{StreamExecutor} is another open source component library of \ascii{Google} that provides a host-side (\ascii{host-side}) programming model and runtime environment that implements \ascii{CUDA} and \ascii{Unified packaging for OpenCL}. In the code on the host side, the \ascii{Kernel} function can be deployed seamlessly on the computing device of \code{CUDA} or \code{OpenCL}.
+\ascii{StreamExecutor} is another open source component library of \ascii{Google} that provides a host-side programming model and runtime environment, and implements the unified packaging for \ascii{CUDA} and \ascii{OpenCL}. Thus, the \ascii{Kernel} function in the code on the host-side can be deployed seamlessly on the computing device with \ascii{CUDA} and \ascii{OpenCL}.
+
 Currently, \ascii{StreamExecutor} is heavily used in the runtime of the \ascii{Google} internal\ascii{GPGPU} application. The \tf{} runtime also contains a snapshot version of \ascii{StreamExecutor} that encapsulates the runtimes of \ascii{CUDA} and \code{OpenCL}. This book will briefly introduce the programming model and threading model of \ascii{CUDA}, and introduce the system architecture and working principle of \ascii{StreamExecutor} in detail, revealing the implementation mode and idiom of \ascii{Kernel} function.
 
 \begin{leftbar}
@@ -320,7 +321,7 @@ Currently, \ascii{StreamExecutor} is heavily used in the runtime of the \ascii{G
 \end{c++}
 \end{leftbar}
 
-Among them, a \ascii{StreamExecutor} is implemented in \code{C++}, which has about \ascii{2.5} million lines of code.
+Among them, \ascii{StreamExecutor} is implemented in \code{C++}, which has about \ascii{2.5} million lines of code.
 
 \begin{leftbar}
 \begin{python}[caption={StreamExecutorCode Statistics}]
@@ -337,8 +338,9 @@ SUM:                  124      4762      6276     25202
 
 
 \subsection{Compiler}
-As we all know, flexibility is the most important design goal and core advantage of \tf{}, so the system architecture of \tf{} has good scalability. \tf{} can be used to define arbitrary graph structures and execute efficiently using heterogeneous computing devices. However, the bear's paw and the shark's fin cannot be combined. When the low-level \ascii{OP} is combined to calculate the subgraph and is expected to be effectively executed on \ascii{GPU}, the runtime will start more \ascii{Kernel} Operation.
-Therefore, the \tf{} method of decomposing and combining \ascii{OP} is not guaranteed to run in the most efficient way at runtime. At this point, \ascii{XLA} technology was born, it uses \ascii{JIT} compilation technology to analyze the runtime calculation graph, which combines multiple \ascii{OP} and generates a more efficient local machine. Code to improve the execution efficiency of the calculation graph.
+As we all know, flexibility is the most important design goal and core advantage of \tf{}, so the system architecture of \tf{} has good scalability. \tf{} can be used to define arbitrary graph structures and executes efficiently on heterogeneous computing devices. However, you can't have your cake and eat it too. When the low-level \ascii{OP} is combined to calculate the subgraph and is expected to be effectively executed on \ascii{GPU}, the runtime will start more \ascii{Kernel} operations.
+
+Therefore, the \tf{} method of decomposing and combining \ascii{OP} is not guaranteed to run in the most efficient way at runtime. At this point, \ascii{XLA} technology was born. It uses \ascii{JIT} compilation technology to analyze the graph calculation at runtime, which combines multiple \ascii{OP} and generates more efficient local machine code, to improve the execution efficiency of the graph calculation .
 
 \begin{leftbar}
 \begin{python}[caption={CompilerSource Structure}]
